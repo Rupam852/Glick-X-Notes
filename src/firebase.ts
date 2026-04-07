@@ -4,7 +4,18 @@ import { getFirestore } from 'firebase/firestore';
 
 // This file will be automatically updated by the set_up_firebase tool
 // once you accept the terms in the UI.
-import firebaseConfig from '../firebase-applet-config.json';
+import localConfig from '../firebase-applet-config.json';
+
+// Use environment variables for production, fallback to local config for development
+const firebaseConfig = {
+  apiKey: import.meta.env?.VITE_FIREBASE_API_KEY || (localConfig as any).apiKey,
+  authDomain: import.meta.env?.VITE_FIREBASE_AUTH_DOMAIN || (localConfig as any).authDomain,
+  projectId: import.meta.env?.VITE_FIREBASE_PROJECT_ID || (localConfig as any).projectId,
+  storageBucket: import.meta.env?.VITE_FIREBASE_STORAGE_BUCKET || (localConfig as any).storageBucket,
+  messagingSenderId: import.meta.env?.VITE_FIREBASE_MESSAGING_SENDER_ID || (localConfig as any).messagingSenderId,
+  appId: import.meta.env?.VITE_FIREBASE_APP_ID || (localConfig as any).appId,
+  measurementId: import.meta.env?.VITE_FIREBASE_MEASUREMENT_ID || (localConfig as any).measurementId
+};
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
