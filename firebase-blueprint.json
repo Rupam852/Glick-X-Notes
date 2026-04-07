@@ -1,0 +1,61 @@
+{
+  "entities": {
+    "users": {
+      "title": "User Profile",
+      "description": "Stores user profile information.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "The unique user ID from Firebase Auth." },
+        "email": { "type": "string", "format": "email", "description": "The user's email address." },
+        "displayName": { "type": "string", "description": "The user's display name." },
+        "photoURL": { "type": "string", "description": "The user's profile picture URL or base64 data." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the user account was created." }
+      },
+      "required": ["uid", "email"]
+    },
+    "notes": {
+      "title": "Note",
+      "description": "A user's note.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "body": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "color": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "createdAt", "updatedAt"]
+    },
+    "attachments": {
+      "title": "Attachment",
+      "description": "A file attached to a note.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string" },
+        "size": { "type": "number" },
+        "data": { "type": "string", "description": "Base64 encoded file data." },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "type", "size", "data", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "users",
+      "description": "User profile document."
+    },
+    "/notes/{noteId}": {
+      "schema": "notes",
+      "description": "User notes."
+    },
+    "/notes/{noteId}/attachments/{attachmentId}": {
+      "schema": "attachments",
+      "description": "Note attachments."
+    }
+  }
+}

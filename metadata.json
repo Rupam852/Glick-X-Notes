@@ -1,0 +1,5 @@
+{
+  "name": "AuthHub",
+  "description": "A secure authentication platform featuring Google OAuth, email/password login, and user registration.",
+  "requestFramePermissions": []
+}
