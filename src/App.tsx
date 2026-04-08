@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { auth } from './firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import AuthLayout from './components/AuthLayout';
@@ -31,14 +31,50 @@ function AppContent() {
       setUser(user);
       if (user) {
         setView('dashboard');
+        // Initialize history state for dashboard
+        window.history.replaceState({ view: 'dashboard', editingNote: null }, '');
       } else {
         setView('login');
+        // Initial history state for login
+        window.history.replaceState({ view: 'login', editingNote: null }, '');
       }
       setLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
+
+  // Sync state with browser history
+  useEffect(() => {
+    if (!user) return;
+
+    const handlePopState = (event: PopStateEvent) => {
+      if (event.state) {
+        const { view: targetView, editingNote: targetNote } = event.state;
+        setView(targetView);
+        setEditingNote(targetNote);
+      } else {
+        setView('dashboard');
+        setEditingNote(null);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+  
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [user]);
+
+  // Wrapper for setView that also updates history
+  const navigateTo = useCallback((newView: typeof view, note: Note | null = null) => {
+    // Only push state if it's a different view or note
+    if (view === newView && editingNote?.id === note?.id) return;
+    
+    setView(newView);
+    setEditingNote(note);
+    window.history.pushState({ view: newView, editingNote: note }, '');
+  }, [view, editingNote]);
 
   if (loading) {
     return (
@@ -77,20 +113,20 @@ function AppContent() {
       >
         {view === 'login' && (
           <LoginForm 
-            onSwitchToSignup={() => setView('signup')} 
-            onForgotPassword={() => setView('forgot-password')}
-            onSuccess={() => setView('dashboard')} 
+            onSwitchToSignup={() => navigateTo('signup')} 
+            onForgotPassword={() => navigateTo('forgot-password')}
+            onSuccess={() => navigateTo('dashboard')} 
           />
         )}
         {view === 'signup' && (
           <SignupForm 
-            onSwitchToLogin={() => setView('login')} 
-            onSuccess={() => setView('dashboard')} 
+            onSwitchToLogin={() => navigateTo('login')} 
+            onSuccess={() => navigateTo('dashboard')} 
           />
         )}
         {view === 'forgot-password' && (
           <ForgotPasswordForm 
-            onBackToLogin={() => setView('login')} 
+            onBackToLogin={() => navigateTo('login')} 
           />
         )}
       </AuthLayout>
@@ -102,27 +138,25 @@ function AppContent() {
       <NoteEditor 
         user={user}
         note={editingNote} 
-        onBack={() => setView('dashboard')} 
+        onBack={() => {
+          // Instead of setView, we go back in history if possible
+          // or just navigate to dashboard and push state
+          window.history.back();
+        }} 
       />
     );
   }
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col md:flex-row">
-      <Sidebar user={user} activeView={view} onViewChange={setView} />
+      <Sidebar user={user} activeView={view} onViewChange={(v) => navigateTo(v)} />
       
       <main className="flex-1 overflow-y-auto pb-24 md:pb-0">
         {view === 'dashboard' && (
           <Dashboard 
             user={user}
-            onEditNote={(note) => {
-              setEditingNote(note);
-              setView('editor');
-            }}
-            onNewNote={() => {
-              setEditingNote(null);
-              setView('editor');
-            }}
+            onEditNote={(note) => navigateTo('editor', note)}
+            onNewNote={() => navigateTo('editor', null)}
           />
         )}
         {view === 'settings' && <Settings user={user} />}
@@ -130,11 +164,8 @@ function AppContent() {
 
       <BottomNav 
         activeView={view} 
-        onViewChange={setView} 
-        onNewNote={() => {
-          setEditingNote(null);
-          setView('editor');
-        }} 
+        onViewChange={(v) => navigateTo(v)} 
+        onNewNote={() => navigateTo('editor', null)} 
       />
     </div>
   );
