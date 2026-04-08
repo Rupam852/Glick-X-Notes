@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { auth, db } from '../firebase';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { auth, db, handleFirestoreError, OperationType } from '../firebase';
+import { doc, getDoc, setDoc, serverTimestamp, collection, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { User as FirebaseUser } from 'firebase/auth';
 import { User as UserIcon, Mail, Shield, Copy, Check, LogOut, Trash2, Camera, Moon, Sun, Loader2 } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
@@ -14,6 +14,7 @@ export default function Settings({ user }: { user: FirebaseUser }) {
   const [userData, setUserData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -70,6 +71,53 @@ export default function Settings({ user }: { user: FirebaseUser }) {
       }
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleDeleteAllData = async () => {
+    if (!user) return;
+    
+    const confirmed = window.confirm('Are you sure you want to delete all your notes? This action cannot be undone.');
+    if (!confirmed) return;
+
+    setDeleting(true);
+    try {
+      const notesQuery = query(collection(db, 'notes'), where('userId', '==', user.uid));
+      const notesSnapshot = await getDocs(notesQuery);
+
+      if (notesSnapshot.empty) {
+        showToast('No notes found to delete', 'info');
+        return;
+      }
+
+      // Delete notes one by one to ensure sub-collections are also cleaned up
+      // Note: For very large amounts of data, a cloud function would be better
+      for (const noteDoc of notesSnapshot.docs) {
+        const noteId = noteDoc.id;
+        
+        // 1. Get all attachments for this note
+        const attachmentsQuery = collection(db, `notes/${noteId}/attachments`);
+        const attachmentsSnapshot = await getDocs(attachmentsQuery);
+        
+        const batch = writeBatch(db);
+        
+        // 2. Add attachments to batch deletion
+        attachmentsSnapshot.docs.forEach((attachmentDoc) => {
+          batch.delete(attachmentDoc.ref);
+        });
+        
+        // 3. Add the note itself to batch deletion
+        batch.delete(noteDoc.ref);
+        
+        await batch.commit();
+      }
+
+      showToast('All notes have been successfully deleted', 'success');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, 'notes/multiple');
+      showToast('Failed to delete notes', 'error');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   if (loading) {
@@ -149,10 +197,14 @@ export default function Settings({ user }: { user: FirebaseUser }) {
               </div>
               <Check className="w-4 h-4 text-slate-200" />
             </button>
-            <button className="w-full flex items-center justify-between p-4 bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-xl transition-all cursor-pointer text-red-600 dark:text-red-400 font-semibold">
+            <button 
+              onClick={handleDeleteAllData}
+              disabled={deleting}
+              className="w-full flex items-center justify-between p-4 bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-xl transition-all cursor-pointer text-red-600 dark:text-red-400 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               <div className="flex items-center gap-3">
-                <Trash2 className="w-5 h-5" />
-                Delete All Data
+                {deleting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}
+                {deleting ? 'Deleting Notes...' : 'Delete All Data'}
               </div>
             </button>
           </div>
