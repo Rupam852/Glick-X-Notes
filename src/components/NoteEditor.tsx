@@ -46,14 +46,16 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const { showToast } = useToast();
   const contentRef = useRef<HTMLDivElement>(null);
-  const [activeFormats, setActiveFormats] = useState({ bold: false, italic: false });
+  const [activeFormats, setActiveFormats] = useState({ bold: false, italic: false, unorderedList: false, orderedList: false });
   const [isDragging, setIsDragging] = useState(false);
   const [viewingAttachment, setViewingAttachment] = useState<Attachment | null>(null);
 
   const updateFormatState = () => {
     setActiveFormats({
       bold: document.queryCommandState('bold'),
-      italic: document.queryCommandState('italic')
+      italic: document.queryCommandState('italic'),
+      unorderedList: document.queryCommandState('insertUnorderedList'),
+      orderedList: document.queryCommandState('insertOrderedList')
     });
   };
 
@@ -70,6 +72,26 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
 
   const handleFormat = (command: string, value?: string) => {
     document.execCommand(command, false, value);
+    if (contentRef.current) {
+      setBody(contentRef.current.innerHTML);
+      contentRef.current.focus();
+    }
+    updateFormatState();
+  };
+
+  const handleListToggle = (command: string) => {
+    const isActive = document.queryCommandState(command);
+    
+    // Toggle the list
+    document.execCommand(command, false);
+    
+    // If it was active (turning OFF), shift to next line
+    if (isActive) {
+      // Standard behavior of execCommand turns <li> into <p> or <div>.
+      // To shift to next line, we insert a paragraph.
+      document.execCommand('insertParagraph', false);
+    }
+    
     if (contentRef.current) {
       setBody(contentRef.current.innerHTML);
       contentRef.current.focus();
@@ -541,8 +563,8 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
             <ToolbarButton icon={<Heading1 className="w-4 h-4" />} onClick={() => toggleBlock('H1', 'H1')} title="Heading" />
             <ToolbarButton icon={<Quote className="w-4 h-4" />} onClick={() => toggleBlock('BLOCKQUOTE', 'BLOCKQUOTE')} title="Quote" />
             <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1" />
-            <ToolbarButton icon={<List className="w-4 h-4" />} onClick={() => handleFormat('insertUnorderedList')} title="Bullet List" />
-            <ToolbarButton icon={<ListOrdered className="w-4 h-4" />} onClick={() => handleFormat('insertOrderedList')} title="Numbered List" />
+            <ToolbarButton icon={<List className="w-4 h-4" />} onClick={() => handleListToggle('insertUnorderedList')} title="Bullet List" isActive={activeFormats.unorderedList} />
+            <ToolbarButton icon={<ListOrdered className="w-4 h-4" />} onClick={() => handleListToggle('insertOrderedList')} title="Numbered List" isActive={activeFormats.orderedList} />
             <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1" />
             <ToolbarButton icon={<Link className="w-4 h-4" />} onClick={() => {
               const url = prompt('Enter link URL:');
