@@ -21,7 +21,7 @@ export default function AuthLayout({ children, title, subtitle }: AuthLayoutProp
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="max-w-md w-full bg-slate-900/40 border border-slate-800/80 backdrop-blur-2xl rounded-[2rem] shadow-[0_0_50px_-12px_rgba(99,102,241,0.25)] overflow-hidden relative z-10"
+        className="max-w-lg w-full bg-slate-900/40 border border-slate-800/80 backdrop-blur-2xl rounded-[2rem] shadow-[0_0_50px_-12px_rgba(99,102,241,0.25)] overflow-hidden relative z-10"
       >
         <div className="p-8 md:p-10">
           <div className="flex justify-center mb-6">
