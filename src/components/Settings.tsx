@@ -5,6 +5,7 @@ import { User as FirebaseUser } from 'firebase/auth';
 import { User as UserIcon, Mail, Shield, Copy, Check, LogOut, Trash2, Camera, Moon, Sun, Loader2 } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { motion, AnimatePresence } from 'motion/react';
 
 export default function Settings({ user }: { user: FirebaseUser }) {
 
@@ -15,6 +16,7 @@ export default function Settings({ user }: { user: FirebaseUser }) {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -73,12 +75,14 @@ export default function Settings({ user }: { user: FirebaseUser }) {
     reader.readAsDataURL(file);
   };
 
-  const handleDeleteAllData = async () => {
+  const handleDeleteAllClick = () => {
+    setShowDeleteAllConfirm(true);
+  };
+
+  const handleDeleteAllConfirm = async () => {
+    setShowDeleteAllConfirm(false);
     if (!user) return;
     
-    const confirmed = window.confirm('Are you sure you want to delete all your notes? This action cannot be undone.');
-    if (!confirmed) return;
-
     setDeleting(true);
     try {
       const notesQuery = query(collection(db, 'notes'), where('userId', '==', user.uid));
@@ -198,7 +202,7 @@ export default function Settings({ user }: { user: FirebaseUser }) {
               <Check className="w-4 h-4 text-slate-200" />
             </button>
             <button 
-              onClick={handleDeleteAllData}
+              onClick={handleDeleteAllClick}
               disabled={deleting}
               className="w-full flex items-center justify-between p-4 bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-xl transition-all cursor-pointer text-red-600 dark:text-red-400 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -210,6 +214,55 @@ export default function Settings({ user }: { user: FirebaseUser }) {
           </div>
         </div>
       </div>
+
+      {/* Reusable Premium Delete All Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteAllConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowDeleteAllConfirm(false)}
+            className="fixed inset-0 z-[150] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              onClick={(e) => e.stopPropagation()}
+              className="max-w-md w-full bg-slate-900 border border-slate-800 backdrop-blur-2xl rounded-3xl p-6 shadow-2xl space-y-6 text-center"
+            >
+              <div className="flex justify-center">
+                <div className="p-4 bg-red-950/40 border border-red-900/30 text-red-500 rounded-full animate-pulse">
+                  <Trash2 className="w-8 h-8" />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <h3 className="text-xl font-bold text-white">Delete All Notes</h3>
+                <p className="text-slate-400 text-sm font-medium leading-relaxed">
+                  Are you sure you want to delete all your notes? This action cannot be undone.
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                <button
+                  onClick={() => setShowDeleteAllConfirm(false)}
+                  className="flex-1 bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 font-bold py-3 rounded-xl transition-all cursor-pointer text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteAllConfirm}
+                  className="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-xl shadow-lg shadow-red-600/10 hover:shadow-red-600/20 active:translate-y-0 transition-all cursor-pointer text-sm"
+                >
+                  Delete All
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

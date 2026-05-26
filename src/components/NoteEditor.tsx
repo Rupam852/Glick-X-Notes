@@ -49,6 +49,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
   const [activeFormats, setActiveFormats] = useState({ bold: false, italic: false, unorderedList: false, orderedList: false });
   const [isDragging, setIsDragging] = useState(false);
   const [viewingAttachment, setViewingAttachment] = useState<Attachment | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const updateFormatState = () => {
     setActiveFormats({
@@ -195,9 +196,13 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     return () => clearInterval(timer);
   }, [handleSave, title, body, tags, color, lastSavedData]);
 
-  const handleDelete = async () => {
+  const handleDeleteClick = () => {
+    setShowDeleteConfirm(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    setShowDeleteConfirm(false);
     if (!currentNoteId) return;
-    if (!window.confirm('Are you sure you want to delete this note?')) return;
 
     try {
       await deleteDoc(doc(db, 'notes', currentNoteId));
@@ -438,7 +443,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
         </div>
         <div className="flex items-center gap-2">
           {currentNoteId && (
-            <button onClick={handleDelete} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all cursor-pointer">
+            <button onClick={handleDeleteClick} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all cursor-pointer">
               <Trash2 className="w-5 h-5" />
             </button>
           )}
@@ -583,6 +588,55 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
           />
         </div>
       </div>
+
+      {/* Reusable Premium Delete Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowDeleteConfirm(false)}
+            className="fixed inset-0 z-[150] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              onClick={(e) => e.stopPropagation()}
+              className="max-w-md w-full bg-slate-900 border border-slate-800 backdrop-blur-2xl rounded-3xl p-6 shadow-2xl space-y-6 text-center"
+            >
+              <div className="flex justify-center">
+                <div className="p-4 bg-red-950/40 border border-red-900/30 text-red-500 rounded-full animate-pulse">
+                  <Trash2 className="w-8 h-8" />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <h3 className="text-xl font-bold text-white">Delete Note</h3>
+                <p className="text-slate-400 text-sm font-medium leading-relaxed">
+                  Are you sure you want to delete this note? This action cannot be undone.
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="flex-1 bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 font-bold py-3 rounded-xl transition-all cursor-pointer text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteConfirm}
+                  className="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-xl shadow-lg shadow-red-600/10 hover:shadow-red-600/20 active:translate-y-0 transition-all cursor-pointer text-sm"
+                >
+                  Delete
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
