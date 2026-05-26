@@ -517,11 +517,11 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
 
           {/* Full-Screen Focus Mode Switcher */}
           <button
+            type="button"
             onClick={() => setFocusMode(prev => !prev)}
-            className={`p-2 rounded-xl border transition-all cursor-pointer text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 ${focusMode ? 'bg-indigo-600 border-indigo-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.25)]' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'}`}
+            className={`px-3 py-1.5 rounded-xl border transition-all cursor-pointer text-[10px] font-bold uppercase tracking-wider ${focusMode ? 'bg-indigo-600 border-indigo-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.25)]' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'}`}
             title={focusMode ? "Exit Focus Mode" : "Enter Focus Mode"}
           >
-            <Sparkles className="w-4 h-4 text-indigo-400" />
             {focusMode ? "Focused" : "Focus"}
           </button>
 
