@@ -4,13 +4,11 @@ import { doc, getDoc, setDoc, serverTimestamp, collection, query, where, getDocs
 import { User as FirebaseUser } from 'firebase/auth';
 import { User as UserIcon, Mail, Shield, Copy, Check, LogOut, Trash2, Camera, Moon, Sun, Loader2 } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
-import { useTheme } from '../contexts/ThemeContext';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function Settings({ user }: { user: FirebaseUser }) {
 
   const { showToast } = useToast();
-  const { theme, toggleTheme } = useTheme();
   const [copied, setCopied] = useState(false);
   const [userData, setUserData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -173,22 +171,6 @@ export default function Settings({ user }: { user: FirebaseUser }) {
           </div>
         </div>
 
-        {/* Appearance */}
-        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 space-y-4">
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white">Appearance</h3>
-          <button 
-            onClick={toggleTheme}
-            className="w-full flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-xl transition-all cursor-pointer"
-          >
-            <div className="flex items-center gap-3 text-slate-700 dark:text-slate-300 font-semibold">
-              {theme === 'light' ? <Moon className="w-5 h-5 text-slate-400" /> : <Sun className="w-5 h-5 text-slate-400" />}
-              {theme === 'light' ? 'Dark Mode' : 'Light Mode'}
-            </div>
-            <div className={`w-12 h-6 rounded-full transition-all relative ${theme === 'dark' ? 'bg-indigo-600' : 'bg-slate-200'}`}>
-              <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${theme === 'dark' ? 'left-7' : 'left-1'}`} />
-            </div>
-          </button>
-        </div>
 
         {/* Account Actions */}
         <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 space-y-4">
