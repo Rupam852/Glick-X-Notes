@@ -79,7 +79,7 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-slate-100/30 to-white dark:from-slate-950 dark:to-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-500 font-sans overflow-x-hidden selection:bg-indigo-500 selection:text-white relative">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-slate-100/30 to-white dark:bg-none dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-500 font-sans overflow-x-hidden selection:bg-indigo-500 selection:text-white relative">
       {/* Premium Background Grid Overlay */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none -z-20" />
       
