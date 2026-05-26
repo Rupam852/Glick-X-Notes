@@ -15,6 +15,8 @@ export default function Settings({ user }: { user: FirebaseUser }) {
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
+  const [showDeleteAccountConfirm, setShowDeleteAccountConfirm] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -122,6 +124,57 @@ export default function Settings({ user }: { user: FirebaseUser }) {
     }
   };
 
+  const handleDeleteAccountClick = () => {
+    setShowDeleteAccountConfirm(true);
+  };
+
+  const handleDeleteAccountConfirm = async () => {
+    setShowDeleteAccountConfirm(false);
+    if (!user) return;
+
+    setDeletingAccount(true);
+    try {
+      // 1. Delete all user notes and subcollections
+      const notesQuery = query(collection(db, 'notes'), where('userId', '==', user.uid));
+      const notesSnapshot = await getDocs(notesQuery);
+
+      for (const noteDoc of notesSnapshot.docs) {
+        const noteId = noteDoc.id;
+        const attachmentsQuery = collection(db, `notes/${noteId}/attachments`);
+        const attachmentsSnapshot = await getDocs(attachmentsQuery);
+        const batch = writeBatch(db);
+        attachmentsSnapshot.docs.forEach((attachmentDoc) => {
+          batch.delete(attachmentDoc.ref);
+        });
+        batch.delete(noteDoc.ref);
+        await batch.commit();
+      }
+
+      // 2. Delete user doc in Firestore
+      const userDocRef = doc(db, 'users', user.uid);
+      const userDoc = await getDoc(userDocRef);
+      if (userDoc.exists()) {
+        const batch = writeBatch(db);
+        batch.delete(userDocRef);
+        await batch.commit();
+      }
+
+      // 3. Delete the registered user from Firebase Auth
+      await user.delete();
+      
+      showToast('Your account and all associated data have been permanently deleted.', 'success');
+    } catch (error: any) {
+      console.error('Error deleting account:', error);
+      if (error.code === 'auth/requires-recent-login') {
+        showToast('For security reasons, please Sign Out, Sign In again, and then try deleting your account.', 'error');
+      } else {
+        showToast(error.message || 'Failed to delete account. Please try again.', 'error');
+      }
+    } finally {
+      setDeletingAccount(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -193,6 +246,16 @@ export default function Settings({ user }: { user: FirebaseUser }) {
                 {deleting ? 'Deleting Notes...' : 'Delete All Data'}
               </div>
             </button>
+            <button 
+              onClick={handleDeleteAccountClick}
+              disabled={deleting || deletingAccount}
+              className="w-full flex items-center justify-between p-4 bg-red-100/40 dark:bg-red-950/20 hover:bg-red-100/60 dark:hover:bg-red-950/40 rounded-xl transition-all cursor-pointer text-red-700 dark:text-red-400 font-bold border border-red-200/50 dark:border-red-900/30 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <div className="flex items-center gap-3">
+                {deletingAccount ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}
+                {deletingAccount ? 'Deleting Account...' : 'Delete Account'}
+              </div>
+            </button>
           </div>
         </div>
       </div>
@@ -239,6 +302,55 @@ export default function Settings({ user }: { user: FirebaseUser }) {
                   className="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-xl shadow-lg shadow-red-600/10 hover:shadow-red-600/20 active:translate-y-0 transition-all cursor-pointer text-sm"
                 >
                   Delete All
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Reusable Premium Delete Account Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteAccountConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowDeleteAccountConfirm(false)}
+            className="fixed inset-0 z-[150] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              onClick={(e) => e.stopPropagation()}
+              className="max-w-md w-full bg-slate-900 border border-slate-800 backdrop-blur-2xl rounded-3xl p-6 shadow-2xl space-y-6 text-center"
+            >
+              <div className="flex justify-center">
+                <div className="p-4 bg-red-950/40 border border-red-900/30 text-red-500 rounded-full animate-pulse">
+                  <Trash2 className="w-8 h-8 animate-bounce" />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <h3 className="text-xl font-bold text-white">Delete Account Permanently</h3>
+                <p className="text-slate-400 text-sm font-medium leading-relaxed">
+                  Are you absolutely sure you want to delete your Glick X Notes account? This will permanently delete your profile, saved credentials, and all notes. This action is irreversible.
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                <button
+                  onClick={() => setShowDeleteAccountConfirm(false)}
+                  className="flex-1 bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 font-bold py-3 rounded-xl transition-all cursor-pointer text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteAccountConfirm}
+                  className="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-xl shadow-lg shadow-red-600/10 hover:shadow-red-600/20 active:translate-y-0 transition-all cursor-pointer text-sm"
+                >
+                  Delete Account
                 </button>
               </div>
             </motion.div>
