@@ -79,11 +79,14 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-500 font-sans overflow-x-hidden selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-500 font-sans overflow-x-hidden selection:bg-indigo-500 selection:text-white relative">
+      {/* Premium Background Grid Overlay */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none -z-20" />
+      
       {/* Background Orbs */}
-      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-indigo-200/40 dark:bg-indigo-900/10 rounded-full blur-[120px] pointer-events-none -z-10 animate-pulse duration-[8s]" />
-      <div className="absolute top-1/3 right-1/4 w-[600px] h-[600px] bg-pink-200/30 dark:bg-pink-900/10 rounded-full blur-[150px] pointer-events-none -z-10 animate-pulse duration-[10s]" />
-      <div className="absolute bottom-1/4 left-10 w-[450px] h-[450px] bg-emerald-200/20 dark:bg-emerald-900/5 rounded-full blur-[100px] pointer-events-none -z-10" />
+      <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-indigo-300/30 dark:bg-indigo-900/10 rounded-full blur-[140px] pointer-events-none -z-10 animate-pulse duration-[8s]" />
+      <div className="absolute top-1/3 right-1/4 w-[700px] h-[700px] bg-pink-300/25 dark:bg-pink-900/10 rounded-full blur-[160px] pointer-events-none -z-10 animate-pulse duration-[10s]" />
+      <div className="absolute bottom-1/4 left-10 w-[500px] h-[500px] bg-emerald-300/20 dark:bg-emerald-900/5 rounded-full blur-[120px] pointer-events-none -z-10" />
 
       {/* Navigation */}
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-white/70 dark:bg-slate-950/70 border-b border-slate-200/50 dark:border-slate-800/40 transition-colors">
@@ -185,18 +188,18 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.4 }}
-            className="flex flex-wrap items-center justify-center gap-8 pt-10 text-xs text-slate-400 dark:text-slate-500 font-semibold tracking-wider uppercase"
+            className="flex flex-wrap items-center justify-center gap-4 pt-12 text-xs text-slate-650 dark:text-slate-400 font-bold tracking-wide uppercase"
           >
-            <div className="flex items-center gap-2">
-              <Lock className="w-4 h-4 text-emerald-500" />
+            <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 rounded-xl shadow-sm shadow-emerald-100/10">
+              <Lock className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               End-to-End User Isolation
             </div>
-            <div className="flex items-center gap-2">
-              <Zap className="w-4 h-4 text-amber-500" />
+            <div className="flex items-center gap-2 px-4 py-2 bg-amber-50/50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/30 rounded-xl shadow-sm shadow-amber-100/10">
+              <Zap className="w-4 h-4 text-amber-600 dark:text-amber-400" />
               Reactive Firebase DB
             </div>
-            <div className="flex items-center gap-2">
-              <Cloud className="w-4 h-4 text-indigo-500" />
+            <div className="flex items-center gap-2 px-4 py-2 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/30 rounded-xl shadow-sm shadow-indigo-100/10">
+              <Cloud className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
               Offline Auto-Sync
             </div>
           </motion.div>
