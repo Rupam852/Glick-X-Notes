@@ -42,8 +42,8 @@ export default function Sidebar({ user, activeView, onViewChange }: SidebarProps
   return (
     <div className="hidden md:flex flex-col w-72 bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800 h-screen sticky top-0 p-6 space-y-8">
       <div className="flex items-center gap-3 px-2">
-        <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-200 dark:shadow-none overflow-hidden">
-          <img src="/favicon.png" alt="Logo" className="w-full h-full object-cover p-1.5" />
+        <div className="w-10 h-10 bg-slate-950 rounded-xl flex items-center justify-center shadow-lg border border-slate-800/80 overflow-hidden">
+          <img src="/favicon.png" alt="Logo" className="w-full h-full object-cover" />
         </div>
         <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">Glick X Notes</h1>
       </div>
