@@ -111,15 +111,9 @@ export default function Dashboard({ user, onEditNote, onNewNote }: DashboardProp
         <div className="absolute bottom-0 left-0 w-80 h-80 bg-pink-500/5 rounded-full blur-[100px] pointer-events-none" />
         
         <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-6 z-10">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-indigo-400 animate-pulse" />
-              <span className="text-xs font-bold text-indigo-400 uppercase tracking-widest bg-indigo-950/40 border border-indigo-900/40 px-2.5 py-1 rounded-full">
-                Workspace Active
-              </span>
-            </div>
+          <div className="space-y-1">
             <h1 className="text-3.5xl font-black bg-gradient-to-r from-white via-slate-100 to-slate-300 bg-clip-text text-transparent">
-              My Cosmic Directory
+              My Notes
             </h1>
             <p className="text-slate-400 text-sm font-medium">
               Manage your custom workflow across <span className="text-indigo-300 font-bold">{notes.length} dynamic nodes</span> • {(totalStorage / 1024).toFixed(2)} KB cloud storage
