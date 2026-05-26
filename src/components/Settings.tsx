@@ -283,15 +283,6 @@ export default function Settings({ user }: { user: FirebaseUser }) {
               </div>
             </div>
 
-            <div className="space-y-3 pt-6 border-t border-slate-900">
-              <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Secure UID Key</label>
-              <div className="flex items-center justify-between p-3 bg-slate-950/60 rounded-xl border border-slate-850">
-                <code className="text-xs text-slate-300 font-mono truncate mr-4">{user?.uid}</code>
-                <button onClick={copyId} className="text-slate-400 hover:text-indigo-400 transition-colors cursor-pointer">
-                  {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
           </div>
         </div>
 
