@@ -17,6 +17,7 @@ import BottomNav from './components/BottomNav';
 import Settings from './components/Settings';
 import LandingPage from './components/LandingPage';
 import EmailVerification from './components/EmailVerification';
+import EmailActionHandler from './components/EmailActionHandler';
 import { Loader2 } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './contexts/ToastContext';
@@ -132,6 +133,23 @@ function AppContent() {
           <p className="text-slate-500 dark:text-slate-400 font-medium">Initializing Glick X Notes...</p>
         </div>
       </div>
+    );
+  }
+
+  // Check if current URL parameters indicate a Firebase Auth Action Link (like email verification or password reset)
+  const urlParams = new URLSearchParams(window.location.search);
+  const oobCode = urlParams.get('oobCode');
+  const mode = urlParams.get('mode');
+
+  if (mode && oobCode) {
+    return (
+      <EmailActionHandler 
+        onContinue={() => {
+          // Clear query parameters from URL and redirect to login
+          window.history.replaceState({}, document.title, window.location.pathname);
+          navigateTo('login');
+        }}
+      />
     );
   }
 
