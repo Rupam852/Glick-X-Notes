@@ -263,7 +263,7 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
               <div className="w-3.5 h-3.5 rounded-full bg-green-500/80" />
             </div>
             <div className="text-xs font-semibold text-slate-500 font-mono tracking-wide">
-              rupam@glickx-notes.io • Interactive Preview
+              Glick X Notes • Secure Personal Vault
             </div>
             <div className="flex items-center gap-2">
               {/* Mockup customizer */}
