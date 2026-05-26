@@ -3,7 +3,7 @@ import { collection, doc, setDoc, deleteDoc, serverTimestamp, Timestamp, getDocs
 import { User as FirebaseUser } from 'firebase/auth';
 import { db, auth, handleFirestoreError, OperationType } from '../firebase';
 import { Note, Attachment } from '../types';
-import { ArrowLeft, Save, Trash2, Paperclip, X, Download, FileText, Image as ImageIcon, Plus, Tag, Palette, Check, Loader2, Bold, Italic, List, ListOrdered, Link, Heading1, Quote, Undo, Redo, UploadCloud, Sparkles } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, Paperclip, X, Download, FileText, Image as ImageIcon, Plus, Tag, Palette, Check, Loader2, Bold, Italic, List, ListOrdered, Link, Heading1, Quote, Undo, Redo, UploadCloud, Sparkles, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useToast } from '../contexts/ToastContext';
 import { format } from 'date-fns';
@@ -52,6 +52,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [activeFont, setActiveFont] = useState<'sans' | 'serif' | 'mono'>('sans');
   const [focusMode, setFocusMode] = useState(false);
+  const [showFontMenu, setShowFontMenu] = useState(false);
 
   const updateFormatState = () => {
     setActiveFormats({
@@ -457,16 +458,49 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Premium Font Switcher */}
-          <select
-            value={activeFont}
-            onChange={(e) => setActiveFont(e.target.value as any)}
-            className="bg-slate-900 border border-slate-800 text-slate-300 rounded-xl px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider outline-none focus:ring-1 focus:ring-indigo-500/40 cursor-pointer transition-all duration-200"
-          >
-            <option value="sans">Outfit Sans</option>
-            <option value="serif">Playfair Serif</option>
-            <option value="mono">Fira Mono</option>
-          </select>
+          {/* Custom Premium Font Switcher */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowFontMenu(prev => !prev)}
+              className="bg-slate-900 border border-slate-800 text-slate-300 hover:text-white rounded-xl px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider outline-none focus:ring-1 focus:ring-indigo-500/40 cursor-pointer transition-all duration-200 flex items-center gap-1.5 min-w-[125px] justify-between shadow-md"
+            >
+              <span>{activeFont === 'sans' ? 'Outfit Sans' : activeFont === 'serif' ? 'Playfair Serif' : 'Fira Mono'}</span>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
+            </button>
+            <AnimatePresence>
+              {showFontMenu && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowFontMenu(false)} />
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    className="absolute right-0 mt-2 w-44 z-50 bg-slate-950/95 border border-slate-850 rounded-xl p-1.5 shadow-2xl backdrop-blur-md space-y-0.5"
+                  >
+                    {[
+                      { value: 'sans', label: 'Outfit Sans', desc: 'Modern Tech' },
+                      { value: 'serif', label: 'Playfair Serif', desc: 'Elegant Editorial' },
+                      { value: 'mono', label: 'Fira Mono', desc: 'Developer Code' }
+                    ].map(item => (
+                      <button
+                        key={item.value}
+                        type="button"
+                        onClick={() => {
+                          setActiveFont(item.value as any);
+                          setShowFontMenu(false);
+                        }}
+                        className={`w-full text-left px-3 py-2 rounded-lg transition-all cursor-pointer flex flex-col justify-start gap-0.5 ${activeFont === item.value ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'}`}
+                      >
+                        <span className="text-[10px] font-bold uppercase tracking-wider">{item.label}</span>
+                        <span className={`text-[8px] font-semibold tracking-wide ${activeFont === item.value ? 'text-indigo-200' : 'text-slate-500'}`}>{item.desc}</span>
+                      </button>
+                    ))}
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
 
           {/* Full-Screen Focus Mode Switcher */}
           <button
