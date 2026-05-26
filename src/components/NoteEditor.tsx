@@ -3,7 +3,7 @@ import { collection, doc, setDoc, deleteDoc, serverTimestamp, Timestamp, getDocs
 import { User as FirebaseUser } from 'firebase/auth';
 import { db, auth, handleFirestoreError, OperationType } from '../firebase';
 import { Note, Attachment } from '../types';
-import { ArrowLeft, Save, Trash2, Paperclip, X, Download, FileText, Image as ImageIcon, Plus, Tag, Palette, Check, Loader2, Bold, Italic, List, ListOrdered, Link, Heading1, Quote, Undo, Redo, UploadCloud, Sparkles, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, Paperclip, X, Download, FileText, Image as ImageIcon, Plus, Tag, Palette, Check, Loader2, Bold, Italic, List, ListOrdered, Link, Heading1, Quote, Undo, Redo, UploadCloud, Sparkles, ChevronDown, Underline, Strikethrough, Code, Highlighter, Eraser } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useToast } from '../contexts/ToastContext';
 import { format } from 'date-fns';
@@ -47,7 +47,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
   const { showToast } = useToast();
   const contentRef = useRef<HTMLDivElement>(null);
   const fontMenuRef = useRef<HTMLDivElement>(null);
-  const [activeFormats, setActiveFormats] = useState({ bold: false, italic: false, unorderedList: false, orderedList: false });
+  const [activeFormats, setActiveFormats] = useState({ bold: false, italic: false, underline: false, strikeThrough: false, unorderedList: false, orderedList: false });
   const [isDragging, setIsDragging] = useState(false);
   const [viewingAttachment, setViewingAttachment] = useState<Attachment | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -74,6 +74,8 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     setActiveFormats({
       bold: document.queryCommandState('bold'),
       italic: document.queryCommandState('italic'),
+      underline: document.queryCommandState('underline'),
+      strikeThrough: document.queryCommandState('strikeThrough'),
       unorderedList: document.queryCommandState('insertUnorderedList'),
       orderedList: document.queryCommandState('insertOrderedList')
     });
@@ -83,6 +85,20 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     if (contentRef.current && contentRef.current.innerHTML !== body) {
       if (!body && contentRef.current.innerHTML) return;
       contentRef.current.innerHTML = body;
+    }
+    // Auto-focus and move caret to the end
+    if (contentRef.current) {
+      contentRef.current.focus();
+      try {
+        const range = document.createRange();
+        const sel = window.getSelection();
+        range.selectNodeContents(contentRef.current);
+        range.collapse(false);
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+      } catch (e) {
+        // Ignore
+      }
     }
   }, [currentNoteId]);
 
@@ -199,20 +215,21 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     }
   }, [currentNoteId, title, body, tags, color, showToast]);
 
-  // Auto-save every 10 seconds
+  // Auto-save throttling
   useEffect(() => {
-    const timer = setInterval(() => {
-      const hasChanges = 
-        title !== lastSavedData.title || 
-        body !== lastSavedData.body || 
-        tags !== lastSavedData.tags || 
-        color !== lastSavedData.color;
+    const hasChanges = 
+      title !== lastSavedData.title || 
+      body !== lastSavedData.body || 
+      tags !== lastSavedData.tags || 
+      color !== lastSavedData.color;
 
-      if (title.trim() && hasChanges) {
-        handleSave();
-      }
-    }, 10000);
-    return () => clearInterval(timer);
+    if (!title.trim() || !hasChanges) return;
+
+    const timer = setTimeout(() => {
+      handleSave();
+    }, 1500); // Auto-save after 1.5s of inactivity
+    
+    return () => clearTimeout(timer);
   }, [handleSave, title, body, tags, color, lastSavedData]);
 
   const handleDeleteClick = () => {
@@ -650,6 +667,12 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
             <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1" />
             <ToolbarButton icon={<Bold className="w-4 h-4" />} onClick={() => handleFormat('bold')} title="Bold" isActive={activeFormats.bold} />
             <ToolbarButton icon={<Italic className="w-4 h-4" />} onClick={() => handleFormat('italic')} title="Italic" isActive={activeFormats.italic} />
+            <ToolbarButton icon={<Underline className="w-4 h-4" />} onClick={() => handleFormat('underline')} title="Underline" isActive={activeFormats.underline} />
+            <ToolbarButton icon={<Strikethrough className="w-4 h-4" />} onClick={() => handleFormat('strikeThrough')} title="Strikethrough" isActive={activeFormats.strikeThrough} />
+            <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1" />
+            <ToolbarButton icon={<Code className="w-4 h-4" />} onClick={() => toggleBlock('PRE', 'PRE')} title="Code Block" />
+            <ToolbarButton icon={<Highlighter className="w-4 h-4" />} onClick={() => handleFormat('hiliteColor', '#fcd34d')} title="Highlight" />
+            <ToolbarButton icon={<Eraser className="w-4 h-4" />} onClick={() => handleFormat('removeFormat')} title="Clear Formatting" />
             <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1" />
             <ToolbarButton icon={<Heading1 className="w-4 h-4" />} onClick={() => toggleBlock('H1', 'H1')} title="Heading" />
             <ToolbarButton icon={<Quote className="w-4 h-4" />} onClick={() => toggleBlock('BLOCKQUOTE', 'BLOCKQUOTE')} title="Quote" />
