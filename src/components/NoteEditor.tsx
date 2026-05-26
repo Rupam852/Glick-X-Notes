@@ -3,7 +3,7 @@ import { collection, doc, setDoc, deleteDoc, serverTimestamp, Timestamp, getDocs
 import { User as FirebaseUser } from 'firebase/auth';
 import { db, auth, handleFirestoreError, OperationType } from '../firebase';
 import { Note, Attachment } from '../types';
-import { ArrowLeft, Save, Trash2, Paperclip, X, Download, FileText, Image as ImageIcon, Plus, Tag, Palette, Check, Loader2, Bold, Italic, List, ListOrdered, Link, Heading1, Quote, Undo, Redo, UploadCloud, Sparkles, ChevronDown, Underline, Strikethrough, Code, Highlighter, Eraser } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, Paperclip, X, Download, FileText, Image as ImageIcon, Plus, Tag, Palette, Check, Loader2, Bold, Italic, List, ListOrdered, Link, Heading1, Quote, Undo, Redo, UploadCloud, Sparkles, ChevronDown, Underline, Strikethrough, Code, Highlighter, Eraser, CornerDownLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useToast } from '../contexts/ToastContext';
 import { format } from 'date-fns';
@@ -159,6 +159,76 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     if (contentRef.current) {
       setBody(contentRef.current.innerHTML);
       contentRef.current.focus();
+    }
+  };
+
+  const insertParagraphBelow = () => {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+    
+    let node: Node | null = selection.anchorNode;
+    let blockNode: Node | null = null;
+    
+    while (node && node !== contentRef.current) {
+      if (node.nodeName === 'PRE' || node.nodeName === 'BLOCKQUOTE' || node.nodeName === 'DIV' || node.nodeName === 'P' || node.nodeName === 'UL' || node.nodeName === 'OL') {
+        blockNode = node;
+        break;
+      }
+      node = node.parentNode;
+    }
+    
+    const p = document.createElement('p');
+    p.innerHTML = '<br>';
+    
+    if (blockNode && blockNode.parentNode) {
+      if (blockNode.nextSibling) {
+        blockNode.parentNode.insertBefore(p, blockNode.nextSibling);
+      } else {
+        blockNode.parentNode.appendChild(p);
+      }
+    } else if (contentRef.current) {
+      contentRef.current.appendChild(p);
+    }
+    
+    // Move cursor to the new paragraph
+    const range = document.createRange();
+    range.setStart(p, 0);
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    
+    if (contentRef.current) {
+      setBody(contentRef.current.innerHTML);
+      contentRef.current.focus();
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter') {
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0) return;
+      
+      let node: Node | null = selection.anchorNode;
+      let isPre = false;
+      let isBlockquote = false;
+      
+      while (node && node !== contentRef.current) {
+        if (node.nodeName === 'PRE') isPre = true;
+        if (node.nodeName === 'BLOCKQUOTE') isBlockquote = true;
+        if (isPre || isBlockquote) break;
+        node = node.parentNode;
+      }
+
+      if ((isPre || isBlockquote) && e.shiftKey) {
+        e.preventDefault();
+        // Break out by formatting as paragraph
+        document.execCommand('insertParagraph', false);
+        document.execCommand('formatBlock', false, 'P');
+      } else if (isPre && !e.shiftKey) {
+        // Normal enter in PRE should insert newline
+        e.preventDefault();
+        document.execCommand('insertText', false, '\n');
+      }
     }
   };
 
@@ -671,6 +741,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
             <ToolbarButton icon={<Strikethrough className="w-4 h-4" />} onClick={() => handleFormat('strikeThrough')} title="Strikethrough" isActive={activeFormats.strikeThrough} />
             <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1" />
             <ToolbarButton icon={<Code className="w-4 h-4" />} onClick={() => toggleBlock('PRE', 'PRE')} title="Code Block" />
+            <ToolbarButton icon={<CornerDownLeft className="w-4 h-4 text-indigo-500" />} onClick={insertParagraphBelow} title="Exit Code Block / Add Line Below" />
             <ToolbarButton icon={<Highlighter className="w-4 h-4" />} onClick={() => handleFormat('hiliteColor', '#fcd34d')} title="Highlight" />
             <ToolbarButton icon={<Eraser className="w-4 h-4" />} onClick={() => handleFormat('removeFormat')} title="Clear Formatting" />
             <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1" />
@@ -700,6 +771,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
             ref={contentRef}
             contentEditable
             onInput={handleInput}
+            onKeyDown={handleKeyDown}
             onKeyUp={updateFormatState}
             onMouseUp={updateFormatState}
             className={`editor-content w-full flex-1 min-h-[500px] lg:min-h-0 p-6 md:p-12 bg-transparent border-none outline-none text-lg text-slate-700 dark:text-slate-350 leading-relaxed overflow-y-auto ${
