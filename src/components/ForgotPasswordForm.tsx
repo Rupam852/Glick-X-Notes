@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { auth } from '../firebase';
+import { auth, db } from '../firebase';
 import { sendPasswordResetEmail } from 'firebase/auth';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { Mail, ArrowRight, AlertCircle, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { motion } from 'motion/react';
 
@@ -20,11 +21,29 @@ export default function ForgotPasswordForm({ onBackToLogin }: ForgotPasswordForm
     setError(null);
     setSuccess(false);
 
+    const formattedEmail = email.trim().toLowerCase();
+
     try {
-      await sendPasswordResetEmail(auth, email);
+      // 1. Verify if email exists in the users collection first
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where('email', '==', formattedEmail));
+      const querySnapshot = await getDocs(q);
+      
+      if (querySnapshot.empty) {
+        setError('This email is not registered with our app. Please sign up first.');
+        setLoading(false);
+        return;
+      }
+
+      // 2. Send password reset email
+      await sendPasswordResetEmail(auth, formattedEmail);
       setSuccess(true);
     } catch (err: any) {
-      setError(err.message || 'Failed to send reset email');
+      if (err.code === 'auth/invalid-email') {
+        setError('Invalid email format. Please check your spelling.');
+      } else {
+        setError(err.message || 'Failed to send reset email. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
