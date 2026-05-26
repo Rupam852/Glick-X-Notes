@@ -190,10 +190,7 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
               <Zap className="w-4 h-4 text-amber-600 dark:text-amber-400" />
               Reactive Firebase DB
             </div>
-            <div className="flex items-center gap-2 px-4 py-2 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/30 rounded-xl shadow-sm shadow-indigo-100/10">
-              <Cloud className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-              Offline Auto-Sync
-            </div>
+
           </motion.div>
         </div>
 
