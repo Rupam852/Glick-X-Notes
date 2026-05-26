@@ -91,8 +91,8 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-white/70 dark:bg-slate-950/70 border-b border-slate-200/50 dark:border-slate-800/40 transition-colors">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-500/30 flex items-center justify-center">
-              <Shield className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 bg-slate-950 rounded-xl flex items-center justify-center shadow-lg border border-slate-800/80 overflow-hidden">
+              <img src="/favicon.png" alt="Logo" className="w-full h-full object-cover" />
             </div>
             <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-indigo-600 via-violet-600 to-pink-600 dark:from-indigo-400 dark:via-violet-400 dark:to-pink-400 bg-clip-text text-transparent">
               Glick X Notes
@@ -451,8 +451,8 @@ service cloud.firestore {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                <div className="p-2 bg-indigo-600 rounded-lg text-white">
-                  <Shield className="w-5 h-5" />
+                <div className="w-8 h-8 bg-slate-950 rounded-lg flex items-center justify-center shadow-lg border border-slate-800/80 overflow-hidden">
+                  <img src="/favicon.png" alt="Logo" className="w-full h-full object-cover" />
                 </div>
                 <span className="text-lg font-bold tracking-tight bg-gradient-to-r from-indigo-600 to-pink-600 dark:from-indigo-400 dark:to-pink-400 bg-clip-text text-transparent">
                   Glick X Notes

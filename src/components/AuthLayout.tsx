@@ -1,6 +1,5 @@
 import { motion } from 'motion/react';
 import { ReactNode } from 'react';
-import { Shield } from 'lucide-react';
 
 interface AuthLayoutProps {
   children: ReactNode;
@@ -26,8 +25,8 @@ export default function AuthLayout({ children, title, subtitle }: AuthLayoutProp
       >
         <div className="p-8 md:p-10">
           <div className="flex justify-center mb-6">
-            <div className="p-3 bg-gradient-to-r from-indigo-500 to-pink-500 rounded-2xl shadow-lg shadow-indigo-500/20 flex items-center justify-center">
-              <Shield className="w-8 h-8 text-white animate-pulse" />
+            <div className="w-16 h-16 bg-slate-950 rounded-2xl flex items-center justify-center shadow-lg border border-slate-800/80 overflow-hidden">
+              <img src="/favicon.png" alt="Logo" className="w-full h-full object-cover" />
             </div>
           </div>
           
