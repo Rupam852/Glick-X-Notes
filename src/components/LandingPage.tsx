@@ -43,7 +43,7 @@ import {
   Link,
   Tag
 } from 'lucide-react';
-import { useTheme } from '../contexts/ThemeContext';
+
 
 interface LandingPageProps {
   onLogin: () => void;
@@ -51,7 +51,6 @@ interface LandingPageProps {
 }
 
 export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
-  const { theme, toggleTheme } = useTheme();
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
 
 
@@ -107,14 +106,7 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
           </nav>
 
           <div className="flex items-center gap-4">
-            {/* Theme Toggle */}
-            <button 
-              onClick={toggleTheme}
-              className="p-2.5 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-xl text-slate-600 dark:text-slate-300 transition-all cursor-pointer"
-              title="Toggle theme"
-            >
-              {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-            </button>
+
 
             {/* Auth CTAs */}
             <button 
