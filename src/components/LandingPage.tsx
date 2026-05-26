@@ -265,20 +265,7 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
             <div className="text-xs font-semibold text-slate-500 font-mono tracking-wide">
               Glick X Notes • Secure Personal Vault
             </div>
-            <div className="flex items-center gap-2">
-              {/* Mockup customizer */}
-              <span className="text-[10px] uppercase font-bold text-slate-500 hidden sm:inline">Theme Color:</span>
-              <div className="flex gap-1">
-                {['#6366f1', '#ec4899', '#10b981', '#f59e0b'].map((color) => (
-                  <button
-                    key={color}
-                    onClick={() => setMockupColor(color)}
-                    style={{ backgroundColor: color }}
-                    className={`w-4 h-4 rounded-full border cursor-pointer transition-all ${mockupColor === color ? 'border-white scale-125' : 'border-transparent hover:scale-110'}`}
-                  />
-                ))}
-              </div>
-            </div>
+            <div className="w-[58px]" />
           </div>
 
           <div className={`grid grid-cols-1 md:grid-cols-4 min-h-[500px] text-left transition-colors duration-300 ${mockupTheme === 'dark' ? 'bg-slate-950 text-white' : 'bg-white text-slate-900'}`}>
