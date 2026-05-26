@@ -417,32 +417,54 @@ service cloud.firestore {
       </section>
 
       {/* CTA Final Banner */}
-      <section className="py-20 px-6 max-w-7xl mx-auto relative text-center">
-        <div className="bg-gradient-to-br from-indigo-900 via-indigo-950 to-slate-950 rounded-3xl p-8 md:p-16 border border-indigo-800 shadow-2xl relative overflow-hidden space-y-6">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(99,102,241,0.15),transparent)] pointer-events-none" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(236,72,153,0.1),transparent)] pointer-events-none" />
+      <section className="py-24 px-6 max-w-7xl mx-auto relative text-center">
+        {/* Colorful background border glow */}
+        <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-pink-500/20 rounded-[2.5rem] blur-2xl opacity-60 pointer-events-none" />
+        
+        <div className="relative bg-slate-950 border border-slate-800/80 rounded-[2.5rem] p-10 md:p-20 overflow-hidden space-y-8 shadow-[0_0_50px_-12px_rgba(99,102,241,0.35)]">
+          {/* Animated decorative fluid background blobs */}
+          <div className="absolute top-0 -left-20 w-80 h-80 bg-indigo-500/10 rounded-full blur-[100px] pointer-events-none animate-pulse duration-[8s]" />
+          <div className="absolute bottom-0 -right-20 w-80 h-80 bg-pink-500/10 rounded-full blur-[100px] pointer-events-none animate-pulse duration-[10s]" />
           
-          <span className="text-xs uppercase font-extrabold tracking-widest text-indigo-400">Get Started Today</span>
-          <h3 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight leading-[1.1]">
-            Ready to secure your digital notes?
-          </h3>
-          <p className="text-slate-400 max-w-xl mx-auto text-sm md:text-base leading-relaxed">
-            Create your account today, import raw attachments, and experience zero-latency React sync under robust security schemas.
-          </p>
+          {/* Grid pattern overlay */}
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
+          
+          <div className="space-y-4 relative z-10">
+            <motion.span 
+              initial={{ opacity: 0, scale: 0.9 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              className="inline-flex items-center gap-2 px-4 py-1.5 bg-indigo-950/40 border border-indigo-900/60 rounded-full text-xs font-extrabold tracking-widest text-indigo-400 uppercase"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              Get Started Today
+            </motion.span>
+            
+            <h3 className="text-4xl md:text-6xl font-black text-white tracking-tight leading-[1.05] max-w-3xl mx-auto">
+              Ready to secure your <br />
+              <span className="bg-gradient-to-r from-indigo-400 via-violet-400 to-pink-400 bg-clip-text text-transparent">
+                digital thoughts & notes?
+              </span>
+            </h3>
+            
+            <p className="text-slate-400 max-w-xl mx-auto text-sm md:text-base font-normal leading-relaxed">
+              Create your free secure account today, attach files directly, and experience real-time sync with robust Firestore rules and zero ads.
+            </p>
+          </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-5 pt-4 relative z-10">
             <button
               onClick={onSignup}
-              className="w-full sm:w-auto px-8 py-4 bg-white text-indigo-950 font-bold rounded-xl shadow-lg hover:shadow-xl hover:bg-slate-50 transition-all text-base cursor-pointer"
+              className="w-full sm:w-auto px-10 py-4 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-extrabold rounded-2xl shadow-xl shadow-indigo-600/30 hover:shadow-2xl hover:shadow-indigo-600/50 hover:-translate-y-0.5 transition-all text-base cursor-pointer"
             >
               Sign Up Free Account
             </button>
             <button
               onClick={onLogin}
-              className="w-full sm:w-auto px-8 py-4 bg-indigo-900/30 text-white border border-indigo-700/50 font-bold rounded-xl hover:bg-indigo-900/50 transition-all text-base cursor-pointer flex items-center justify-center gap-1.5"
+              className="w-full sm:w-auto px-10 py-4 bg-slate-900/80 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-700 font-extrabold rounded-2xl hover:-translate-y-0.5 transition-all text-base cursor-pointer flex items-center justify-center gap-2"
             >
               Access Vault
-              <ArrowRight className="w-4.5 h-4.5" />
+              <ArrowRight className="w-5 h-5 transition-transform" />
             </button>
           </div>
         </div>
