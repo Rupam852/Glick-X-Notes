@@ -16,6 +16,17 @@
 .dark .editor-content a { color: #818cf8; }
 .dark .editor-content pre { background: #1e293b; color: #e2e8f0; }
 
+/* Force clean text coloring inside contenteditable editor */
+.editor-content {
+  color: #334155; /* slate-700 */
+}
+.dark .editor-content {
+  color: #e2e8f0 !important; /* slate-200 */
+}
+.editor-content div, .editor-content p, .editor-content span {
+  color: inherit;
+}
+
 /* Dynamic Dark Mode Autofill Styles Override */
 input:-webkit-autofill,
 input:-webkit-autofill:hover, 
