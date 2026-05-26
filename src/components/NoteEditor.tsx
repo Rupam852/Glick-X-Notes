@@ -3,7 +3,7 @@ import { collection, doc, setDoc, deleteDoc, serverTimestamp, Timestamp, getDocs
 import { User as FirebaseUser } from 'firebase/auth';
 import { db, auth, handleFirestoreError, OperationType } from '../firebase';
 import { Note, Attachment } from '../types';
-import { ArrowLeft, Save, Trash2, Paperclip, X, Download, FileText, Image as ImageIcon, Plus, Tag, Palette, Check, Loader2, Bold, Italic, List, ListOrdered, Link, Heading1, Quote, Undo, Redo, UploadCloud } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, Paperclip, X, Download, FileText, Image as ImageIcon, Plus, Tag, Palette, Check, Loader2, Bold, Italic, List, ListOrdered, Link, Heading1, Quote, Undo, Redo, UploadCloud, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useToast } from '../contexts/ToastContext';
 import { format } from 'date-fns';
@@ -50,6 +50,8 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [viewingAttachment, setViewingAttachment] = useState<Attachment | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [activeFont, setActiveFont] = useState<'sans' | 'serif' | 'mono'>('sans');
+  const [focusMode, setFocusMode] = useState(false);
 
   const updateFormatState = () => {
     setActiveFormats({
@@ -319,6 +321,10 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     link.click();
   };
 
+  const textContent = body.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim();
+  const wordCount = textContent ? textContent.split(/\s+/).filter(w => w).length : 0;
+  const charCount = textContent.length;
+
   return (
     <div 
       className="min-h-screen bg-white dark:bg-slate-900 flex flex-col relative"
@@ -423,31 +429,62 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
       </AnimatePresence>
 
       {/* Toolbar */}
-      <div className="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 px-4 py-3 flex items-center justify-between">
+      <div className="sticky top-0 z-30 bg-slate-950/80 backdrop-blur-md border-b border-slate-900 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <button onClick={onBack} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-all cursor-pointer text-slate-600 dark:text-slate-400">
+          <button onClick={onBack} className="p-2 hover:bg-slate-900 rounded-lg transition-all cursor-pointer text-slate-400 hover:text-white">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <div className="flex items-center gap-2">
+          
+          {/* Breathing Auto-Save Pulse Indicator */}
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-900/60 border border-slate-850 rounded-full select-none shrink-0 shadow-md">
             {saving ? (
-              <div className="flex items-center gap-2 text-xs font-medium text-slate-400">
-                <Loader2 className="w-3 h-3 animate-spin" />
+              <div className="flex items-center gap-1.5 text-[9px] font-bold text-indigo-400 uppercase tracking-widest">
+                <span className="w-2 h-2 bg-indigo-500 rounded-full animate-ping" />
                 Saving...
               </div>
             ) : lastSaved ? (
-              <div className="text-[10px] font-bold text-green-500 uppercase tracking-widest">
-                Saved {format(lastSaved, 'HH:mm:ss')}
+              <div className="flex items-center gap-1.5 text-[9px] font-bold text-emerald-400 uppercase tracking-widest">
+                <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                Cloud Synced
               </div>
-            ) : null}
+            ) : (
+              <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-500 uppercase tracking-widest">
+                <span className="w-2 h-2 bg-slate-600 rounded-full" />
+                Draft Offline
+              </div>
+            )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+
+        <div className="flex items-center gap-3">
+          {/* Premium Font Switcher */}
+          <select
+            value={activeFont}
+            onChange={(e) => setActiveFont(e.target.value as any)}
+            className="bg-slate-900 border border-slate-800 text-slate-300 rounded-xl px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider outline-none focus:ring-1 focus:ring-indigo-500/40 cursor-pointer transition-all duration-200"
+          >
+            <option value="sans">Outfit Sans</option>
+            <option value="serif">Playfair Serif</option>
+            <option value="mono">Fira Mono</option>
+          </select>
+
+          {/* Full-Screen Focus Mode Switcher */}
+          <button
+            onClick={() => setFocusMode(prev => !prev)}
+            className={`p-2 rounded-xl border transition-all cursor-pointer text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 ${focusMode ? 'bg-indigo-600 border-indigo-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.25)]' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'}`}
+            title={focusMode ? "Exit Focus Mode" : "Enter Focus Mode"}
+          >
+            <Sparkles className="w-4 h-4 text-indigo-400" />
+            {focusMode ? "Focused" : "Focus"}
+          </button>
+
           {currentNoteId && (
-            <button onClick={handleDeleteClick} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all cursor-pointer">
+            <button onClick={handleDeleteClick} className="p-2 text-red-400 hover:bg-red-950/20 rounded-xl transition-all cursor-pointer">
               <Trash2 className="w-5 h-5" />
             </button>
           )}
-          <button onClick={handleSave} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 transition-all cursor-pointer text-sm">
+
+          <button onClick={handleSave} className="bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-all cursor-pointer text-xs uppercase tracking-wider">
             <Save className="w-4 h-4" />
             Save
           </button>
@@ -456,104 +493,106 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
 
       <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
         {/* Left Pane: Metadata */}
-        <div className="w-full lg:w-80 lg:border-r border-slate-100 dark:border-slate-800 overflow-y-auto p-6 space-y-8 bg-slate-50/50 dark:bg-slate-900/50">
-          {/* Title */}
-          <div className="space-y-4">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Title</label>
-            <input
-              type="text"
-              placeholder="Note Title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full text-2xl font-bold bg-transparent border-none outline-none text-slate-900 dark:text-white placeholder:text-slate-200 dark:placeholder:text-slate-700"
-            />
-          </div>
-
-          {/* Color Picker */}
-          <div className="space-y-4">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Theme Color</label>
-            <div className="flex flex-wrap gap-2">
-              {COLORS.map(c => (
-                <button
-                  key={c.value}
-                  onClick={() => setColor(c.value)}
-                  className={`w-7 h-7 rounded-full border-2 transition-all cursor-pointer flex items-center justify-center ${color === c.value ? 'border-slate-900 dark:border-white scale-110' : 'border-transparent opacity-50 hover:opacity-100'}`}
-                  style={{ backgroundColor: c.value }}
-                >
-                  {color === c.value && <Check className="w-3 h-3 text-white" />}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Tags */}
-          <div className="space-y-4">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tags</label>
-            <div className="flex items-center gap-3 text-slate-400 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-3 rounded-xl">
-              <Tag className="w-4 h-4" />
+        {!focusMode && (
+          <div className="w-full lg:w-80 lg:border-r border-slate-100 dark:border-slate-800 overflow-y-auto p-6 space-y-8 bg-slate-50/50 dark:bg-slate-900/50">
+            {/* Title */}
+            <div className="space-y-4">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Title</label>
               <input
                 type="text"
-                placeholder="Add tags..."
-                value={tags}
-                onChange={(e) => setTags(e.target.value)}
-                className="flex-1 bg-transparent border-none outline-none text-xs text-slate-700 dark:text-slate-300"
+                placeholder="Note Title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full text-2xl font-bold bg-transparent border-none outline-none text-slate-900 dark:text-white placeholder:text-slate-200 dark:placeholder:text-slate-700"
               />
             </div>
-          </div>
 
-          {/* Attachments Section */}
-          <div className="space-y-4 pt-8 border-t border-slate-100 dark:border-slate-800">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Paperclip className="w-4 h-4" />
-                Files
-              </h3>
-              <label className="bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 p-2 rounded-lg text-slate-600 dark:text-slate-400 transition-all cursor-pointer border border-slate-100 dark:border-slate-700">
-                <Plus className="w-4 h-4" />
-                <input type="file" multiple className="hidden" onChange={handleFileUpload} />
-              </label>
-            </div>
-
-            {!currentNoteId && (
-              <p className="text-[10px] text-slate-400 italic">Adding a file will auto-save the note.</p>
-            )}
-
-            <div className="space-y-2">
-              <AnimatePresence>
-                {attachments.map(file => (
-                  <motion.div
-                    key={file.id}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -10 }}
-                    onClick={() => setViewingAttachment(file)}
-                    className="group relative bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl p-3 flex items-center gap-3 cursor-pointer hover:border-indigo-200 dark:hover:border-indigo-900 transition-all"
+            {/* Color Picker */}
+            <div className="space-y-4">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Theme Color</label>
+              <div className="flex flex-wrap gap-2">
+                {COLORS.map(c => (
+                  <button
+                    key={c.value}
+                    onClick={() => setColor(c.value)}
+                    className={`w-7 h-7 rounded-full border-2 transition-all cursor-pointer flex items-center justify-center ${color === c.value ? 'border-slate-900 dark:border-white scale-110' : 'border-transparent opacity-50 hover:opacity-100'}`}
+                    style={{ backgroundColor: c.value }}
                   >
-                    <div className="w-8 h-8 bg-slate-50 dark:bg-slate-900 rounded-lg flex items-center justify-center border border-slate-100 dark:border-slate-800 overflow-hidden flex-shrink-0">
-                      {file.type.startsWith('image/') ? (
-                        <img src={file.data} alt={file.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <FileText className="w-4 h-4 text-slate-400" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[11px] font-bold text-slate-900 dark:text-white truncate">{file.name}</p>
-                      <p className="text-[9px] text-slate-400 uppercase tracking-widest">{(file.size / 1024).toFixed(1)} KB</p>
-                    </div>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                      <button onClick={(e) => { e.stopPropagation(); downloadAttachment(file); }} className="p-1.5 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-400 cursor-pointer">
-                        <Download className="w-3.5 h-3.5" />
-                      </button>
-                      <button onClick={(e) => { e.stopPropagation(); deleteAttachment(file.id); }} className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-red-500 cursor-pointer">
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </motion.div>
+                    {color === c.value && <Check className="w-3 h-3 text-white" />}
+                  </button>
                 ))}
-              </AnimatePresence>
+              </div>
+            </div>
+
+            {/* Tags */}
+            <div className="space-y-4">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tags</label>
+              <div className="flex items-center gap-3 text-slate-400 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-3 rounded-xl">
+                <Tag className="w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="Add tags..."
+                  value={tags}
+                  onChange={(e) => setTags(e.target.value)}
+                  className="flex-1 bg-transparent border-none outline-none text-xs text-slate-700 dark:text-slate-300"
+                />
+              </div>
+            </div>
+
+            {/* Attachments Section */}
+            <div className="space-y-4 pt-8 border-t border-slate-100 dark:border-slate-800">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Paperclip className="w-4 h-4" />
+                  Files
+                </h3>
+                <label className="bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 p-2 rounded-lg text-slate-600 dark:text-slate-400 transition-all cursor-pointer border border-slate-100 dark:border-slate-700">
+                  <Plus className="w-4 h-4" />
+                  <input type="file" multiple className="hidden" onChange={handleFileUpload} />
+                </label>
+              </div>
+
+              {!currentNoteId && (
+                <p className="text-[10px] text-slate-400 italic">Adding a file will auto-save the note.</p>
+              )}
+
+              <div className="space-y-2">
+                <AnimatePresence>
+                  {attachments.map(file => (
+                    <motion.div
+                      key={file.id}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -10 }}
+                      onClick={() => setViewingAttachment(file)}
+                      className="group relative bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl p-3 flex items-center gap-3 cursor-pointer hover:border-indigo-200 dark:hover:border-indigo-900 transition-all"
+                    >
+                      <div className="w-8 h-8 bg-slate-50 dark:bg-slate-900 rounded-lg flex items-center justify-center border border-slate-100 dark:border-slate-800 overflow-hidden flex-shrink-0">
+                        {file.type.startsWith('image/') ? (
+                          <img src={file.data} alt={file.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <FileText className="w-4 h-4 text-slate-400" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] font-bold text-slate-900 dark:text-white truncate">{file.name}</p>
+                        <p className="text-[9px] text-slate-400 uppercase tracking-widest">{(file.size / 1024).toFixed(1)} KB</p>
+                      </div>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                        <button onClick={(e) => { e.stopPropagation(); downloadAttachment(file); }} className="p-1.5 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-400 cursor-pointer">
+                          <Download className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); deleteAttachment(file.id); }} className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-red-500 cursor-pointer">
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Right Pane: Content */}
         <div className="flex-1 flex flex-col overflow-y-auto bg-white dark:bg-slate-900 border-l border-transparent">
@@ -577,15 +616,38 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
             }} title="Link" />
           </div>
 
+          {focusMode && (
+            <input
+              type="text"
+              placeholder="Untitled Node..."
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="px-12 pt-12 text-3.5xl font-black bg-transparent border-none outline-none text-slate-900 dark:text-white placeholder:text-slate-700"
+            />
+          )}
+
           <div
             ref={contentRef}
             contentEditable
             onInput={handleInput}
             onKeyUp={updateFormatState}
             onMouseUp={updateFormatState}
-            className="editor-content w-full flex-1 min-h-[500px] lg:min-h-0 p-6 md:p-12 bg-transparent border-none outline-none text-lg text-slate-700 dark:text-slate-300 leading-relaxed font-sans overflow-y-auto"
+            className={`editor-content w-full flex-1 min-h-[500px] lg:min-h-0 p-6 md:p-12 bg-transparent border-none outline-none text-lg text-slate-700 dark:text-slate-350 leading-relaxed overflow-y-auto ${
+              activeFont === 'sans' ? 'font-sans' : activeFont === 'serif' ? 'font-serif font-medium tracking-wide' : 'font-mono text-base'
+            }`}
             style={{ minHeight: '500px' }}
           />
+
+          {/* Word and Character Counter Footer */}
+          <div className="bg-slate-950/40 border-t border-slate-900 px-6 py-2.5 flex items-center justify-between text-[9px] font-bold text-slate-500 uppercase tracking-widest select-none shrink-0">
+            <div className="flex items-center gap-4">
+              <span>Words: <span className="text-indigo-400 font-black">{wordCount}</span></span>
+              <span>Characters: <span className="text-indigo-400 font-black">{charCount}</span></span>
+            </div>
+            {lastSaved && (
+              <span>Synced at {format(lastSaved, 'HH:mm:ss')}</span>
+            )}
+          </div>
         </div>
       </div>
 

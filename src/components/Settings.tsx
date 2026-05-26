@@ -2,39 +2,65 @@ import React, { useState, useEffect } from 'react';
 import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import { doc, getDoc, setDoc, serverTimestamp, collection, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { User as FirebaseUser } from 'firebase/auth';
-import { User as UserIcon, Mail, Shield, Copy, Check, LogOut, Trash2, Camera, Moon, Sun, Loader2 } from 'lucide-react';
+import { User as UserIcon, Mail, Copy, Check, LogOut, Trash2, Camera, Loader2, Sparkles, BookOpen, PenTool, Calendar } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function Settings({ user }: { user: FirebaseUser }) {
-
   const { showToast } = useToast();
   const [copied, setCopied] = useState(false);
   const [userData, setUserData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  
+  // Stats state
+  const [stats, setStats] = useState({ totalNotes: 0, totalWords: 0, activeDays: 1 });
+
+  // Confirmation States
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
   const [showDeleteAccountConfirm, setShowDeleteAccountConfirm] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [confirmDeleteText, setConfirmDeleteText] = useState('');
 
   useEffect(() => {
     if (!user) return;
 
-    const fetchUserData = async () => {
+    const fetchUserDataAndStats = async () => {
       try {
+        // 1. Fetch Profile Data
         const userDoc = await getDoc(doc(db, 'users', user.uid));
         if (userDoc.exists()) {
           setUserData(userDoc.data());
         }
+
+        // 2. Compute Intelligent Statistics
+        const notesQuery = query(collection(db, 'notes'), where('userId', '==', user.uid));
+        const notesSnapshot = await getDocs(notesQuery);
+        
+        let words = 0;
+        notesSnapshot.docs.forEach(d => {
+          const bodyText = (d.data().body || '').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim();
+          words += bodyText ? bodyText.split(/\s+/).filter(w => w).length : 0;
+        });
+
+        const creationTime = user.metadata.creationTime ? new Date(user.metadata.creationTime) : new Date();
+        const activeDays = Math.max(1, Math.ceil((Date.now() - creationTime.getTime()) / (1024 * 60 * 60 * 24)));
+
+        setStats({
+          totalNotes: notesSnapshot.size,
+          totalWords: words,
+          activeDays
+        });
+
       } catch (error) {
-        console.error('Error fetching user data:', error);
+        console.error('Error fetching settings data:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchUserData();
+    fetchUserDataAndStats();
   }, [user?.uid]);
 
   const copyId = () => {
@@ -93,28 +119,19 @@ export default function Settings({ user }: { user: FirebaseUser }) {
         return;
       }
 
-      // Delete notes one by one to ensure sub-collections are also cleaned up
-      // Note: For very large amounts of data, a cloud function would be better
       for (const noteDoc of notesSnapshot.docs) {
         const noteId = noteDoc.id;
-        
-        // 1. Get all attachments for this note
         const attachmentsQuery = collection(db, `notes/${noteId}/attachments`);
         const attachmentsSnapshot = await getDocs(attachmentsQuery);
-        
         const batch = writeBatch(db);
-        
-        // 2. Add attachments to batch deletion
         attachmentsSnapshot.docs.forEach((attachmentDoc) => {
           batch.delete(attachmentDoc.ref);
         });
-        
-        // 3. Add the note itself to batch deletion
         batch.delete(noteDoc.ref);
-        
         await batch.commit();
       }
 
+      setStats(prev => ({ ...prev, totalNotes: 0, totalWords: 0 }));
       showToast('All notes have been successfully deleted', 'success');
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, 'notes/multiple');
@@ -125,10 +142,16 @@ export default function Settings({ user }: { user: FirebaseUser }) {
   };
 
   const handleDeleteAccountClick = () => {
+    setConfirmDeleteText('');
     setShowDeleteAccountConfirm(true);
   };
 
   const handleDeleteAccountConfirm = async () => {
+    if (confirmDeleteText !== 'DELETE MY ACCOUNT') {
+      showToast('Please type the confirmation text exactly to proceed', 'error');
+      return;
+    }
+
     setShowDeleteAccountConfirm(false);
     if (!user) return;
 
@@ -159,9 +182,8 @@ export default function Settings({ user }: { user: FirebaseUser }) {
         await batch.commit();
       }
 
-      // 3. Delete the registered user from Firebase Auth
+      // 3. Delete user from Auth
       await user.delete();
-      
       showToast('Your account and all associated data have been permanently deleted.', 'success');
     } catch (error: any) {
       console.error('Error deleting account:', error);
@@ -177,90 +199,136 @@ export default function Settings({ user }: { user: FirebaseUser }) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+      <div className="flex items-center justify-center py-20 select-none">
+        <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-8">
-      <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Settings</h1>
+    <div className="p-6 max-w-4xl mx-auto space-y-8 select-none">
+      <div className="flex items-center gap-2">
+        <Sparkles className="w-6 h-6 text-indigo-400 animate-pulse" />
+        <h1 className="text-3xl font-black bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
+          Workspace Settings
+        </h1>
+      </div>
 
-      <div className="space-y-6">
-        {/* Profile Card */}
-        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 space-y-6">
-          <div className="flex flex-col sm:flex-row items-center gap-6">
-            <div className="relative">
-              <div className="w-24 h-24 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center text-indigo-600 dark:text-indigo-400 overflow-hidden border-4 border-white dark:border-slate-700 shadow-lg">
-                {userData?.photoURL ? (
-                  <img src={userData.photoURL} alt="Profile" className="w-full h-full object-cover" />
-                ) : (
-                  <UserIcon className="w-12 h-12" />
-                )}
-              </div>
-              <label className="absolute bottom-0 right-0 p-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-lg cursor-pointer transition-all">
-                {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
-                <input type="file" className="hidden" accept="image/*" onChange={handlePhotoUpload} disabled={uploading} />
-              </label>
+      {/* 📊 Premium Intelligent Stats Dashboard */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="relative overflow-hidden bg-slate-900/25 border border-slate-850 rounded-2xl p-6 shadow-md">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/5 rounded-full blur-2xl" />
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-indigo-950/40 border border-indigo-900/40 rounded-xl text-indigo-400">
+              <BookOpen className="w-5 h-5" />
             </div>
-            <div className="text-center sm:text-left">
-              <h3 className="text-2xl font-bold text-slate-900 dark:text-white">{userData?.displayName || 'AuthHub User'}</h3>
-              <p className="text-slate-500 dark:text-slate-400">{user?.email}</p>
-            </div>
-          </div>
-
-          <div className="space-y-4 pt-6 border-t border-slate-100 dark:border-slate-700">
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">User ID</label>
-              <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800">
-                <code className="text-xs text-slate-600 dark:text-slate-300 font-mono truncate mr-4">{user?.uid}</code>
-                <button onClick={copyId} className="text-slate-400 hover:text-indigo-600 transition-colors cursor-pointer">
-                  {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-                </button>
-              </div>
-              <p className="text-[10px] text-slate-400 mt-1 italic">Use this ID to access your data from any device.</p>
+            <div className="space-y-0.5">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Total Notes</p>
+              <h4 className="text-2xl font-black text-white">{stats.totalNotes}</h4>
             </div>
           </div>
         </div>
 
+        <div className="relative overflow-hidden bg-slate-900/25 border border-slate-850 rounded-2xl p-6 shadow-md">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-full blur-2xl" />
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-purple-950/40 border border-purple-900/40 rounded-xl text-purple-400">
+              <PenTool className="w-5 h-5" />
+            </div>
+            <div className="space-y-0.5">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Words Written</p>
+              <h4 className="text-2xl font-black text-white">{stats.totalWords}</h4>
+            </div>
+          </div>
+        </div>
 
-        {/* Account Actions */}
-        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 space-y-4">
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white">Account Actions</h3>
-          <div className="space-y-2">
-            <button onClick={() => auth.signOut()} className="w-full flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-xl transition-all cursor-pointer">
-              <div className="flex items-center gap-3 text-slate-700 dark:text-slate-300 font-semibold">
-                <LogOut className="w-5 h-5 text-slate-400" />
-                Sign Out
-              </div>
-              <Check className="w-4 h-4 text-slate-200" />
-            </button>
-            <button 
-              onClick={handleDeleteAllClick}
-              disabled={deleting}
-              className="w-full flex items-center justify-between p-4 bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-xl transition-all cursor-pointer text-red-600 dark:text-red-400 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <div className="flex items-center gap-3">
-                {deleting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}
-                {deleting ? 'Deleting Notes...' : 'Delete All Data'}
-              </div>
-            </button>
-            <button 
-              onClick={handleDeleteAccountClick}
-              disabled={deleting || deletingAccount}
-              className="w-full flex items-center justify-between p-4 bg-red-100/40 dark:bg-red-950/20 hover:bg-red-100/60 dark:hover:bg-red-950/40 rounded-xl transition-all cursor-pointer text-red-700 dark:text-red-400 font-bold border border-red-200/50 dark:border-red-900/30 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <div className="flex items-center gap-3">
-                {deletingAccount ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}
-                {deletingAccount ? 'Deleting Account...' : 'Delete Account'}
-              </div>
-            </button>
+        <div className="relative overflow-hidden bg-slate-900/25 border border-slate-850 rounded-2xl p-6 shadow-md">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-pink-500/5 rounded-full blur-2xl" />
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-pink-950/40 border border-pink-900/40 rounded-xl text-pink-400">
+              <Calendar className="w-5 h-5" />
+            </div>
+            <div className="space-y-0.5">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Days Active</p>
+              <h4 className="text-2xl font-black text-white">{stats.activeDays} days</h4>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Reusable Premium Delete All Confirmation Modal */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Profile Card & Info */}
+        <div className="md:col-span-2 space-y-6">
+          <div className="bg-slate-900/25 border border-slate-850 rounded-2xl p-6 space-y-6">
+            <div className="flex flex-col sm:flex-row items-center gap-6">
+              <div className="relative">
+                <div className="w-24 h-24 bg-indigo-950/40 border border-indigo-900/30 rounded-full flex items-center justify-center text-indigo-400 overflow-hidden shadow-lg">
+                  {userData?.photoURL ? (
+                    <img src={userData.photoURL} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    <UserIcon className="w-12 h-12" />
+                  )}
+                </div>
+                <label className="absolute bottom-0 right-0 p-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-lg cursor-pointer transition-all">
+                  {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
+                  <input type="file" className="hidden" accept="image/*" onChange={handlePhotoUpload} disabled={uploading} />
+                </label>
+              </div>
+              <div className="text-center sm:text-left space-y-1">
+                <h3 className="text-2xl font-black text-slate-100">{userData?.displayName || 'Glick User'}</h3>
+                <p className="text-slate-400 text-sm font-medium flex items-center gap-1.5 justify-center sm:justify-start">
+                  <Mail className="w-4 h-4 text-slate-500" />
+                  {user?.email}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3 pt-6 border-t border-slate-900">
+              <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Secure UID Key</label>
+              <div className="flex items-center justify-between p-3 bg-slate-950/60 rounded-xl border border-slate-850">
+                <code className="text-xs text-slate-300 font-mono truncate mr-4">{user?.uid}</code>
+                <button onClick={copyId} className="text-slate-400 hover:text-indigo-400 transition-colors cursor-pointer">
+                  {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Action Buttons Panel */}
+        <div className="bg-slate-900/25 border border-slate-850 rounded-2xl p-6 flex flex-col justify-between">
+          <div className="space-y-4">
+            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest">Workspace Core</h3>
+            
+            <div className="space-y-2">
+              <button onClick={() => auth.signOut()} className="w-full flex items-center gap-3 p-4 bg-slate-950/40 hover:bg-slate-900 border border-slate-850 rounded-xl transition-all cursor-pointer text-slate-300 font-bold text-xs uppercase tracking-wider">
+                <LogOut className="w-4 h-4 text-slate-500" />
+                Sign Out
+              </button>
+
+              <button 
+                onClick={handleDeleteAllClick}
+                disabled={deleting}
+                className="w-full flex items-center gap-3 p-4 bg-red-950/20 hover:bg-red-900/20 border border-red-900/30 rounded-xl transition-all cursor-pointer text-red-400 font-bold text-xs uppercase tracking-wider disabled:opacity-50"
+              >
+                {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                {deleting ? 'Purging data...' : 'Clear All Notes'}
+              </button>
+            </div>
+          </div>
+
+          <button 
+            onClick={handleDeleteAccountClick}
+            disabled={deleting || deletingAccount}
+            className="w-full flex items-center justify-center gap-2 mt-6 p-4 bg-red-600 hover:bg-red-500 text-white rounded-xl transition-all cursor-pointer text-xs font-bold uppercase tracking-wider shadow-lg shadow-red-600/10 disabled:opacity-50"
+          >
+            {deletingAccount ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+            Delete Account
+          </button>
+        </div>
+      </div>
+
+      {/* Delete All Notes Confirmation Modal */}
       <AnimatePresence>
         {showDeleteAllConfirm && (
           <motion.div
@@ -286,22 +354,22 @@ export default function Settings({ user }: { user: FirebaseUser }) {
               <div className="space-y-2">
                 <h3 className="text-xl font-bold text-white">Delete All Notes</h3>
                 <p className="text-slate-400 text-sm font-medium leading-relaxed">
-                  Are you sure you want to delete all your notes? This action cannot be undone.
+                  Are you sure you want to delete all notes inside this workspace? This action cannot be undone.
                 </p>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3 pt-2">
                 <button
                   onClick={() => setShowDeleteAllConfirm(false)}
-                  className="flex-1 bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 font-bold py-3 rounded-xl transition-all cursor-pointer text-sm"
+                  className="flex-1 bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-750 font-bold py-3 rounded-xl transition-all cursor-pointer text-sm"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleDeleteAllConfirm}
-                  className="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-xl shadow-lg shadow-red-600/10 hover:shadow-red-600/20 active:translate-y-0 transition-all cursor-pointer text-sm"
+                  className="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-xl shadow-lg transition-all cursor-pointer text-sm"
                 >
-                  Delete All
+                  Purge Notes
                 </button>
               </div>
             </motion.div>
@@ -309,7 +377,7 @@ export default function Settings({ user }: { user: FirebaseUser }) {
         )}
       </AnimatePresence>
 
-      {/* Reusable Premium Delete Account Confirmation Modal */}
+      {/* Reusable Double-Verification Deletion Modal */}
       <AnimatePresence>
         {showDeleteAccountConfirm && (
           <motion.div
@@ -324,33 +392,45 @@ export default function Settings({ user }: { user: FirebaseUser }) {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 15 }}
               onClick={(e) => e.stopPropagation()}
-              className="max-w-md w-full bg-slate-900 border border-slate-800 backdrop-blur-2xl rounded-3xl p-6 shadow-2xl space-y-6 text-center"
+              className="max-w-md w-full bg-slate-900 border border-red-900/20 backdrop-blur-2xl rounded-3xl p-6 shadow-2xl space-y-6"
             >
-              <div className="flex justify-center">
-                <div className="p-4 bg-red-950/40 border border-red-900/30 text-red-500 rounded-full animate-pulse">
-                  <Trash2 className="w-8 h-8 animate-bounce" />
+              <div className="flex justify-center text-center flex-col items-center space-y-2">
+                <div className="p-4 bg-red-950/40 border border-red-900/30 text-red-500 rounded-full animate-bounce">
+                  <Trash2 className="w-8 h-8" />
                 </div>
-              </div>
-              
-              <div className="space-y-2">
-                <h3 className="text-xl font-bold text-white">Delete Account Permanently</h3>
-                <p className="text-slate-400 text-sm font-medium leading-relaxed">
-                  Are you absolutely sure you want to delete your Glick X Notes account? This will permanently delete your profile, saved credentials, and all notes. This action is irreversible.
+                <h3 className="text-xl font-black text-white">Critical Security Verification</h3>
+                <p className="text-slate-400 text-xs font-medium leading-relaxed text-center">
+                  To permanently destroy your account and completely erase all cloud database directories, please verify this action by typing exactly the code string below:
                 </p>
+              </div>
+
+              <div className="bg-slate-950 border border-slate-850 p-4 rounded-xl text-center select-all">
+                <code className="text-red-400 font-mono font-black tracking-widest text-sm">DELETE MY ACCOUNT</code>
+              </div>
+
+              <div className="space-y-1.5">
+                <input
+                  type="text"
+                  placeholder="Type verification text..."
+                  value={confirmDeleteText}
+                  onChange={(e) => setConfirmDeleteText(e.target.value)}
+                  className="w-full text-center px-4 py-3 bg-slate-950 border border-slate-850 focus:border-red-500/50 outline-none text-slate-100 rounded-xl transition-all font-mono font-black placeholder:text-slate-700 tracking-wider text-sm focus:ring-1 focus:ring-red-500/20"
+                />
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3 pt-2">
                 <button
                   onClick={() => setShowDeleteAccountConfirm(false)}
-                  className="flex-1 bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 font-bold py-3 rounded-xl transition-all cursor-pointer text-sm"
+                  className="flex-1 bg-slate-850 hover:bg-slate-800 text-slate-300 border border-slate-750 font-bold py-3 rounded-xl transition-all cursor-pointer text-xs uppercase tracking-wider"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleDeleteAccountConfirm}
-                  className="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-xl shadow-lg shadow-red-600/10 hover:shadow-red-600/20 active:translate-y-0 transition-all cursor-pointer text-sm"
+                  disabled={confirmDeleteText !== 'DELETE MY ACCOUNT'}
+                  className="flex-1 bg-red-600 hover:bg-red-500 disabled:bg-red-950/40 disabled:text-red-900/40 disabled:border-transparent text-white border border-red-500/20 font-bold py-3 rounded-xl shadow-lg transition-all cursor-pointer text-xs uppercase tracking-wider disabled:cursor-not-allowed"
                 >
-                  Delete Account
+                  Confirm Destroy
                 </button>
               </div>
             </motion.div>

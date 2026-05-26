@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
 import { User } from 'firebase/auth';
-import { db, auth, handleFirestoreError, OperationType } from '../firebase';
+import { db, handleFirestoreError, OperationType } from '../firebase';
 import { Note } from '../types';
-import { Search, Plus, Filter, SortDesc, SortAsc, Tag, Paperclip, Calendar, Clock, MoreVertical, Trash2, Edit2 } from 'lucide-react';
+import { Search, Plus, SortDesc, SortAsc, Tag, Paperclip, Calendar, Clock, LayoutGrid, List, Sparkles, BookOpen } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { format } from 'date-fns';
 
@@ -19,6 +19,8 @@ export default function Dashboard({ user, onEditNote, onNewNote }: DashboardProp
   const [sortBy, setSortBy] = useState<'createdAt' | 'updatedAt' | 'title'>('updatedAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -65,144 +67,305 @@ export default function Dashboard({ user, onEditNote, onNewNote }: DashboardProp
     return () => unsubscribe();
   }, [user.uid, sortBy, sortOrder]);
 
-  const filteredNotes = notes.filter(note => 
-    note.title.toLowerCase().includes(search.toLowerCase()) ||
-    note.body.toLowerCase().includes(search.toLowerCase()) ||
-    note.tags.some(tag => tag.toLowerCase().includes(search.toLowerCase()))
-  );
+  // Extract all unique tags
+  const allTags = Array.from(new Set(notes.flatMap(n => n.tags || [])));
+
+  const filteredNotes = notes.filter(note => {
+    const matchesSearch = 
+      note.title.toLowerCase().includes(search.toLowerCase()) ||
+      note.body.toLowerCase().includes(search.toLowerCase()) ||
+      note.tags.some(tag => tag.toLowerCase().includes(search.toLowerCase()));
+    
+    const matchesTag = selectedTag ? note.tags.includes(selectedTag) : true;
+    
+    return matchesSearch && matchesTag;
+  });
 
   const totalStorage = notes.reduce((acc, note) => acc + (note.body.length * 2), 0); // Rough estimate in bytes
 
-  return (
-    <div className="p-6 max-w-7xl mx-auto space-y-8">
-      {/* Header & Summary */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">My Notes</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
-            {notes.length} notes • {(totalStorage / 1024).toFixed(2)} KB used
-          </p>
-        </div>
-        <button
-          onClick={onNewNote}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl shadow-lg shadow-indigo-200 dark:shadow-none transition-all flex items-center justify-center gap-2 font-semibold cursor-pointer"
-        >
-          <Plus className="w-5 h-5" />
-          Create New Note
-        </button>
-      </div>
+  // Search highlight helper
+  const highlightText = (text: string, highlight: string) => {
+    if (!highlight.trim()) return <span>{text}</span>;
+    const regex = new RegExp(`(${highlight.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')})`, 'gi');
+    const parts = text.split(regex);
+    return (
+      <span>
+        {parts.map((part, i) => 
+          regex.test(part) ? (
+            <mark key={i} className="bg-indigo-500/30 text-indigo-300 dark:text-indigo-200 px-0.5 rounded font-semibold">
+              {part}
+            </mark>
+          ) : (
+            part
+          )
+        )}
+      </span>
+    );
+  };
 
-      {/* Search & Filters */}
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search notes, tags, content..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all dark:text-white"
-          />
-        </div>
-        <div className="flex gap-2">
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as any)}
-            className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-medium text-slate-700 dark:text-slate-300 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
-          >
-            <option value="updatedAt">Last Modified</option>
-            <option value="createdAt">Date Created</option>
-            <option value="title">Title</option>
-          </select>
+  return (
+    <div className="p-6 max-w-7xl mx-auto space-y-8 select-none">
+      {/* Premium Header Dashboard Banner */}
+      <div className="relative overflow-hidden bg-slate-900/35 border border-slate-800/80 rounded-3xl p-8 backdrop-blur-3xl shadow-[0_0_50px_rgba(99,102,241,0.05)]">
+        <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-500/5 rounded-full blur-[100px] pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-80 h-80 bg-pink-500/5 rounded-full blur-[100px] pointer-events-none" />
+        
+        <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-6 z-10">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-indigo-400 animate-pulse" />
+              <span className="text-xs font-bold text-indigo-400 uppercase tracking-widest bg-indigo-950/40 border border-indigo-900/40 px-2.5 py-1 rounded-full">
+                Workspace Active
+              </span>
+            </div>
+            <h1 className="text-3.5xl font-black bg-gradient-to-r from-white via-slate-100 to-slate-300 bg-clip-text text-transparent">
+              My Cosmic Directory
+            </h1>
+            <p className="text-slate-400 text-sm font-medium">
+              Manage your custom workflow across <span className="text-indigo-300 font-bold">{notes.length} dynamic nodes</span> • {(totalStorage / 1024).toFixed(2)} KB cloud storage
+            </p>
+          </div>
           <button
-            onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
-            className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all cursor-pointer"
+            onClick={onNewNote}
+            className="flex items-center justify-center gap-2.5 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white font-bold px-6 py-4 rounded-2xl shadow-lg hover:shadow-[0_0_30px_rgba(99,102,241,0.25)] transition-all duration-200 active:translate-y-0.5 cursor-pointer text-sm uppercase tracking-wider font-black"
           >
-            {sortOrder === 'asc' ? <SortAsc className="w-5 h-5" /> : <SortDesc className="w-5 h-5" />}
+            <Plus className="w-5 h-5" />
+            Create New Note
           </button>
         </div>
       </div>
 
-      {/* Notes Grid */}
+      {/* Advanced Control Panel */}
+      <div className="bg-slate-900/20 border border-slate-900/60 p-4 rounded-2xl space-y-4">
+        <div className="flex flex-col md:flex-row gap-4">
+          {/* Enhanced Search Input */}
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search notes, tags, content..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-12 pr-4 py-3.5 bg-slate-950/60 border border-slate-850 focus:border-indigo-500/60 text-slate-100 rounded-xl outline-none transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)] focus:ring-1 focus:ring-indigo-500/20 text-sm"
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Sorting select */}
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="bg-slate-950/60 border border-slate-850 hover:bg-slate-900/60 text-slate-200 rounded-xl px-4 py-3.5 text-xs font-bold uppercase tracking-wider outline-none focus:ring-1 focus:ring-indigo-500/40 cursor-pointer transition-all duration-200"
+            >
+              <option value="updatedAt">Last Modified</option>
+              <option value="createdAt">Date Created</option>
+              <option value="title">Title</option>
+            </select>
+
+            {/* Ascending / Descending Button */}
+            <button
+              onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+              className="bg-slate-950/60 border border-slate-850 hover:bg-slate-900/60 p-3.5 rounded-xl text-slate-300 transition-all cursor-pointer shadow-md"
+              title="Toggle Sort Order"
+            >
+              {sortOrder === 'asc' ? <SortAsc className="w-5 h-5" /> : <SortDesc className="w-5 h-5" />}
+            </button>
+
+            {/* Grid / List View Toggle */}
+            <div className="flex bg-slate-950/80 border border-slate-850 p-1 rounded-xl shadow-md">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-2.5 rounded-lg transition-all cursor-pointer ${viewMode === 'grid' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
+                title="Grid View"
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`p-2.5 rounded-lg transition-all cursor-pointer ${viewMode === 'list' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
+                title="List View"
+              >
+                <List className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Scrollable Horizontal Tags List */}
+        {allTags.length > 0 && (
+          <div className="flex items-center gap-2 pt-2 border-t border-slate-900/40 overflow-x-auto pb-1 no-scrollbar">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider shrink-0 flex items-center gap-1">
+              <Tag className="w-3 h-3" /> Filter by:
+            </span>
+            <button
+              onClick={() => setSelectedTag(null)}
+              className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer shrink-0 ${!selectedTag ? 'bg-indigo-600/20 border border-indigo-500/40 text-indigo-300' : 'bg-slate-950/40 border border-slate-850 text-slate-400 hover:text-slate-200'}`}
+            >
+              All Tags
+            </button>
+            {allTags.map(tag => (
+              <button
+                key={tag}
+                onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
+                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer shrink-0 ${selectedTag === tag ? 'bg-indigo-600/30 border border-indigo-500/60 text-indigo-300 shadow-[0_0_10px_rgba(99,102,241,0.1)]' : 'bg-slate-950/40 border border-slate-850 text-slate-400 hover:text-slate-200'}`}
+              >
+                #{tag}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Grid or List View rendering */}
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3].map(i => (
-            <div key={i} className="h-48 bg-slate-100 dark:bg-slate-800 animate-pulse rounded-2xl" />
+            <div key={i} className="h-48 bg-slate-900/30 border border-slate-850/60 animate-pulse rounded-2xl" />
           ))}
         </div>
       ) : filteredNotes.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <AnimatePresence mode="popLayout">
-            {filteredNotes.map(note => (
-              <motion.div
-                key={note.id}
-                layout
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                onClick={() => onEditNote(note)}
-                className="group relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 hover:shadow-xl hover:shadow-slate-200/50 dark:hover:shadow-none transition-all cursor-pointer overflow-hidden"
-              >
-                {/* Color Strip */}
-                <div 
-                  className="absolute top-0 left-0 w-full h-1.5" 
-                  style={{ backgroundColor: note.color || '#6366f1' }}
-                />
+        viewMode === 'grid' ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <AnimatePresence mode="popLayout">
+              {filteredNotes.map(note => (
+                <motion.div
+                  key={note.id}
+                  layout
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  onClick={() => onEditNote(note)}
+                  className="group relative bg-slate-900/20 hover:bg-slate-900/40 border border-slate-850 hover:border-indigo-500/30 rounded-2xl p-6 shadow-md hover:shadow-[0_0_30px_rgba(99,102,241,0.08)] transition-all duration-300 cursor-pointer overflow-hidden flex flex-col justify-between min-h-[200px]"
+                >
+                  {/* Left Border color bar */}
+                  <div 
+                    className="absolute top-0 left-0 w-1.5 h-full" 
+                    style={{ backgroundColor: note.color || '#6366f1' }}
+                  />
 
-                <div className="space-y-4">
-                  <div className="flex justify-between items-start">
-                    <h3 className="font-bold text-lg text-slate-900 dark:text-white line-clamp-1">{note.title}</h3>
-                    <div className="flex items-center gap-1 text-slate-400">
+                  <div className="space-y-4 pl-2">
+                    <div className="flex justify-between items-start gap-4">
+                      <h3 className="font-bold text-lg text-slate-100 group-hover:text-indigo-300 transition-colors duration-200 line-clamp-1">
+                        {highlightText(note.title, search)}
+                      </h3>
                       {note.attachmentCount ? (
-                        <div className="flex items-center gap-0.5 text-xs font-medium">
-                          <Paperclip className="w-3.5 h-3.5" />
+                        <div className="flex items-center gap-0.5 text-[10px] font-bold text-slate-400 bg-slate-950/60 border border-slate-850 px-2 py-1 rounded-md">
+                          <Paperclip className="w-3 h-3 text-indigo-400" />
                           {note.attachmentCount}
                         </div>
                       ) : null}
                     </div>
+
+                    <p className="text-slate-400 text-sm line-clamp-3 leading-relaxed font-medium">
+                      {highlightText(note.body.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' '), search)}
+                    </p>
                   </div>
 
-                  <p className="text-slate-500 dark:text-slate-400 text-sm line-clamp-3 leading-relaxed">
-                    {note.body.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ')}
-                  </p>
+                  <div className="space-y-3 pt-4 border-t border-slate-900 pl-2 mt-auto">
+                    {/* Tags */}
+                    {note.tags && note.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {note.tags.map(tag => (
+                          <span key={tag} className="px-2 py-0.5 bg-slate-950/80 border border-slate-850 text-indigo-400 text-[9px] font-bold uppercase tracking-wider rounded-md">
+                            #{tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
 
-                  <div className="flex flex-wrap gap-2">
-                    {note.tags.map(tag => (
-                      <span key={tag} className="px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] font-bold uppercase tracking-wider rounded-md">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-
-                  <div className="pt-4 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-[10px] font-medium text-slate-400 uppercase tracking-widest">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      {format(note.updatedAt.toDate(), 'MMM d, yyyy')}
+                    {/* Metadata Footer */}
+                    <div className="flex items-center justify-between text-[9px] font-bold text-slate-500 uppercase tracking-widest">
+                      <div className="flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                        {format(note.updatedAt.toDate(), 'MMM d, yyyy')}
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 text-slate-500" />
+                        {format(note.updatedAt.toDate(), 'HH:mm')}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      {format(note.updatedAt.toDate(), 'HH:mm')}
-                    </div>
                   </div>
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
-          <div className="p-6 bg-slate-100 dark:bg-slate-800 rounded-full">
-            <Edit2 className="w-12 h-12 text-slate-400" />
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
-          <div>
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white">No notes found</h3>
-            <p className="text-slate-500 dark:text-slate-400">Start by creating your first note!</p>
+        ) : (
+          /* Premium Compact List View rendering */
+          <div className="space-y-3">
+            <AnimatePresence mode="popLayout">
+              {filteredNotes.map(note => (
+                <motion.div
+                  key={note.id}
+                  layout
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, scale: 0.98 }}
+                  onClick={() => onEditNote(note)}
+                  className="group relative bg-slate-900/20 hover:bg-slate-900/40 border border-slate-850 hover:border-indigo-500/30 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer transition-all duration-200 overflow-hidden"
+                >
+                  <div 
+                    className="absolute top-0 left-0 w-1.5 h-full" 
+                    style={{ backgroundColor: note.color || '#6366f1' }}
+                  />
+
+                  <div className="flex items-center gap-4 pl-3 flex-1">
+                    <BookOpen className="w-5 h-5 text-indigo-400 shrink-0" />
+                    <div className="space-y-1">
+                      <h3 className="font-bold text-base text-slate-100 group-hover:text-indigo-300 transition-colors duration-200">
+                        {highlightText(note.title, search)}
+                      </h3>
+                      <p className="text-slate-400 text-xs line-clamp-1 max-w-xl">
+                        {note.body.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ')}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-4 pl-3 sm:pl-0 shrink-0">
+                    {/* Tags */}
+                    {note.tags && note.tags.length > 0 && (
+                      <div className="flex gap-1.5">
+                        {note.tags.slice(0, 2).map(tag => (
+                          <span key={tag} className="px-2 py-0.5 bg-slate-950/80 border border-slate-850 text-indigo-400 text-[8px] font-bold uppercase tracking-wider rounded-md">
+                            #{tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Datetime Stamp */}
+                    <div className="flex items-center gap-3 text-[9px] font-bold text-slate-500 uppercase tracking-wider">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-3.5 h-3.5" />
+                        {format(note.updatedAt.toDate(), 'MMM d')}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3.5 h-3.5" />
+                        {format(note.updatedAt.toDate(), 'HH:mm')}
+                      </span>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+        )
+      ) : (
+        <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 bg-slate-900/10 border border-slate-900 rounded-3xl p-8">
+          <div className="p-5 bg-slate-950 border border-slate-850 rounded-2xl shadow-lg relative">
+            <div className="absolute inset-0 bg-indigo-500/10 rounded-2xl blur-lg animate-pulse" />
+            <BookOpen className="w-12 h-12 text-indigo-400 relative z-10" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-xl font-bold text-slate-200">Directory Node Empty</h3>
+            <p className="text-slate-400 text-sm max-w-xs mx-auto">
+              No matching notes found inside this workspace folder. Create a new note to start!
+            </p>
           </div>
           <button
             onClick={onNewNote}
-            className="text-indigo-600 font-bold hover:underline cursor-pointer"
+            className="text-indigo-400 font-bold hover:text-indigo-300 cursor-pointer text-xs uppercase tracking-wider border-b border-indigo-400/40 pb-0.5 hover:border-indigo-300 transition-colors"
           >
-            Create Note
+            Create First Note
           </button>
         </div>
       )}
