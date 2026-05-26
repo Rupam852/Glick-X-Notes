@@ -198,7 +198,7 @@ export default function SignupForm({ onSwitchToLogin, onSuccess }: SignupFormPro
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-gradient-to-r from-indigo-500 via-violet-600 to-pink-600 hover:from-indigo-400 hover:via-violet-500 hover:to-pink-500 text-white font-black py-3.5 rounded-xl shadow-lg shadow-indigo-600/20 hover:shadow-xl hover:shadow-indigo-600/30 hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
+          className="w-full bg-gradient-to-r from-indigo-500 via-violet-600 to-pink-600 hover:from-indigo-400 hover:via-violet-500 hover:to-pink-500 text-white font-black py-3.5 rounded-xl hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
         >
           {loading ? 'Creating account...' : 'Create Account'}
           <ArrowRight className="w-4.5 h-4.5" />
@@ -215,7 +215,7 @@ export default function SignupForm({ onSwitchToLogin, onSuccess }: SignupFormPro
       <button
         onClick={handleGoogleLogin}
         disabled={loading}
-        className="w-full bg-slate-950 hover:bg-slate-900/80 text-slate-200 border border-slate-800 hover:border-slate-700 font-bold py-3.5 rounded-xl shadow-md shadow-slate-950/25 hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-3 disabled:opacity-70 cursor-pointer"
+        className="w-full bg-slate-950 hover:bg-slate-900/80 text-slate-200 border border-slate-800 hover:border-slate-700 font-bold py-3.5 rounded-xl hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 flex items-center justify-center gap-3 disabled:opacity-70 cursor-pointer"
       >
         <Chrome className="w-5 h-5 text-red-500" />
         Sign up with Google
