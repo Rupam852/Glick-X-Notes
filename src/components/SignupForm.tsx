@@ -103,11 +103,11 @@ export default function SignupForm({ onSwitchToLogin, onSuccess }: SignupFormPro
 
   return (
     <div className="space-y-6">
-      <form onSubmit={handleSignup} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
+      <form onSubmit={handleSignup} className="space-y-5">
+        <div className="space-y-1.5">
+          <label className="block text-sm font-semibold text-slate-300">Full Name</label>
           <div className="relative">
-            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
             <input
               type="text"
               required
@@ -117,21 +117,21 @@ export default function SignupForm({ onSwitchToLogin, onSuccess }: SignupFormPro
                 setDisplayName(e.target.value);
                 if (fieldErrors.displayName) setFieldErrors(prev => ({ ...prev, displayName: undefined }));
               }}
-              className={`w-full pl-10 pr-4 py-2.5 bg-slate-50 border rounded-lg focus:ring-2 transition-all outline-none ${
-                fieldErrors.displayName ? 'border-red-500 focus:ring-red-200' : 'border-slate-200 focus:ring-indigo-500 focus:border-indigo-500'
+              className={`w-full pl-11 pr-4 py-3 bg-slate-950/60 text-slate-100 border rounded-xl focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none placeholder:text-slate-650 ${
+                fieldErrors.displayName ? 'border-red-500/80 focus:ring-red-500/20' : 'border-slate-800/80'
               }`}
               placeholder="John Doe"
             />
           </div>
           {fieldErrors.displayName && (
-            <p className="mt-1 text-xs text-red-500 font-medium">{fieldErrors.displayName}</p>
+            <p className="text-xs text-red-400 font-medium">{fieldErrors.displayName}</p>
           )}
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
+        <div className="space-y-1.5">
+          <label className="block text-sm font-semibold text-slate-300">Email Address</label>
           <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
             <input
               type="email"
               required
@@ -141,21 +141,21 @@ export default function SignupForm({ onSwitchToLogin, onSuccess }: SignupFormPro
                 setEmail(e.target.value);
                 if (fieldErrors.email) setFieldErrors(prev => ({ ...prev, email: undefined }));
               }}
-              className={`w-full pl-10 pr-4 py-2.5 bg-slate-50 border rounded-lg focus:ring-2 transition-all outline-none ${
-                fieldErrors.email ? 'border-red-500 focus:ring-red-200' : 'border-slate-200 focus:ring-indigo-500 focus:border-indigo-500'
+              className={`w-full pl-11 pr-4 py-3 bg-slate-950/60 text-slate-100 border rounded-xl focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none placeholder:text-slate-650 ${
+                fieldErrors.email ? 'border-red-500/80 focus:ring-red-500/20' : 'border-slate-800/80'
               }`}
               placeholder="you@example.com"
             />
           </div>
           {fieldErrors.email && (
-            <p className="mt-1 text-xs text-red-500 font-medium">{fieldErrors.email}</p>
+            <p className="text-xs text-red-400 font-medium">{fieldErrors.email}</p>
           )}
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+        <div className="space-y-1.5">
+          <label className="block text-sm font-semibold text-slate-300">Password</label>
           <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
             <input
               type={showPassword ? 'text' : 'password'}
               required
@@ -166,21 +166,21 @@ export default function SignupForm({ onSwitchToLogin, onSuccess }: SignupFormPro
                 setPassword(e.target.value);
                 if (fieldErrors.password) setFieldErrors(prev => ({ ...prev, password: undefined }));
               }}
-              className={`w-full pl-10 pr-12 py-2.5 bg-slate-50 border rounded-lg focus:ring-2 transition-all outline-none ${
-                fieldErrors.password ? 'border-red-500 focus:ring-red-200' : 'border-slate-200 focus:ring-indigo-500 focus:border-indigo-500'
+              className={`w-full pl-11 pr-12 py-3 bg-slate-950/60 text-slate-100 border rounded-xl focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none placeholder:text-slate-650 ${
+                fieldErrors.password ? 'border-red-500/80 focus:ring-red-500/20' : 'border-slate-800/80'
               }`}
               placeholder="••••••••"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
             >
               {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
             </button>
           </div>
           {fieldErrors.password && (
-            <p className="mt-1 text-xs text-red-500 font-medium">{fieldErrors.password}</p>
+            <p className="text-xs text-red-400 font-medium">{fieldErrors.password}</p>
           )}
         </div>
 
@@ -188,7 +188,7 @@ export default function SignupForm({ onSwitchToLogin, onSuccess }: SignupFormPro
           <motion.div 
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
-            className="flex items-center gap-2 text-red-600 text-sm bg-red-50 p-3 rounded-lg border border-red-100"
+            className="flex items-center gap-2.5 text-red-400 text-sm bg-red-950/20 border border-red-900/40 p-3.5 rounded-xl"
           >
             <AlertCircle className="w-4 h-4 flex-shrink-0" />
             <p>{error}</p>
@@ -198,36 +198,34 @@ export default function SignupForm({ onSwitchToLogin, onSuccess }: SignupFormPro
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg shadow-md shadow-indigo-200 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
+          className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-extrabold py-3.5 rounded-xl shadow-lg shadow-indigo-600/20 hover:shadow-xl hover:shadow-indigo-600/30 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
         >
           {loading ? 'Creating account...' : 'Create Account'}
-          <ArrowRight className="w-4 h-4" />
+          <ArrowRight className="w-4.5 h-4.5" />
         </button>
       </form>
 
-      <div className="relative">
+      <div className="relative flex items-center justify-center">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-slate-200"></div>
+          <div className="w-full border-t border-slate-800/80"></div>
         </div>
-        <div className="relative flex justify-center text-sm">
-          <span className="px-2 bg-white text-slate-500 uppercase tracking-wider text-[10px] font-bold">Or continue with</span>
-        </div>
+        <span className="relative px-3 bg-[#0a0f1d] text-slate-500 uppercase tracking-widest text-[9px] font-extrabold z-10">Or continue with</span>
       </div>
 
       <button
         onClick={handleGoogleLogin}
         disabled={loading}
-        className="w-full bg-white hover:bg-slate-50 text-slate-700 font-semibold py-2.5 rounded-lg border border-slate-200 shadow-sm transition-all flex items-center justify-center gap-3 disabled:opacity-70 cursor-pointer"
+        className="w-full bg-slate-950 hover:bg-slate-900 text-slate-200 border border-slate-800 hover:border-slate-700 font-extrabold py-3.5 rounded-xl shadow-sm transition-all flex items-center justify-center gap-3 disabled:opacity-70 cursor-pointer"
       >
         <Chrome className="w-5 h-5 text-red-500" />
         Sign up with Google
       </button>
 
-      <p className="text-center text-sm text-slate-600">
+      <p className="text-center text-sm text-slate-400">
         Already have an account?{' '}
         <button 
           onClick={onSwitchToLogin}
-          className="text-indigo-600 font-semibold hover:underline cursor-pointer"
+          className="text-indigo-400 font-extrabold hover:text-indigo-300 transition-colors cursor-pointer"
         >
           Sign in
         </button>
