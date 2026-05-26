@@ -104,8 +104,8 @@ export default function SignupForm({ onSwitchToLogin, onSuccess }: SignupFormPro
   return (
     <div className="space-y-6">
       <form onSubmit={handleSignup} className="space-y-5">
-        <div className="space-y-1.5">
-          <label className="block text-sm font-semibold text-slate-300">Full Name</label>
+        <div className="space-y-2">
+          <label className="block text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Full Name</label>
           <div className="relative">
             <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
             <input
@@ -117,19 +117,19 @@ export default function SignupForm({ onSwitchToLogin, onSuccess }: SignupFormPro
                 setDisplayName(e.target.value);
                 if (fieldErrors.displayName) setFieldErrors(prev => ({ ...prev, displayName: undefined }));
               }}
-              className={`w-full pl-11 pr-4 py-3 bg-slate-950/60 text-slate-100 border rounded-xl focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none placeholder:text-slate-650 ${
-                fieldErrors.displayName ? 'border-red-500/80 focus:ring-red-500/20' : 'border-slate-800/80'
+              className={`w-full pl-11 pr-4 py-3.5 bg-slate-950/80 text-slate-100 border rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 outline-none placeholder:text-slate-650 font-medium ${
+                fieldErrors.displayName ? 'border-red-500/80 focus:ring-red-500/10' : 'border-slate-800/80'
               }`}
               placeholder="John Doe"
             />
           </div>
           {fieldErrors.displayName && (
-            <p className="text-xs text-red-400 font-medium">{fieldErrors.displayName}</p>
+            <p className="text-xs text-red-400 font-semibold">{fieldErrors.displayName}</p>
           )}
         </div>
 
-        <div className="space-y-1.5">
-          <label className="block text-sm font-semibold text-slate-300">Email Address</label>
+        <div className="space-y-2">
+          <label className="block text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Email Address</label>
           <div className="relative">
             <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
             <input
@@ -141,19 +141,19 @@ export default function SignupForm({ onSwitchToLogin, onSuccess }: SignupFormPro
                 setEmail(e.target.value);
                 if (fieldErrors.email) setFieldErrors(prev => ({ ...prev, email: undefined }));
               }}
-              className={`w-full pl-11 pr-4 py-3 bg-slate-950/60 text-slate-100 border rounded-xl focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none placeholder:text-slate-650 ${
-                fieldErrors.email ? 'border-red-500/80 focus:ring-red-500/20' : 'border-slate-800/80'
+              className={`w-full pl-11 pr-4 py-3.5 bg-slate-950/80 text-slate-100 border rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 outline-none placeholder:text-slate-650 font-medium ${
+                fieldErrors.email ? 'border-red-500/80 focus:ring-red-500/10' : 'border-slate-800/80'
               }`}
               placeholder="you@example.com"
             />
           </div>
           {fieldErrors.email && (
-            <p className="text-xs text-red-400 font-medium">{fieldErrors.email}</p>
+            <p className="text-xs text-red-400 font-semibold">{fieldErrors.email}</p>
           )}
         </div>
 
-        <div className="space-y-1.5">
-          <label className="block text-sm font-semibold text-slate-300">Password</label>
+        <div className="space-y-2">
+          <label className="block text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Password</label>
           <div className="relative">
             <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
             <input
@@ -166,8 +166,8 @@ export default function SignupForm({ onSwitchToLogin, onSuccess }: SignupFormPro
                 setPassword(e.target.value);
                 if (fieldErrors.password) setFieldErrors(prev => ({ ...prev, password: undefined }));
               }}
-              className={`w-full pl-11 pr-12 py-3 bg-slate-950/60 text-slate-100 border rounded-xl focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none placeholder:text-slate-650 ${
-                fieldErrors.password ? 'border-red-500/80 focus:ring-red-500/20' : 'border-slate-800/80'
+              className={`w-full pl-11 pr-12 py-3.5 bg-slate-950/80 text-slate-100 border rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 outline-none placeholder:text-slate-650 font-medium ${
+                fieldErrors.password ? 'border-red-500/80 focus:ring-red-500/10' : 'border-slate-800/80'
               }`}
               placeholder="••••••••"
             />
@@ -180,7 +180,7 @@ export default function SignupForm({ onSwitchToLogin, onSuccess }: SignupFormPro
             </button>
           </div>
           {fieldErrors.password && (
-            <p className="text-xs text-red-400 font-medium">{fieldErrors.password}</p>
+            <p className="text-xs text-red-400 font-semibold">{fieldErrors.password}</p>
           )}
         </div>
 
@@ -198,24 +198,24 @@ export default function SignupForm({ onSwitchToLogin, onSuccess }: SignupFormPro
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-extrabold py-3.5 rounded-xl shadow-lg shadow-indigo-600/20 hover:shadow-xl hover:shadow-indigo-600/30 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
+          className="w-full bg-gradient-to-r from-indigo-500 via-violet-600 to-pink-600 hover:from-indigo-400 hover:via-violet-500 hover:to-pink-500 text-white font-black py-3.5 rounded-xl shadow-lg shadow-indigo-600/20 hover:shadow-xl hover:shadow-indigo-600/30 hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
         >
           {loading ? 'Creating account...' : 'Create Account'}
           <ArrowRight className="w-4.5 h-4.5" />
         </button>
       </form>
 
-      <div className="relative flex items-center justify-center">
+      <div className="relative flex items-center justify-center py-2">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-slate-800/80"></div>
+          <div className="w-full border-t border-slate-800/60"></div>
         </div>
-        <span className="relative px-3 bg-[#0a0f1d] text-slate-500 uppercase tracking-widest text-[9px] font-extrabold z-10">Or continue with</span>
+        <span className="relative px-4 py-1.5 bg-slate-900 border border-slate-800 rounded-full text-slate-500 uppercase tracking-widest text-[9px] font-black z-10">Or continue with</span>
       </div>
 
       <button
         onClick={handleGoogleLogin}
         disabled={loading}
-        className="w-full bg-slate-950 hover:bg-slate-900 text-slate-200 border border-slate-800 hover:border-slate-700 font-extrabold py-3.5 rounded-xl shadow-sm transition-all flex items-center justify-center gap-3 disabled:opacity-70 cursor-pointer"
+        className="w-full bg-slate-950 hover:bg-slate-900/80 text-slate-200 border border-slate-800 hover:border-slate-700 font-bold py-3.5 rounded-xl shadow-md shadow-slate-950/25 hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-3 disabled:opacity-70 cursor-pointer"
       >
         <Chrome className="w-5 h-5 text-red-500" />
         Sign up with Google

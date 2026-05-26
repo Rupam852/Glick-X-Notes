@@ -15,3 +15,13 @@
 .dark .editor-content blockquote { border-color: #334155; color: #94a3b8; }
 .dark .editor-content a { color: #818cf8; }
 .dark .editor-content pre { background: #1e293b; color: #e2e8f0; }
+
+/* Dynamic Dark Mode Autofill Styles Override */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #020617 inset !important; /* bg-slate-950 color */
+  -webkit-text-fill-color: #f8fafc !important; /* text-slate-50 color */
+  transition: background-color 5000s ease-in-out 0s;
+}
