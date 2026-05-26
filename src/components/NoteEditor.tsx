@@ -177,7 +177,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
       node = node.parentNode;
     }
     
-    const p = document.createElement('p');
+    const p = document.createElement('div');
     p.innerHTML = '<br>';
     
     if (blockNode && blockNode.parentNode) {

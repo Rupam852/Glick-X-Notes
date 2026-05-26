@@ -26,6 +26,10 @@
 .editor-content div, .editor-content p, .editor-content span {
   color: inherit;
 }
+.editor-content p, .editor-content div {
+  min-height: 1.5em;
+  margin-bottom: 0.5em;
+}
 
 /* Dynamic Dark Mode Autofill Styles Override */
 input:-webkit-autofill,
