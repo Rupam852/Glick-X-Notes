@@ -16,6 +16,16 @@ export default function Sidebar({ user, activeView, onViewChange }: SidebarProps
   const [copied, setCopied] = React.useState(false);
   const [userData, setUserData] = React.useState<any>(null);
 
+  const getInitials = (name: string) => {
+    if (!name) return 'G';
+    const cleanName = name.includes('@') ? name.split('@')[0] : name;
+    const parts = cleanName.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return parts[0][0].toUpperCase();
+  };
+
   React.useEffect(() => {
     if (!user) return;
     const unsubscribe = onSnapshot(doc(db, 'users', user.uid), (doc) => {
@@ -69,11 +79,11 @@ export default function Sidebar({ user, activeView, onViewChange }: SidebarProps
         {/* User Profile Card */}
         <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center text-indigo-600 dark:text-indigo-400 overflow-hidden border-2 border-white dark:border-slate-700">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-extrabold text-xs overflow-hidden border-2 border-white dark:border-slate-700 bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 shadow-md shrink-0 select-none">
               {userData?.photoURL ? (
                 <img src={userData.photoURL} alt="Profile" className="w-full h-full object-cover" />
               ) : (
-                <User className="w-5 h-5" />
+                getInitials(userData?.displayName || user?.email || 'G')
               )}
             </div>
             <div className="min-w-0">
