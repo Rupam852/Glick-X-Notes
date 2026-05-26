@@ -1,8 +1,6 @@
 @import "tailwindcss";
 
-@theme {
-  --dark-mode: class;
-}
+@custom-variant dark (&:where(.dark, .dark *));
 
 /* WYSIWYG Editor Styles overrides for Tailwind resets */
 .editor-content b, .editor-content strong { font-weight: 900; }
