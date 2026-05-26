@@ -1,7 +1,6 @@
 import React from 'react';
 import { auth, db, handleFirestoreError, OperationType } from '../firebase';
-import { LayoutDashboard, Settings, LogOut, Moon, Sun, User, Copy, Check, FileText } from 'lucide-react';
-import { useTheme } from '../contexts/ThemeContext';
+import { LayoutDashboard, Settings, LogOut, User, Copy, Check, FileText } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import { collection, getDocs, writeBatch, doc, onSnapshot } from 'firebase/firestore';
 import { User as FirebaseUser } from 'firebase/auth';
@@ -13,7 +12,6 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ user, activeView, onViewChange }: SidebarProps) {
-  const { theme, toggleTheme } = useTheme();
   const { showToast } = useToast();
   const [copied, setCopied] = React.useState(false);
   const [userData, setUserData] = React.useState<any>(null);
@@ -98,10 +96,6 @@ export default function Sidebar({ user, activeView, onViewChange }: SidebarProps
         </div>
 
         <div className="flex flex-col gap-2">
-          <button onClick={toggleTheme} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 dark:text-slate-400 transition-all font-semibold cursor-pointer">
-            {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
-            {theme === 'light' ? 'Dark Mode' : 'Light Mode'}
-          </button>
           <button onClick={() => auth.signOut()} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all font-semibold cursor-pointer">
             <LogOut className="w-5 h-5" />
             Sign Out

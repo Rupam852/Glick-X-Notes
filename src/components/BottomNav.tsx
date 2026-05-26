@@ -1,6 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Settings, Plus, Moon, Sun } from 'lucide-react';
-import { useTheme } from '../contexts/ThemeContext';
+import { LayoutDashboard, Settings, Plus } from 'lucide-react';
 
 interface BottomNavProps {
   activeView: string;
@@ -9,7 +8,6 @@ interface BottomNavProps {
 }
 
 export default function BottomNav({ activeView, onViewChange, onNewNote }: BottomNavProps) {
-  const { theme, toggleTheme } = useTheme();
 
   return (
     <div className="md:hidden fixed bottom-0 left-0 w-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-t border-slate-100 dark:border-slate-800 px-6 py-3 flex items-center justify-between z-40">
