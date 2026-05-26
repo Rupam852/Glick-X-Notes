@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { auth } from '../firebase';
-import { sendEmailVerification, signOut } from 'firebase/auth';
+import { auth, db } from '../firebase';
+import { sendEmailVerification, signOut, deleteUser } from 'firebase/auth';
+import { deleteDoc, doc } from 'firebase/firestore';
 import { Mail, AlertCircle, ArrowLeft, RefreshCw, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useToast } from '../contexts/ToastContext';
@@ -62,10 +63,28 @@ export default function EmailVerification({ onVerified }: EmailVerificationProps
 
   const handleSignOut = async () => {
     try {
-      await signOut(auth);
-      showToast('Signed out successfully.', 'info');
+      setLoading(true);
+      if (auth.currentUser) {
+        const user = auth.currentUser;
+        
+        // 1. Delete user profile from Firestore first
+        const userDocRef = doc(db, 'users', user.uid);
+        await deleteDoc(userDocRef);
+        
+        // 2. Delete the user account from Firebase Auth
+        await deleteUser(user);
+        
+        showToast('Registration canceled. Account was not created.', 'info');
+      } else {
+        await signOut(auth);
+      }
     } catch (err: any) {
-      showToast('Failed to sign out.', 'error');
+      console.error("Cleanup failed, signing out:", err);
+      // Fallback: If deleteUser fails, at least sign out to clear session
+      await signOut(auth);
+      showToast('Session cleared.', 'info');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -89,9 +108,10 @@ export default function EmailVerification({ onVerified }: EmailVerificationProps
         <div className="absolute top-6 left-6 z-20">
           <button
             onClick={handleSignOut}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-950/60 hover:bg-slate-950 border border-slate-850 text-slate-400 hover:text-white rounded-lg transition-all cursor-pointer text-[10px] uppercase tracking-wider font-bold shadow-md hover:shadow-[0_0_15px_rgba(99,102,241,0.15)] duration-200"
+            disabled={loading}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-950/60 hover:bg-slate-950 border border-slate-850 text-slate-400 hover:text-white rounded-lg transition-all cursor-pointer text-[10px] uppercase tracking-wider font-bold shadow-md hover:shadow-[0_0_15px_rgba(99,102,241,0.15)] duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <ArrowLeft className="w-3.5 h-3.5" />
+            {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowLeft className="w-3.5 h-3.5" />}
             Back
           </button>
         </div>
