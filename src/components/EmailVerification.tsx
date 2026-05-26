@@ -71,17 +71,6 @@ export default function EmailVerification({ onVerified }: EmailVerificationProps
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 relative overflow-hidden">
-      {/* Top Left Floating Back Button */}
-      <div className="absolute top-6 left-6 z-20">
-        <button
-          onClick={handleSignOut}
-          className="flex items-center gap-2 px-4 py-2.5 bg-slate-900/60 hover:bg-slate-900 border border-slate-800 text-slate-300 hover:text-white rounded-xl transition-all cursor-pointer text-xs uppercase tracking-wider font-bold shadow-md hover:shadow-[0_0_15px_rgba(99,102,241,0.15)] duration-200"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back
-        </button>
-      </div>
-
       {/* High-end Cosmic Ambient Lighting */}
       <div className="absolute -top-40 -left-40 w-96 h-96 bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none animate-pulse duration-[8s]" />
       <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-pink-500/10 rounded-full blur-[120px] pointer-events-none animate-pulse duration-[10s]" />
@@ -95,6 +84,17 @@ export default function EmailVerification({ onVerified }: EmailVerificationProps
       >
         {/* Futuristic Top Lip Neon Highlight */}
         <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-indigo-500 to-pink-500 opacity-60" />
+
+        {/* Back Button Inside Card Box at Top Left */}
+        <div className="absolute top-6 left-6 z-20">
+          <button
+            onClick={handleSignOut}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-950/60 hover:bg-slate-950 border border-slate-850 text-slate-400 hover:text-white rounded-lg transition-all cursor-pointer text-[10px] uppercase tracking-wider font-bold shadow-md hover:shadow-[0_0_15px_rgba(99,102,241,0.15)] duration-200"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            Back
+          </button>
+        </div>
 
         {/* Premium Rotating/Glow Envelope Frame */}
         <div className="flex justify-center">
