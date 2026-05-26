@@ -52,7 +52,6 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
   const [viewingAttachment, setViewingAttachment] = useState<Attachment | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [activeFont, setActiveFont] = useState<'sans' | 'serif' | 'mono'>('sans');
-  const [focusMode, setFocusMode] = useState(false);
   const [showFontMenu, setShowFontMenu] = useState(false);
 
   // Click-Outside Listener for Custom Font Dropdown Menu
@@ -515,15 +514,6 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
             </AnimatePresence>
           </div>
 
-          {/* Full-Screen Focus Mode Switcher */}
-          <button
-            onClick={() => setFocusMode(prev => !prev)}
-            className={`p-2 rounded-xl border transition-all cursor-pointer text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 ${focusMode ? 'bg-indigo-600 border-indigo-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.25)]' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'}`}
-            title={focusMode ? "Exit Focus Mode" : "Enter Focus Mode"}
-          >
-            <Sparkles className="w-4 h-4 text-indigo-400" />
-            {focusMode ? "Focused" : "Focus"}
-          </button>
 
           {currentNoteId && (
             <button onClick={handleDeleteClick} className="p-2 text-red-400 hover:bg-red-950/20 rounded-xl transition-all cursor-pointer">
@@ -540,8 +530,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
 
       <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
         {/* Left Pane: Metadata */}
-        {!focusMode && (
-          <div className="w-full lg:w-80 lg:border-r border-slate-100 dark:border-slate-800 overflow-y-auto p-6 space-y-8 bg-slate-50/50 dark:bg-slate-900/50">
+        <div className="w-full lg:w-80 lg:border-r border-slate-100 dark:border-slate-800 overflow-y-auto p-6 space-y-8 bg-slate-50/50 dark:bg-slate-900/50">
             {/* Title */}
             <div className="space-y-4">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Title</label>
@@ -639,7 +628,6 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
               </div>
             </div>
           </div>
-        )}
 
         {/* Right Pane: Content */}
         <div className="flex-1 flex flex-col overflow-y-auto bg-white dark:bg-slate-900 border-l border-transparent">
@@ -663,15 +651,6 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
             }} title="Link" />
           </div>
 
-          {focusMode && (
-            <input
-              type="text"
-              placeholder="Untitled Node..."
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="px-12 pt-12 text-3.5xl font-black bg-transparent border-none outline-none text-slate-900 dark:text-white placeholder:text-slate-700"
-            />
-          )}
 
           <div
             ref={contentRef}
