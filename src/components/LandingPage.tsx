@@ -22,7 +22,16 @@ import {
   FolderOpen,
   Eye,
   Github,
-  Award
+  Award,
+  LayoutDashboard,
+  Settings,
+  LogOut,
+  Copy,
+  Plus,
+  Search,
+  SortDesc,
+  Calendar,
+  Clock
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -34,48 +43,52 @@ interface LandingPageProps {
 export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
   const { theme, toggleTheme } = useTheme();
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
-  const [mockupActiveTab, setMockupActiveTab] = useState<'all' | 'work' | 'ideas' | 'private'>('all');
   const [mockupColor, setMockupColor] = useState<string>('#6366f1');
+  const [mockupSearch, setMockupSearch] = useState('');
+  const [mockupCopied, setMockupCopied] = useState(false);
+  const [mockupTheme, setMockupTheme] = useState<'light' | 'dark'>('dark');
+  const [mockupActiveView, setMockupActiveView] = useState<'dashboard' | 'settings'>('dashboard');
 
-  // Simulated notes in the interactive mockup
+  // Simulated notes matching the user's actual Glick X Notes dashboard
   const simulatedNotes = [
     {
       id: 1,
-      title: "🚀 Glick-X Product Launch Roadmap",
-      body: "Our next-gen note-taking app with biometric locks, zero-knowledge metadata separation, and multi-device Base64 sync is set to launch. Key stages: 1. Beta feedback, 2. Global deployment, 3. Community feature requests.",
-      category: "work",
+      title: "fhc",
+      body: "Drafting the security schemas for the base64 multi-sync database module...",
       color: "#6366f1",
-      date: "May 26, 2026"
+      date: "APR 8, 2026",
+      time: "10:52"
     },
     {
       id: 2,
-      title: "💡 Brainstorming: Encryption Upgrades",
-      body: "Need to explore AES-256 for local browser storage. Let's separate keys from payload, maintaining zero-trust access on cloud synchronization. Always keep attachments in base64 binary arrays.",
-      category: "ideas",
+      title: "gdf",
+      body: "egg",
       color: "#ec4899",
-      date: "May 25, 2026"
+      date: "APR 8, 2026",
+      time: "10:52"
     },
     {
       id: 3,
-      title: "🔐 Personal Vault Credentials",
-      body: "Highly confidential identity details and backup recovery phrases. Remember to keep this specific folder locked with secondary verification. Color-coded red for high priority alert.",
-      category: "private",
-      color: "#f43f5e",
-      date: "May 24, 2026"
+      title: "fnfb",
+      body: "fhdnfc",
+      color: "#6366f1",
+      date: "APR 8, 2026",
+      time: "09:40"
     },
     {
       id: 4,
-      title: "📝 Meeting Notes with VCs",
-      body: "Investors loved the lightning-fast firestore reactivity and the clean fluid bottom-nav UI. Focus on the organic user growth strategy and high premium aesthetics. Follow up on Monday.",
-      category: "work",
-      color: "#10b981",
-      date: "May 23, 2026"
+      title: "qq",
+      body: "Drafting critical recovery passwords...",
+      color: "#6366f1",
+      date: "APR 8, 2026",
+      time: "09:40"
     }
   ];
 
-  const filteredMockupNotes = mockupActiveTab === 'all' 
-    ? simulatedNotes 
-    : simulatedNotes.filter(n => n.category === mockupActiveTab);
+  const filteredMockupNotes = simulatedNotes.filter(note => 
+    note.title.toLowerCase().includes(mockupSearch.toLowerCase()) ||
+    note.body.toLowerCase().includes(mockupSearch.toLowerCase())
+  );
 
   const faqs = [
     {
@@ -240,7 +253,7 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.5 }}
           id="mockup"
-          className="mt-20 max-w-5xl mx-auto bg-slate-900 rounded-3xl p-3 md:p-5 border border-slate-800 shadow-[0_0_50px_-12px_rgba(99,102,241,0.25)] relative overflow-hidden group/mockup"
+          className="mt-20 max-w-5xl mx-auto bg-slate-900 rounded-3xl p-3 md:p-5 border border-slate-800 shadow-[0_0_50px_-12px_rgba(99,102,241,0.25)] relative overflow-hidden group/mockup animate-fade-in"
         >
           {/* Window Buttons */}
           <div className="flex items-center justify-between px-4 pb-4 border-b border-slate-800">
@@ -268,122 +281,200 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 min-h-[500px] text-left">
+          <div className={`grid grid-cols-1 md:grid-cols-4 min-h-[500px] text-left transition-colors duration-300 ${mockupTheme === 'dark' ? 'bg-slate-950 text-white' : 'bg-white text-slate-900'}`}>
             {/* Mockup Sidebar */}
-            <div className="md:col-span-1 border-r border-slate-800 p-6 flex flex-col gap-6 bg-slate-900/50">
-              <div className="space-y-1">
-                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Main Workspace</h4>
-                <div className="space-y-1 pt-2">
-                  <button 
-                    onClick={() => setMockupActiveTab('all')}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2.5 ${mockupActiveTab === 'all' ? 'text-white' : 'text-slate-400 hover:text-slate-200'}`}
-                    style={mockupActiveTab === 'all' ? { backgroundColor: `${mockupColor}20`, color: mockupColor } : {}}
-                  >
-                    <FolderOpen className="w-4 h-4" />
-                    All Notes
-                  </button>
-                  <button 
-                    onClick={() => setMockupActiveTab('work')}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2.5 ${mockupActiveTab === 'work' ? 'text-white' : 'text-slate-400 hover:text-slate-200'}`}
-                    style={mockupActiveTab === 'work' ? { backgroundColor: `${mockupColor}20`, color: mockupColor } : {}}
-                  >
-                    <span className="w-2 h-2 rounded-full bg-indigo-500" />
-                    Work Projects
-                  </button>
-                  <button 
-                    onClick={() => setMockupActiveTab('ideas')}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2.5 ${mockupActiveTab === 'ideas' ? 'text-white' : 'text-slate-400 hover:text-slate-200'}`}
-                    style={mockupActiveTab === 'ideas' ? { backgroundColor: `${mockupColor}20`, color: mockupColor } : {}}
-                  >
-                    <span className="w-2 h-2 rounded-full bg-pink-500" />
-                    Creative Ideas
-                  </button>
-                  <button 
-                    onClick={() => setMockupActiveTab('private')}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2.5 ${mockupActiveTab === 'private' ? 'text-white' : 'text-slate-400 hover:text-slate-200'}`}
-                    style={mockupActiveTab === 'private' ? { backgroundColor: `${mockupColor}20`, color: mockupColor } : {}}
-                  >
-                    <span className="w-2 h-2 rounded-full bg-rose-500" />
-                    Secure Identity
-                  </button>
+            <div className={`md:col-span-1 border-r p-6 flex flex-col gap-6 transition-colors duration-300 ${mockupTheme === 'dark' ? 'border-slate-800 bg-slate-900/40' : 'border-slate-200 bg-slate-50'}`}>
+              <div className="flex items-center gap-3 px-2">
+                <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white overflow-hidden shrink-0">
+                  <Shield className="w-5 h-5 text-white" />
+                </div>
+                <h1 className={`text-base font-bold tracking-tight transition-colors ${mockupTheme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Glick X Notes</h1>
+              </div>
+
+              <div className="flex-1 space-y-1">
+                <button
+                  onClick={() => setMockupActiveView('dashboard')}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${mockupActiveView === 'dashboard' ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400 font-extrabold shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
+                >
+                  <LayoutDashboard className="w-4 h-4 shrink-0" />
+                  Dashboard
+                </button>
+                <button
+                  onClick={() => setMockupActiveView('settings')}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${mockupActiveView === 'settings' ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400 font-extrabold shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
+                >
+                  <Settings className="w-4 h-4 shrink-0" />
+                  Settings
+                </button>
+              </div>
+
+              {/* Mockup Profile Card */}
+              <div className={`p-4 rounded-xl border space-y-4 transition-colors ${mockupTheme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'}`}>
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center text-indigo-600 shrink-0">
+                    <User className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className={`text-xs font-bold truncate transition-colors ${mockupTheme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Glick X User</p>
+                    <p className="text-[9px] text-slate-400 dark:text-slate-500 truncate">user@glickx-notes.io</p>
+                  </div>
+                </div>
+
+                <div className={`space-y-1 pt-3 border-t ${mockupTheme === 'dark' ? 'border-slate-800' : 'border-slate-100'}`}>
+                  <div className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Device ID</div>
+                  <div className="flex items-center justify-between gap-1">
+                    <code className="text-[9px] font-mono text-slate-500 truncate flex-1">E4hWLBPw1Wtbpn9AgMB1NYXGSv13</code>
+                    <button 
+                      onClick={() => {
+                        setMockupCopied(true);
+                        setTimeout(() => setMockupCopied(false), 2000);
+                      }}
+                      className="text-slate-400 hover:text-indigo-600 transition-colors cursor-pointer shrink-0"
+                    >
+                      {mockupCopied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              <div className="mt-auto p-4 rounded-xl border border-slate-800 bg-slate-950/50 space-y-2">
-                <div className="flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-emerald-400" />
-                  <span className="text-[11px] font-bold text-slate-300">Firebase Encrypted</span>
-                </div>
-                <div className="w-full bg-slate-800 rounded-full h-1.5">
-                  <div className="bg-emerald-400 h-1.5 rounded-full" style={{ width: '42%' }} />
-                </div>
-                <p className="text-[10px] text-slate-500 font-medium leading-normal">
-                  Zero admin footprint storage rules active.
-                </p>
+              {/* Mockup footer quick toggles */}
+              <div className="space-y-2 pt-2 border-t border-slate-800/20 dark:border-slate-800">
+                <button 
+                  onClick={() => setMockupTheme(t => t === 'light' ? 'dark' : 'light')}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-all font-semibold cursor-pointer"
+                >
+                  {mockupTheme === 'light' ? <Moon className="w-4 h-4 shrink-0" /> : <Sun className="w-4 h-4 shrink-0" />}
+                  {mockupTheme === 'light' ? 'Dark Mode' : 'Light Mode'}
+                </button>
+                <button 
+                  onClick={onLogin}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all font-bold cursor-pointer"
+                >
+                  <LogOut className="w-4 h-4 shrink-0" />
+                  Sign Out
+                </button>
               </div>
             </div>
 
             {/* Mockup Workspace */}
-            <div className="md:col-span-3 p-6 md:p-8 space-y-6 flex flex-col justify-between bg-slate-950/30">
-              <div className="space-y-6">
-                {/* Search Bar / Header Mockup */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-6">
-                  <div>
-                    <h3 className="text-xl font-bold text-white flex items-center gap-2.5">
-                      Personal Dashboard
-                      <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 font-mono font-medium">v1.2.0</span>
-                    </h3>
-                    <p className="text-xs text-slate-500 mt-0.5">Manage your tags and attachments reactively</p>
+            <div className={`md:col-span-3 p-6 md:p-8 space-y-6 flex flex-col justify-between transition-colors ${mockupTheme === 'dark' ? 'bg-slate-900/20' : 'bg-slate-100/30'}`}>
+              {mockupActiveView === 'dashboard' ? (
+                <div className="space-y-6 flex-1">
+                  {/* Header */}
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div>
+                      <h3 className={`text-xl font-bold transition-colors ${mockupTheme === 'dark' ? 'text-white' : 'text-slate-900'}`}>My Notes</h3>
+                      <p className="text-xs text-slate-400 mt-0.5">4 notes • 0.03 KB used</p>
+                    </div>
+                    <button 
+                      onClick={onSignup}
+                      style={{ backgroundColor: mockupColor }}
+                      className="px-4 py-2 hover:opacity-90 text-white text-xs font-bold rounded-lg shadow-lg flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      Create New Note
+                    </button>
                   </div>
-                  <button 
-                    onClick={onSignup}
-                    style={{ backgroundColor: mockupColor }}
-                    className="px-4 py-2 hover:opacity-90 text-white text-xs font-bold rounded-lg shadow-lg flex items-center gap-1.5 transition-all cursor-pointer"
-                  >
-                    <Edit3 className="w-3.5 h-3.5" />
-                    New Secure Note
-                  </button>
-                </div>
 
-                {/* Simulated Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <AnimatePresence mode="popLayout">
-                    {filteredMockupNotes.map(note => (
-                      <motion.div
-                        key={note.id}
-                        layout
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        className="bg-slate-900 border border-slate-800 rounded-xl p-5 hover:border-slate-700 transition-all relative overflow-hidden"
+                  {/* Search Bar / Sorting select */}
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="Search notes, tags, content..."
+                        value={mockupSearch}
+                        onChange={(e) => setMockupSearch(e.target.value)}
+                        className={`w-full pl-9 pr-3 py-2 text-xs border rounded-lg outline-none focus:ring-1 focus:ring-indigo-500 transition-all ${mockupTheme === 'dark' ? 'bg-slate-900 border-slate-800 text-white focus:border-indigo-500' : 'bg-white border-slate-200 text-slate-800 focus:border-indigo-500'}`}
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <select
+                        className={`border rounded-lg px-3 py-2 text-xs font-semibold outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer ${mockupTheme === 'dark' ? 'bg-slate-900 border-slate-800 text-slate-300' : 'bg-white border-slate-200 text-slate-600'}`}
+                        disabled
                       >
-                        <div 
-                          className="absolute top-0 left-0 w-full h-1" 
-                          style={{ backgroundColor: note.color }}
-                        />
-                        <h4 className="font-bold text-sm text-slate-100 line-clamp-1">{note.title}</h4>
-                        <p className="text-xs text-slate-400 mt-2 line-clamp-3 leading-relaxed">
-                          {note.body}
-                        </p>
-                        <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-800/60 text-[10px] text-slate-500 font-semibold tracking-wider uppercase">
-                          <span>{note.date}</span>
-                          <span className="px-2 py-0.5 rounded bg-slate-800 border border-slate-700/50 text-slate-300">
-                            {note.category}
-                          </span>
+                        <option>Last Modified</option>
+                      </select>
+                      <button className={`border p-2 rounded-lg cursor-pointer ${mockupTheme === 'dark' ? 'bg-slate-900 border-slate-800 text-slate-300' : 'bg-white border-slate-200 text-slate-600'}`}>
+                        <SortDesc className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Simulated Grid of real notes */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <AnimatePresence mode="popLayout">
+                      {filteredMockupNotes.length > 0 ? (
+                        filteredMockupNotes.map(note => (
+                          <motion.div
+                            key={note.id}
+                            layout
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className={`border rounded-xl p-5 hover:border-slate-500 transition-all relative overflow-hidden flex flex-col justify-between min-h-[140px] cursor-pointer ${mockupTheme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'}`}
+                          >
+                            <div 
+                              className="absolute top-0 left-0 w-full h-1" 
+                              style={{ backgroundColor: note.color }}
+                            />
+                            <div>
+                              <h4 className={`font-bold text-sm transition-colors ${mockupTheme === 'dark' ? 'text-slate-100' : 'text-slate-800'}`}>{note.title}</h4>
+                              <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 line-clamp-2 leading-relaxed">
+                                {note.body}
+                              </p>
+                            </div>
+                            <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-850/10 dark:border-slate-800/60 text-[9px] text-slate-450 font-semibold uppercase tracking-wider">
+                              <span className="flex items-center gap-1"><Calendar className="w-2.5 h-2.5" />{note.date}</span>
+                              <span className="flex items-center gap-1"><Clock className="w-2.5 h-2.5" />{note.time}</span>
+                            </div>
+                          </motion.div>
+                        ))
+                      ) : (
+                        <div className="col-span-full py-10 text-center text-xs text-slate-500">
+                          No notes found matching search query
                         </div>
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
+                      )}
+                    </AnimatePresence>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                /* Mockup Settings */
+                <div className="space-y-6 flex-1">
+                  <div>
+                    <h3 className={`text-xl font-bold transition-colors ${mockupTheme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Settings</h3>
+                    <p className="text-xs text-slate-400 mt-0.5">Customize your digital notes sandbox preferences</p>
+                  </div>
+
+                  <div className={`p-6 rounded-2xl border space-y-4 ${mockupTheme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'}`}>
+                    <h4 className="text-sm font-bold">Preferences</h4>
+                    <div className="space-y-3 pt-2 text-xs">
+                      <div className="flex items-center justify-between py-2 border-b border-slate-800/10 dark:border-slate-800/40">
+                        <div>
+                          <p className="font-bold">Sync Attachments automatically</p>
+                          <p className="text-[10px] text-slate-400">Convert attachments immediately to Base64 in subcollections</p>
+                        </div>
+                        <div className="w-8 h-4 bg-indigo-600 rounded-full relative"><div className="w-3.5 h-3.5 bg-white rounded-full absolute right-0.5 top-0.5" /></div>
+                      </div>
+                      <div className="flex items-center justify-between py-2">
+                        <div>
+                          <p className="font-bold">Offline read access mode</p>
+                          <p className="text-[10px] text-slate-400">Keep Firestore offline persistence cache alive</p>
+                        </div>
+                        <div className="w-8 h-4 bg-indigo-600 rounded-full relative"><div className="w-3.5 h-3.5 bg-white rounded-full absolute right-0.5 top-0.5" /></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Status footer inside mockup */}
-              <div className="pt-6 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-500">
-                <span className="flex items-center gap-1.5">
+              <div className={`pt-4 border-t flex items-center justify-between text-xs text-slate-400 ${mockupTheme === 'dark' ? 'border-slate-850/60' : 'border-slate-205'}`}>
+                <span className="flex items-center gap-1.5 font-semibold">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
                   Live Sync Connected
                 </span>
-                <span>4 items • 0.38 KB used</span>
+                <span>Active Vault Session</span>
               </div>
             </div>
           </div>
