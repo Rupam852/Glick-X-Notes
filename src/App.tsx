@@ -15,6 +15,7 @@ import NoteEditor from './components/NoteEditor';
 import Sidebar from './components/Sidebar';
 import BottomNav from './components/BottomNav';
 import Settings from './components/Settings';
+import LandingPage from './components/LandingPage';
 import { Loader2 } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './contexts/ToastContext';
@@ -23,7 +24,7 @@ import { Note } from './types';
 function AppContent() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<'login' | 'signup' | 'forgot-password' | 'dashboard' | 'settings' | 'editor'>('login');
+  const [view, setView] = useState<'landing' | 'login' | 'signup' | 'forgot-password' | 'dashboard' | 'settings' | 'editor'>('landing');
   const [editingNote, setEditingNote] = useState<Note | null>(null);
 
   useEffect(() => {
@@ -34,9 +35,9 @@ function AppContent() {
         // Initialize history state for dashboard
         window.history.replaceState({ view: 'dashboard', editingNote: null }, '');
       } else {
-        setView('login');
-        // Initial history state for login
-        window.history.replaceState({ view: 'login', editingNote: null }, '');
+        setView('landing');
+        // Initial history state for landing
+        window.history.replaceState({ view: 'landing', editingNote: null }, '');
       }
       setLoading(false);
     });
@@ -46,15 +47,13 @@ function AppContent() {
 
   // Sync state with browser history
   useEffect(() => {
-    if (!user) return;
-
     const handlePopState = (event: PopStateEvent) => {
       if (event.state) {
         const { view: targetView, editingNote: targetNote } = event.state;
         setView(targetView);
         setEditingNote(targetNote);
       } else {
-        setView('dashboard');
+        setView(user ? 'dashboard' : 'landing');
         setEditingNote(null);
       }
     };
@@ -88,6 +87,15 @@ function AppContent() {
   }
 
   if (!user) {
+    if (view === 'landing') {
+      return (
+        <LandingPage 
+          onLogin={() => navigateTo('login')}
+          onSignup={() => navigateTo('signup')}
+        />
+      );
+    }
+
     const getTitle = () => {
       switch (view) {
         case 'login': return "Welcome Back";
