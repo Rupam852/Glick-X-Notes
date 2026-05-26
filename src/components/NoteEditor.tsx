@@ -801,10 +801,39 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
             onKeyDown={handleKeyDown}
             onKeyUp={updateFormatState}
             onMouseUp={updateFormatState}
-            className={`editor-content w-full flex-1 min-h-[500px] lg:min-h-0 p-6 md:p-12 bg-transparent border-none outline-none text-lg text-slate-700 dark:text-slate-350 leading-relaxed overflow-y-auto ${
+            className={`editor-content w-full p-6 md:p-12 pb-4 bg-transparent border-none outline-none text-lg text-slate-700 dark:text-slate-350 leading-relaxed ${
               activeFont === 'sans' ? 'font-sans' : activeFont === 'serif' ? 'font-serif font-medium tracking-wide' : 'font-mono text-base'
             }`}
-            style={{ minHeight: '500px' }}
+          />
+          {/* Clickable padding at the bottom to append new line */}
+          <div 
+            className="flex-1 w-full cursor-text min-h-[50px]" 
+            onClick={() => {
+              if (contentRef.current) {
+                const lastChild = contentRef.current.lastElementChild;
+                let targetNode = lastChild;
+                
+                if (!lastChild || (lastChild.nodeName !== 'DIV' && lastChild.nodeName !== 'P') || (lastChild.textContent?.trim() !== '' && lastChild.innerHTML !== '<br>')) {
+                  const p = document.createElement('div');
+                  p.innerHTML = '<br>';
+                  contentRef.current.appendChild(p);
+                  targetNode = p;
+                  setBody(contentRef.current.innerHTML);
+                }
+                
+                const range = document.createRange();
+                if (targetNode) {
+                  range.setStart(targetNode, 0);
+                } else {
+                  range.setStart(contentRef.current, 0);
+                }
+                range.collapse(true);
+                const sel = window.getSelection();
+                sel?.removeAllRanges();
+                sel?.addRange(range);
+                contentRef.current.focus();
+              }
+            }}
           />
 
           {/* Word and Character Counter Footer */}
