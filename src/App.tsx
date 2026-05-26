@@ -24,20 +24,49 @@ import { Note } from './types';
 function AppContent() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<'landing' | 'login' | 'signup' | 'forgot-password' | 'dashboard' | 'settings' | 'editor'>('landing');
-  const [editingNote, setEditingNote] = useState<Note | null>(null);
+  
+  // Read initial view from sessionStorage, default to 'landing'
+  const [view, setView] = useState<'landing' | 'login' | 'signup' | 'forgot-password' | 'dashboard' | 'settings' | 'editor'>(() => {
+    const savedView = sessionStorage.getItem('glick_notes_view');
+    return (savedView as any) || 'landing';
+  });
+
+  const [editingNote, setEditingNote] = useState<Note | null>(() => {
+    const savedNote = sessionStorage.getItem('glick_notes_editing_note');
+    return savedNote ? JSON.parse(savedNote) : null;
+  });
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
+      
+      const savedView = sessionStorage.getItem('glick_notes_view');
+      const savedNote = sessionStorage.getItem('glick_notes_editing_note');
+      const parsedNote = savedNote ? JSON.parse(savedNote) : null;
+
       if (user) {
-        setView('dashboard');
-        // Initialize history state for dashboard
-        window.history.replaceState({ view: 'dashboard', editingNote: null }, '');
+        // If logged in, check if the saved view is a valid logged-in view
+        if (savedView === 'settings' || savedView === 'editor' || savedView === 'dashboard') {
+          setView(savedView as any);
+          setEditingNote(parsedNote);
+          window.history.replaceState({ view: savedView, editingNote: parsedNote }, '');
+        } else {
+          // Default to dashboard
+          setView('dashboard');
+          sessionStorage.setItem('glick_notes_view', 'dashboard');
+          window.history.replaceState({ view: 'dashboard', editingNote: null }, '');
+        }
       } else {
-        setView('landing');
-        // Initial history state for landing
-        window.history.replaceState({ view: 'landing', editingNote: null }, '');
+        // If not logged in, check if the saved view is a valid guest view
+        if (savedView === 'login' || savedView === 'signup' || savedView === 'forgot-password' || savedView === 'landing') {
+          setView(savedView as any);
+          window.history.replaceState({ view: savedView, editingNote: null }, '');
+        } else {
+          // Default to landing
+          setView('landing');
+          sessionStorage.setItem('glick_notes_view', 'landing');
+          window.history.replaceState({ view: 'landing', editingNote: null }, '');
+        }
       }
       setLoading(false);
     });
@@ -52,9 +81,20 @@ function AppContent() {
         const { view: targetView, editingNote: targetNote } = event.state;
         setView(targetView);
         setEditingNote(targetNote);
+        
+        sessionStorage.setItem('glick_notes_view', targetView);
+        if (targetNote) {
+          sessionStorage.setItem('glick_notes_editing_note', JSON.stringify(targetNote));
+        } else {
+          sessionStorage.removeItem('glick_notes_editing_note');
+        }
       } else {
-        setView(user ? 'dashboard' : 'landing');
+        const defaultView = user ? 'dashboard' : 'landing';
+        setView(defaultView);
         setEditingNote(null);
+        
+        sessionStorage.setItem('glick_notes_view', defaultView);
+        sessionStorage.removeItem('glick_notes_editing_note');
       }
     };
 
@@ -65,13 +105,21 @@ function AppContent() {
     };
   }, [user]);
 
-  // Wrapper for setView that also updates history
+  // Wrapper for setView that also updates history and sessionStorage
   const navigateTo = useCallback((newView: typeof view, note: Note | null = null) => {
     // Only push state if it's a different view or note
     if (view === newView && editingNote?.id === note?.id) return;
     
     setView(newView);
     setEditingNote(note);
+    
+    sessionStorage.setItem('glick_notes_view', newView);
+    if (note) {
+      sessionStorage.setItem('glick_notes_editing_note', JSON.stringify(note));
+    } else {
+      sessionStorage.removeItem('glick_notes_editing_note');
+    }
+    
     window.history.pushState({ view: newView, editingNote: note }, '');
   }, [view, editingNote]);
 
