@@ -91,18 +91,7 @@ export default function Sidebar({ user, activeView, onViewChange }: SidebarProps
               <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{user?.email}</p>
             </div>
           </div>
-          
-          <div className="space-y-1 pt-3 border-t border-slate-100 dark:border-slate-700">
-            <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-              <span>Device ID</span>
-            </div>
-            <div className="flex items-center justify-between gap-2">
-              <code className="text-[10px] text-slate-600 dark:text-slate-300 truncate flex-1 font-mono">{user?.uid}</code>
-              <button onClick={copyId} className="text-slate-400 hover:text-indigo-600 transition-colors cursor-pointer">
-                {copied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
-              </button>
-            </div>
-          </div>
+
         </div>
 
         <div className="flex flex-col gap-2">
