@@ -120,7 +120,7 @@ export default function LoginForm({ onSwitchToSignup, onForgotPassword, onSucces
                 setEmail(e.target.value);
                 if (fieldErrors.email) setFieldErrors(prev => ({ ...prev, email: undefined }));
               }}
-              className={`w-full pl-11 pr-4 py-3.5 bg-slate-950/80 text-slate-100 border rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 outline-none placeholder:text-slate-650 font-medium ${
+              className={`w-full pl-11 pr-4 py-3.5 bg-slate-950/80 text-slate-100 border rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 outline-none placeholder:text-slate-700 font-medium ${
                 fieldErrors.email ? 'border-red-500/80 focus:ring-red-500/10' : 'border-slate-800/80'
               }`}
               placeholder="you@example.com"
@@ -153,7 +153,7 @@ export default function LoginForm({ onSwitchToSignup, onForgotPassword, onSucces
                 setPassword(e.target.value);
                 if (fieldErrors.password) setFieldErrors(prev => ({ ...prev, password: undefined }));
               }}
-              className={`w-full pl-11 pr-12 py-3.5 bg-slate-950/80 text-slate-100 border rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 outline-none placeholder:text-slate-650 font-medium ${
+              className={`w-full pl-11 pr-12 py-3.5 bg-slate-950/80 text-slate-100 border rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 outline-none placeholder:text-slate-700 font-medium ${
                 fieldErrors.password ? 'border-red-500/80 focus:ring-red-500/10' : 'border-slate-800/80'
               }`}
               placeholder="••••••••"

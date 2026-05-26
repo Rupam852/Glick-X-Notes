@@ -67,7 +67,7 @@ export default function ForgotPasswordForm({ onBackToLogin }: ForgotPasswordForm
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full pl-11 pr-4 py-3 bg-slate-950/60 text-slate-100 border border-slate-800/80 rounded-xl focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none placeholder:text-slate-650"
+              className="w-full pl-11 pr-4 py-3 bg-slate-950/60 text-slate-100 border border-slate-800/80 rounded-xl focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none placeholder:text-slate-700"
               placeholder="you@example.com"
             />
           </div>
