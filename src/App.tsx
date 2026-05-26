@@ -16,6 +16,7 @@ import Sidebar from './components/Sidebar';
 import BottomNav from './components/BottomNav';
 import Settings from './components/Settings';
 import LandingPage from './components/LandingPage';
+import EmailVerification from './components/EmailVerification';
 import { Loader2 } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './contexts/ToastContext';
@@ -186,6 +187,19 @@ function AppContent() {
           />
         )}
       </AuthLayout>
+    );
+  }
+
+  // Intercept and enforce email verification
+  if (user && !user.emailVerified) {
+    return (
+      <EmailVerification 
+        onVerified={() => {
+          if (auth.currentUser) {
+            setUser(Object.assign(Object.create(Object.getPrototypeOf(auth.currentUser)), auth.currentUser));
+          }
+        }}
+      />
     );
   }
 

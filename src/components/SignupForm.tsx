@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { auth, db, googleProvider } from '../firebase';
-import { createUserWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithPopup, sendEmailVerification } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { Mail, Lock, User, ArrowRight, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -70,6 +70,9 @@ export default function SignupForm({ onSwitchToLogin, onSuccess }: SignupFormPro
         photoURL: user.photoURL || '',
         createdAt: serverTimestamp()
       });
+
+      // Send email verification
+      await sendEmailVerification(user);
 
       onSuccess();
     } catch (err: any) {
