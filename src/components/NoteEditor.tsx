@@ -47,7 +47,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
   const { showToast } = useToast();
   const contentRef = useRef<HTMLDivElement>(null);
   const fontMenuRef = useRef<HTMLDivElement>(null);
-  const [activeFormats, setActiveFormats] = useState({ bold: false, italic: false, underline: false, strikeThrough: false, unorderedList: false, orderedList: false });
+  const [activeFormats, setActiveFormats] = useState({ bold: false, italic: false, underline: false, strikeThrough: false, unorderedList: false, orderedList: false, pre: false, h1: false, blockquote: false });
   const [isDragging, setIsDragging] = useState(false);
   const [viewingAttachment, setViewingAttachment] = useState<Attachment | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -71,13 +71,32 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
   }, [showFontMenu]);
 
   const updateFormatState = () => {
+    let isPre = false;
+    let isBlockquote = false;
+    let isH1 = false;
+    
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      let node: Node | null = selection.anchorNode;
+      while (node && node !== contentRef.current) {
+        if (node.nodeName === 'PRE') isPre = true;
+        if (node.nodeName === 'BLOCKQUOTE') isBlockquote = true;
+        if (node.nodeName === 'H1') isH1 = true;
+        if (isPre || isBlockquote || isH1) break;
+        node = node.parentNode;
+      }
+    }
+
     setActiveFormats({
       bold: document.queryCommandState('bold'),
       italic: document.queryCommandState('italic'),
       underline: document.queryCommandState('underline'),
       strikeThrough: document.queryCommandState('strikeThrough'),
       unorderedList: document.queryCommandState('insertUnorderedList'),
-      orderedList: document.queryCommandState('insertOrderedList')
+      orderedList: document.queryCommandState('insertOrderedList'),
+      pre: isPre,
+      blockquote: isBlockquote,
+      h1: isH1
     });
   };
 
@@ -162,46 +181,6 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     }
   };
 
-  const insertParagraphBelow = () => {
-    const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0) return;
-    
-    let node: Node | null = selection.anchorNode;
-    let blockNode: Node | null = null;
-    
-    while (node && node !== contentRef.current) {
-      if (node.nodeName === 'PRE' || node.nodeName === 'BLOCKQUOTE' || node.nodeName === 'DIV' || node.nodeName === 'P' || node.nodeName === 'UL' || node.nodeName === 'OL') {
-        blockNode = node;
-        break;
-      }
-      node = node.parentNode;
-    }
-    
-    const p = document.createElement('div');
-    p.innerHTML = '<br>';
-    
-    if (blockNode && blockNode.parentNode) {
-      if (blockNode.nextSibling) {
-        blockNode.parentNode.insertBefore(p, blockNode.nextSibling);
-      } else {
-        blockNode.parentNode.appendChild(p);
-      }
-    } else if (contentRef.current) {
-      contentRef.current.appendChild(p);
-    }
-    
-    // Move cursor to the new paragraph
-    const range = document.createRange();
-    range.setStart(p, 0);
-    range.collapse(true);
-    selection.removeAllRanges();
-    selection.addRange(range);
-    
-    if (contentRef.current) {
-      setBody(contentRef.current.innerHTML);
-      contentRef.current.focus();
-    }
-  };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Enter') {
@@ -740,13 +719,12 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
             <ToolbarButton icon={<Underline className="w-4 h-4" />} onClick={() => handleFormat('underline')} title="Underline" isActive={activeFormats.underline} />
             <ToolbarButton icon={<Strikethrough className="w-4 h-4" />} onClick={() => handleFormat('strikeThrough')} title="Strikethrough" isActive={activeFormats.strikeThrough} />
             <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1" />
-            <ToolbarButton icon={<Code className="w-4 h-4" />} onClick={() => toggleBlock('PRE', 'PRE')} title="Code Block" />
-            <ToolbarButton icon={<CornerDownLeft className="w-4 h-4 text-indigo-500" />} onClick={insertParagraphBelow} title="Exit Code Block / Add Line Below" />
+            <ToolbarButton icon={<Code className="w-4 h-4" />} onClick={() => toggleBlock('PRE', 'PRE')} title="Code Block" isActive={activeFormats.pre} />
             <ToolbarButton icon={<Highlighter className="w-4 h-4" />} onClick={() => handleFormat('hiliteColor', '#fcd34d')} title="Highlight" />
             <ToolbarButton icon={<Eraser className="w-4 h-4" />} onClick={() => handleFormat('removeFormat')} title="Clear Formatting" />
             <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1" />
-            <ToolbarButton icon={<Heading1 className="w-4 h-4" />} onClick={() => toggleBlock('H1', 'H1')} title="Heading" />
-            <ToolbarButton icon={<Quote className="w-4 h-4" />} onClick={() => toggleBlock('BLOCKQUOTE', 'BLOCKQUOTE')} title="Quote" />
+            <ToolbarButton icon={<Heading1 className="w-4 h-4" />} onClick={() => toggleBlock('H1', 'H1')} title="Heading" isActive={activeFormats.h1} />
+            <ToolbarButton icon={<Quote className="w-4 h-4" />} onClick={() => toggleBlock('BLOCKQUOTE', 'BLOCKQUOTE')} title="Quote" isActive={activeFormats.blockquote} />
             <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1" />
             <ToolbarButton icon={<List className="w-4 h-4" />} onClick={() => handleListToggle('insertUnorderedList')} title="Bullet List" isActive={activeFormats.unorderedList} />
             <ToolbarButton icon={<ListOrdered className="w-4 h-4" />} onClick={() => handleListToggle('insertOrderedList')} title="Numbered List" isActive={activeFormats.orderedList} />
