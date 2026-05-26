@@ -134,16 +134,7 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
       {/* Hero Section */}
       <section className="pt-16 pb-24 px-6 max-w-7xl mx-auto text-center relative">
         <div className="space-y-6 max-w-4xl mx-auto">
-          {/* Tagline Badge */}
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6 }}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 rounded-full text-xs font-semibold tracking-wide text-indigo-600 dark:text-indigo-400"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            Empowering Digital Minds & Thoughts
-          </motion.div>
+
 
           {/* Main Hero Title */}
           <motion.h1 
@@ -430,15 +421,7 @@ service cloud.firestore {
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
           
           <div className="space-y-4 relative z-10">
-            <motion.span 
-              initial={{ opacity: 0, scale: 0.9 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              className="inline-flex items-center gap-2 px-4 py-1.5 bg-indigo-950/40 border border-indigo-900/60 rounded-full text-xs font-extrabold tracking-widest text-indigo-400 uppercase"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              Get Started Today
-            </motion.span>
+
             
             <h3 className="text-4xl md:text-6xl font-black text-white tracking-tight leading-[1.05] max-w-3xl mx-auto">
               Ready to secure your <br />
@@ -473,7 +456,7 @@ service cloud.firestore {
       {/* Footer */}
       <footer className="border-t border-slate-200/50 dark:border-slate-900/80 bg-white dark:bg-slate-950 transition-colors">
         <div className="max-w-7xl mx-auto px-6 py-12 md:py-16 space-y-12">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <div className="p-2 bg-indigo-600 rounded-lg text-white">
@@ -506,24 +489,6 @@ service cloud.firestore {
                 <li>Terms of Service</li>
                 <li>Firestore Rule Validation</li>
               </ul>
-            </div>
-
-            <div>
-              <h5 className="font-bold text-sm text-slate-800 dark:text-slate-200 mb-4">Open Source</h5>
-              <div className="space-y-4">
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Join our GitHub community. Contribute themes, request security features, or audit our rules schema.
-                </p>
-                <a 
-                  href="https://github.com/Rupam852/Glick-X-Notes" 
-                  target="_blank" 
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-2 px-3.5 py-2 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-semibold hover:bg-slate-200 dark:hover:bg-slate-800 transition-all text-slate-700 dark:text-slate-200"
-                >
-                  <Github className="w-4 h-4" />
-                  GitHub Repository
-                </a>
-              </div>
             </div>
           </div>
 
