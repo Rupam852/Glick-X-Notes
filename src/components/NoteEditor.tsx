@@ -46,6 +46,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const { showToast } = useToast();
   const contentRef = useRef<HTMLDivElement>(null);
+  const fontMenuRef = useRef<HTMLDivElement>(null);
   const [activeFormats, setActiveFormats] = useState({ bold: false, italic: false, unorderedList: false, orderedList: false });
   const [isDragging, setIsDragging] = useState(false);
   const [viewingAttachment, setViewingAttachment] = useState<Attachment | null>(null);
@@ -53,6 +54,21 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
   const [activeFont, setActiveFont] = useState<'sans' | 'serif' | 'mono'>('sans');
   const [focusMode, setFocusMode] = useState(false);
   const [showFontMenu, setShowFontMenu] = useState(false);
+
+  // Click-Outside Listener for Custom Font Dropdown Menu
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (fontMenuRef.current && !fontMenuRef.current.contains(event.target as Node)) {
+        setShowFontMenu(false);
+      }
+    }
+    if (showFontMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showFontMenu]);
 
   const updateFormatState = () => {
     setActiveFormats({
@@ -459,7 +475,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
 
         <div className="flex items-center gap-3">
           {/* Custom Premium Font Switcher */}
-          <div className="relative">
+          <div className="relative" ref={fontMenuRef}>
             <button
               type="button"
               onClick={() => setShowFontMenu(prev => !prev)}
@@ -470,34 +486,31 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
             </button>
             <AnimatePresence>
               {showFontMenu && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setShowFontMenu(false)} />
-                  <motion.div
-                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    className="absolute right-0 mt-2 w-44 z-50 bg-slate-950/95 border border-slate-850 rounded-xl p-1.5 shadow-2xl backdrop-blur-md space-y-0.5"
-                  >
-                    {[
-                      { value: 'sans', label: 'Outfit Sans', desc: 'Modern Tech' },
-                      { value: 'serif', label: 'Playfair Serif', desc: 'Elegant Editorial' },
-                      { value: 'mono', label: 'Fira Mono', desc: 'Developer Code' }
-                    ].map(item => (
-                      <button
-                        key={item.value}
-                        type="button"
-                        onClick={() => {
-                          setActiveFont(item.value as any);
-                          setShowFontMenu(false);
-                        }}
-                        className={`w-full text-left px-3 py-2 rounded-lg transition-all cursor-pointer flex flex-col justify-start gap-0.5 ${activeFont === item.value ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'}`}
-                      >
-                        <span className="text-[10px] font-bold uppercase tracking-wider">{item.label}</span>
-                        <span className={`text-[8px] font-semibold tracking-wide ${activeFont === item.value ? 'text-indigo-200' : 'text-slate-500'}`}>{item.desc}</span>
-                      </button>
-                    ))}
-                  </motion.div>
-                </>
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  className="absolute right-0 mt-2 w-44 z-50 bg-slate-950/95 border border-slate-850 rounded-xl p-1.5 shadow-2xl backdrop-blur-md space-y-0.5"
+                >
+                  {[
+                    { value: 'sans', label: 'Outfit Sans', desc: 'Modern Tech' },
+                    { value: 'serif', label: 'Playfair Serif', desc: 'Elegant Editorial' },
+                    { value: 'mono', label: 'Fira Mono', desc: 'Developer Code' }
+                  ].map(item => (
+                    <button
+                      key={item.value}
+                      type="button"
+                      onClick={() => {
+                        setActiveFont(item.value as any);
+                        setShowFontMenu(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 rounded-lg transition-all cursor-pointer flex flex-col justify-start gap-0.5 ${activeFont === item.value ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'}`}
+                    >
+                      <span className="text-[10px] font-bold uppercase tracking-wider">{item.label}</span>
+                      <span className={`text-[8px] font-semibold tracking-wide ${activeFont === item.value ? 'text-indigo-200' : 'text-slate-500'}`}>{item.desc}</span>
+                    </button>
+                  ))}
+                </motion.div>
               )}
             </AnimatePresence>
           </div>
