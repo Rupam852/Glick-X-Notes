@@ -106,7 +106,7 @@ export default function LoginForm({ onSwitchToSignup, onForgotPassword, onSucces
 
   return (
     <div className="space-y-6">
-      <form onSubmit={handleEmailLogin} className="space-y-5" autoComplete="off">
+      <form onSubmit={handleEmailLogin} className="space-y-5">
         <div className="space-y-2">
           <label className="block text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Email Address</label>
           <div className="relative">
@@ -114,7 +114,9 @@ export default function LoginForm({ onSwitchToSignup, onForgotPassword, onSucces
             <input
               type="email"
               required
-              autoComplete="off"
+              readOnly
+              onFocus={(e) => e.target.removeAttribute('readonly')}
+              autoComplete="username"
               value={email}
               onChange={(e) => {
                 setEmail(e.target.value);
@@ -146,7 +148,9 @@ export default function LoginForm({ onSwitchToSignup, onForgotPassword, onSucces
             <input
               type={showPassword ? 'text' : 'password'}
               required
-              autoComplete="new-password"
+              readOnly
+              onFocus={(e) => e.target.removeAttribute('readonly')}
+              autoComplete="current-password"
               value={password}
               onChange={(e) => {
                 setPassword(e.target.value);

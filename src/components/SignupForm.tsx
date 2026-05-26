@@ -112,7 +112,7 @@ export default function SignupForm({ onSwitchToLogin, onSuccess }: SignupFormPro
 
   return (
     <div className="space-y-6">
-      <form onSubmit={handleSignup} className="space-y-5" autoComplete="off">
+      <form onSubmit={handleSignup} className="space-y-5">
         <div className="space-y-2">
           <label className="block text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Full Name</label>
           <div className="relative">
@@ -120,7 +120,9 @@ export default function SignupForm({ onSwitchToLogin, onSuccess }: SignupFormPro
             <input
               type="text"
               required
-              autoComplete="off"
+              readOnly
+              onFocus={(e) => e.target.removeAttribute('readonly')}
+              autoComplete="name"
               value={displayName}
               onChange={(e) => {
                 setDisplayName(e.target.value);
@@ -143,7 +145,9 @@ export default function SignupForm({ onSwitchToLogin, onSuccess }: SignupFormPro
             <input
               type="email"
               required
-              autoComplete="off"
+              readOnly
+              onFocus={(e) => e.target.removeAttribute('readonly')}
+              autoComplete="username"
               value={email}
               onChange={(e) => {
                 setEmail(e.target.value);
@@ -167,6 +171,8 @@ export default function SignupForm({ onSwitchToLogin, onSuccess }: SignupFormPro
               type={showPassword ? 'text' : 'password'}
               required
               minLength={6}
+              readOnly
+              onFocus={(e) => e.target.removeAttribute('readonly')}
               autoComplete="new-password"
               value={password}
               onChange={(e) => {
