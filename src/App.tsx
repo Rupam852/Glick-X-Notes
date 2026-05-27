@@ -34,8 +34,13 @@ function AppContent() {
   });
 
   const [editingNote, setEditingNote] = useState<Note | null>(() => {
-    const savedNote = sessionStorage.getItem('glick_notes_editing_note');
-    return savedNote ? JSON.parse(savedNote) : null;
+    try {
+      const savedNote = sessionStorage.getItem('glick_notes_editing_note');
+      return savedNote && savedNote !== 'undefined' ? JSON.parse(savedNote) : null;
+    } catch (e) {
+      console.error("Error parsing editing note on init:", e);
+      return null;
+    }
   });
 
   useEffect(() => {
@@ -43,8 +48,13 @@ function AppContent() {
       setUser(user);
       
       const savedView = sessionStorage.getItem('glick_notes_view');
-      const savedNote = sessionStorage.getItem('glick_notes_editing_note');
-      const parsedNote = savedNote ? JSON.parse(savedNote) : null;
+      let parsedNote = null;
+      try {
+        const savedNote = sessionStorage.getItem('glick_notes_editing_note');
+        parsedNote = savedNote && savedNote !== 'undefined' ? JSON.parse(savedNote) : null;
+      } catch (e) {
+        console.error("Error parsing editing note on auth change:", e);
+      }
 
       if (user) {
         // If logged in, check if the saved view is a valid logged-in view
