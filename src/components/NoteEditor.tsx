@@ -323,30 +323,45 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     });
   };
 
-  // Sync Body from Firebase once note loads
-  const bodyRef = React.useRef(body);
-  useEffect(() => { bodyRef.current = body; }, [body]);
-
+  // Sync state when note prop changes from parent (e.g. switching notes)
   useEffect(() => {
-    if (!contentRef.current) return;
-    const isNewlySaved = prevNoteIdRef.current === null && currentNoteId !== null;
-    prevNoteIdRef.current = currentNoteId;
-    if (isNewlySaved) return;
+    const targetNoteId = note?.id || null;
+    if (targetNoteId !== currentNoteId) {
+      setCurrentNoteId(targetNoteId);
+      setTitle(note?.title || '');
+      setBody(note?.body || '');
+      setTags(note?.tags.join(', ') || '');
+      setColor(note?.color || COLORS[0].value);
+      setLastSaved(note ? new Date() : null);
+      
+      undoStack.current = [note?.body || ''];
+      redoStack.current = [];
+      latestContent.current = note?.body || '';
+      prevNoteIdRef.current = targetNoteId;
 
-    contentRef.current.innerHTML = bodyRef.current;
-    latestContent.current = bodyRef.current;
-    
-    // Move caret to end
-    contentRef.current.focus();
-    try {
-      const range = document.createRange();
-      const sel = window.getSelection();
-      range.selectNodeContents(contentRef.current);
-      range.collapse(false);
-      sel?.removeAllRanges();
-      sel?.addRange(range);
-    } catch (e) { /* ignore */ }
-  }, [currentNoteId]); // eslint-disable-line react-hooks/exhaustive-deps
+      setLastSavedSnapshot({
+        title: note?.title || '',
+        body: note?.body || '',
+        tags: note?.tags.join(', ') || '',
+        color: note?.color || COLORS[0].value
+      });
+
+      if (contentRef.current) {
+        contentRef.current.innerHTML = note?.body || '';
+        
+        // Move caret to end
+        contentRef.current.focus();
+        try {
+          const range = document.createRange();
+          const sel = window.getSelection();
+          range.selectNodeContents(contentRef.current);
+          range.collapse(false);
+          sel?.removeAllRanges();
+          sel?.addRange(range);
+        } catch (e) { /* ignore */ }
+      }
+    }
+  }, [note?.id]);
 
   // Handle Input Changes inside editor
   const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
