@@ -140,48 +140,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     updateFormatState();
   };
 
-  const handleHighlight = () => {
-    if (activeFormats.highlight) {
-      document.execCommand('hiliteColor', false, 'transparent');
-      document.execCommand('backColor', false, 'transparent');
-    } else {
-      document.execCommand('hiliteColor', false, '#fcd34d');
-      document.execCommand('backColor', false, '#fcd34d');
-    }
-    if (contentRef.current) {
-      setBody(contentRef.current.innerHTML);
-      contentRef.current.focus();
-    }
-    updateFormatState();
-  };
 
-  const handleClearFormatting = () => {
-    document.execCommand('removeFormat', false, '');
-    document.execCommand('hiliteColor', false, 'transparent');
-    document.execCommand('backColor', false, 'transparent');
-
-    let isBlock = false;
-    const selection = window.getSelection();
-    if (selection && selection.rangeCount > 0) {
-      let node: Node | null = selection.anchorNode;
-      while (node && node !== contentRef.current) {
-        if (node.nodeName === 'PRE' || node.nodeName === 'BLOCKQUOTE' || node.nodeName === 'H1' || node.nodeName === 'UL' || node.nodeName === 'OL') {
-          isBlock = true;
-          break;
-        }
-        node = node.parentNode;
-      }
-    }
-    if (isBlock) {
-      document.execCommand('formatBlock', false, 'P');
-    }
-
-    if (contentRef.current) {
-      setBody(contentRef.current.innerHTML);
-      contentRef.current.focus();
-    }
-    updateFormatState();
-  };
 
   const handleListToggle = (command: string) => {
     const isActive = document.queryCommandState(command);
@@ -769,8 +728,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
             <ToolbarButton icon={<Strikethrough className="w-4 h-4" />} onClick={() => handleFormat('strikeThrough')} title="Strikethrough" isActive={activeFormats.strikeThrough} />
             <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1" />
             <ToolbarButton icon={<Code className="w-4 h-4" />} onClick={() => toggleBlock('PRE', 'PRE')} title="Code Block" isActive={activeFormats.pre} />
-            <ToolbarButton icon={<Highlighter className="w-4 h-4" />} onClick={handleHighlight} title="Highlight" isActive={activeFormats.highlight} />
-            <ToolbarButton icon={<Eraser className="w-4 h-4" />} onClick={handleClearFormatting} title="Clear Formatting" />
+
             <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1" />
             <ToolbarButton icon={<Heading1 className="w-4 h-4" />} onClick={() => toggleBlock('H1', 'H1')} title="Heading" isActive={activeFormats.h1} />
             <ToolbarButton icon={<Quote className="w-4 h-4" />} onClick={() => toggleBlock('BLOCKQUOTE', 'BLOCKQUOTE')} title="Quote" isActive={activeFormats.blockquote} />
