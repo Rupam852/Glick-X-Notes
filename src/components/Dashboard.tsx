@@ -7,6 +7,22 @@ import { Search, Plus, SortDesc, SortAsc, Tag, Paperclip, Calendar, Clock, Layou
 import { motion, AnimatePresence } from 'motion/react';
 import { format } from 'date-fns';
 
+const stripHtmlForPreview = (html: string) => {
+  if (!html) return '';
+  return html
+    .replace(/<br\s*\/?>/gi, ' ')
+    .replace(/<\/div>/gi, ' ')
+    .replace(/<\/p>/gi, ' ')
+    .replace(/<\/li>/gi, ' ')
+    .replace(/<div[^>]*>/gi, ' ')
+    .replace(/<p[^>]*>/gi, ' ')
+    .replace(/<li[^>]*>/gi, ' ')
+    .replace(/<[^>]+>/g, '') // Strip remaining tags
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ') // Collapse multiple spaces
+    .trim();
+};
+
 interface DashboardProps {
   user: User;
   onEditNote: (note: Note) => void;
@@ -73,7 +89,7 @@ export default function Dashboard({ user, onEditNote, onNewNote }: DashboardProp
   const filteredNotes = notes.filter(note => {
     const matchesSearch = 
       note.title.toLowerCase().includes(search.toLowerCase()) ||
-      note.body.toLowerCase().includes(search.toLowerCase()) ||
+      stripHtmlForPreview(note.body).toLowerCase().includes(search.toLowerCase()) ||
       note.tags.some(tag => tag.toLowerCase().includes(search.toLowerCase()));
     
     const matchesTag = selectedTag ? note.tags.includes(selectedTag) : true;
@@ -251,7 +267,7 @@ export default function Dashboard({ user, onEditNote, onNewNote }: DashboardProp
                     </div>
 
                     <p className="text-slate-400 text-sm line-clamp-3 leading-relaxed font-medium">
-                      {highlightText(note.body.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' '), search)}
+                      {highlightText(stripHtmlForPreview(note.body), search)}
                     </p>
                   </div>
 
@@ -309,7 +325,7 @@ export default function Dashboard({ user, onEditNote, onNewNote }: DashboardProp
                         {highlightText(note.title, search)}
                       </h3>
                       <p className="text-slate-400 text-xs line-clamp-1 max-w-xl">
-                        {note.body.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ')}
+                        {stripHtmlForPreview(note.body)}
                       </p>
                     </div>
                   </div>
