@@ -16,6 +16,62 @@
 .dark .editor-content a { color: #818cf8; }
 .dark .editor-content pre { background: #1e293b; color: #e2e8f0; }
 
+/* WYSIWYG Editor Table Styles */
+.editor-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  background: #ffffff;
+}
+
+.dark .editor-content table {
+  border-color: rgba(148, 163, 184, 0.15);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  background: #0f172a;
+}
+
+.editor-content th {
+  padding: 12px 16px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(99, 102, 241, 0.06);
+  color: #312e81;
+  font-weight: 700;
+  text-align: left;
+  font-size: 14px;
+}
+
+.dark .editor-content th {
+  border-color: rgba(148, 163, 184, 0.15);
+  background: rgba(99, 102, 241, 0.16);
+  color: #e0e7ff;
+}
+
+.editor-content td {
+  padding: 12px 16px;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  color: #334155;
+  font-size: 14px;
+  transition: background-color 0.15s ease;
+}
+
+.dark .editor-content td {
+  border-color: rgba(148, 163, 184, 0.1);
+  color: #94a3b8;
+}
+
+/* Hover highlights to indicate interactive cells */
+.editor-content td:hover {
+  background: rgba(99, 102, 241, 0.03);
+}
+
+.dark .editor-content td:hover {
+  background: rgba(99, 102, 241, 0.04);
+}
+
 /* Force clean text coloring inside contenteditable editor */
 .editor-content {
   color: #334155; /* slate-700 */
