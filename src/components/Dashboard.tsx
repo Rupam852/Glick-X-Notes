@@ -110,7 +110,7 @@ export default function Dashboard({ user, onEditNote, onNewNote }: DashboardProp
         <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-500/5 rounded-full blur-[100px] pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-80 h-80 bg-pink-500/5 rounded-full blur-[100px] pointer-events-none" />
         
-        <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-6 z-10">
+        <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-6 z-10">
           <div className="space-y-1">
             <h1 className="text-3.5xl font-black bg-gradient-to-r from-white via-slate-100 to-slate-300 bg-clip-text text-transparent">
               My Notes
@@ -121,7 +121,7 @@ export default function Dashboard({ user, onEditNote, onNewNote }: DashboardProp
           </div>
           <button
             onClick={onNewNote}
-            className="flex items-center justify-center gap-2.5 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white font-bold px-6 py-4 rounded-2xl shadow-lg hover:shadow-[0_0_30px_rgba(99,102,241,0.25)] transition-all duration-200 active:translate-y-0.5 cursor-pointer text-sm uppercase tracking-wider font-black"
+            className="flex items-center justify-center gap-2.5 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white font-bold px-6 py-4 rounded-2xl shadow-lg hover:shadow-[0_0_30px_rgba(99,102,241,0.25)] transition-all duration-200 active:translate-y-0.5 cursor-pointer text-sm uppercase tracking-wider font-black lg:w-auto w-full"
           >
             <Plus className="w-5 h-5" />
             Create New Note
@@ -131,7 +131,7 @@ export default function Dashboard({ user, onEditNote, onNewNote }: DashboardProp
 
       {/* Advanced Control Panel */}
       <div className="bg-slate-900/20 border border-slate-900/60 p-4 rounded-2xl space-y-4">
-        <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex flex-col lg:flex-row gap-4">
           {/* Enhanced Search Input */}
           <div className="relative flex-1">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
