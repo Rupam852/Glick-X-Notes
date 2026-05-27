@@ -1498,7 +1498,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
           </div>
         </div>
 
-        <div className="flex flex-nowrap items-center gap-1.5 p-2 overflow-x-auto no-scrollbar bg-slate-50/50 dark:bg-slate-900/50">
+        <div className="flex flex-wrap items-center gap-1.5 p-2 bg-slate-50/50 dark:bg-slate-900/50">
           
           <button onMouseDown={(e) => e.preventDefault()} onClick={() => setActivePopup(p => p === 'text' ? null : 'text')} className={`p-2 w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all ${activePopup === 'text' ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Text Styles">
             <Type className="w-5 h-5" />
