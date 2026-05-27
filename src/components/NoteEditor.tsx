@@ -3,7 +3,7 @@ import { collection, doc, setDoc, deleteDoc, serverTimestamp, Timestamp, getDocs
 import { User as FirebaseUser } from 'firebase/auth';
 import { db, auth, handleFirestoreError, OperationType } from '../firebase';
 import { Note, Attachment } from '../types';
-import { ArrowLeft, Save, Trash2, Paperclip, X, Download, FileText, Image as ImageIcon, Plus, Tag, Palette, Check, Loader2, Bold, Italic, List, ListOrdered, Link, Heading1, Quote, Undo, Redo, UploadCloud, Sparkles, ChevronDown, Underline, Strikethrough, Code, Highlighter, Eraser, CornerDownLeft, Type, AlignLeft, AlignCenter, AlignRight, CheckSquare, Table } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, Paperclip, X, Download, FileText, Image as ImageIcon, Plus, Tag, Palette, Check, Loader2, Bold, Italic, List, ListOrdered, Link, Heading1, Quote, Undo, Redo, UploadCloud, Sparkles, ChevronDown, ChevronUp, Underline, Strikethrough, Code, Highlighter, Eraser, CornerDownLeft, Type, AlignLeft, AlignCenter, AlignRight, CheckSquare, Table } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useToast } from '../contexts/ToastContext';
 import { format } from 'date-fns';
@@ -266,19 +266,19 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
   const handleGridClick = (r: number, c: number) => {
     const rows = r + 1;
     const cols = c + 1;
-    let html = '<table border="1" style="border-collapse:collapse; width:100%; margin: 10px 0;">';
+    let html = '<table style="border-collapse: collapse; width: 100%; border: 1px solid rgba(148, 163, 184, 0.35); margin: 16px 0; border-radius: 8px; overflow: hidden;">';
     for (let i = 0; i < rows; i++) {
       html += '<tr>';
       for (let j = 0; j < cols; j++) {
         if (i === 0) {
-          html += '<th style="padding:6px 10px; background:#f3f4f6;">Col ' + (j + 1) + '</th>';
+          html += `<th style="padding: 12px 16px; border: 1px solid rgba(148, 163, 184, 0.35); background: rgba(99, 102, 241, 0.15); color: inherit; font-weight: 600; text-align: left; font-size: 14px;">Col ${j + 1}</th>`;
         } else {
-          html += '<td style="padding:6px 10px;">&nbsp;</td>';
+          html += '<td style="padding: 12px 16px; border: 1px solid rgba(148, 163, 184, 0.2); color: inherit; font-size: 14px;"><br></td>';
         }
       }
       html += '</tr>';
     }
-    html += '</table><p></p>';
+    html += '</table><p><br></p>';
     
     document.execCommand('insertHTML', false, html);
     if (contentRef.current) {
@@ -921,28 +921,52 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
 
                     <div>
                       <p className="text-xs text-slate-500 dark:text-slate-400 mb-2 px-1 font-semibold uppercase tracking-wider">Font size</p>
-                      <div className="flex items-center gap-6 px-2 overflow-x-auto no-scrollbar">
-                        {[10, 12, 14, 16, 18, 20, 24, 36].map(size => {
-                          const isActive = Math.round(parseFloat(activeFormats.fontSize)) === size;
-                          
-                          return (
+                      <div className="flex items-center gap-2 px-1">
+                        <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1.5 rounded-xl border border-slate-200/50 dark:border-slate-700/50 shadow-inner">
+                          <input
+                            type="number"
+                            min={1}
+                            max={120}
+                            value={Math.round(parseFloat(activeFormats.fontSize)) || 16}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value, 10);
+                              if (!isNaN(val)) {
+                                handleFontSize(val);
+                              }
+                            }}
+                            className="w-14 bg-transparent text-slate-800 dark:text-slate-100 text-sm font-bold text-center outline-none border-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          />
+                          <div className="flex flex-col gap-0.5 border-l border-slate-300 dark:border-slate-600 pl-1.5 ml-1.5">
                             <button 
-                              key={size} 
-                              type="button" 
-                              onClick={() => handleFontSize(size)} 
-                              className={`font-medium text-lg transition-colors whitespace-nowrap ${isActive ? 'text-indigo-600 dark:text-indigo-400 font-bold scale-110' : 'text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-white'}`}
+                              type="button"
+                              onClick={() => {
+                                const current = Math.round(parseFloat(activeFormats.fontSize)) || 16;
+                                handleFontSize(Math.min(120, current + 1));
+                              }}
+                              className="text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-white transition-colors"
                             >
-                              {size}
+                              <ChevronUp className="w-3.5 h-3.5" />
                             </button>
-                          );
-                        })}
+                            <button 
+                              type="button"
+                              onClick={() => {
+                                const current = Math.round(parseFloat(activeFormats.fontSize)) || 16;
+                                handleFontSize(Math.max(1, current - 1));
+                              }}
+                              className="text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-white transition-colors"
+                            >
+                              <ChevronDown className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                        <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">px</span>
                       </div>
                     </div>
                     
                     <div>
                       <p className="text-xs text-slate-500 dark:text-slate-400 mb-2 px-1 font-semibold uppercase tracking-wider">Font color</p>
                       <div className="flex items-center gap-4 px-2 overflow-x-auto no-scrollbar pb-2">
-                        {['#0f172a', '#64748b', '#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6'].map(color => {
+                        {['#ffffff', '#0f172a', '#64748b', '#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6'].map(color => {
                           const isActive = rgbToHex(activeFormats.fontColor) === color.toLowerCase();
                           return (
                             <button 
@@ -952,7 +976,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
                               className={`w-8 h-8 rounded-md shrink-0 shadow-sm transition-transform hover:scale-110 flex items-center justify-center ${isActive ? 'ring-2 ring-offset-2 ring-indigo-500 dark:ring-offset-slate-900 border-none' : 'border border-slate-200 dark:border-slate-800'}`} 
                               style={{ backgroundColor: color }} 
                             >
-                              {isActive && <Check className="w-4 h-4 text-white drop-shadow-md" />}
+                              {isActive && <Check className={`w-4 h-4 drop-shadow-sm ${color === '#ffffff' ? 'text-slate-800' : 'text-white'}`} />}
                             </button>
                           );
                         })}
