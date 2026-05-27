@@ -90,11 +90,11 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
       {/* Navigation */}
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-white/70 dark:bg-slate-950/70 border-b border-slate-200/50 dark:border-slate-800/40 transition-colors">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-slate-950 rounded-xl flex items-center justify-center shadow-lg border border-slate-800/80 overflow-hidden">
+          <div className="flex items-center gap-2 md:gap-3">
+            <div className="w-8 h-8 md:w-10 md:h-10 bg-slate-950 rounded-lg md:rounded-xl flex items-center justify-center shadow-lg border border-slate-800/80 overflow-hidden shrink-0">
               <img src="/favicon.png" alt="Logo" className="w-full h-full object-cover" />
             </div>
-            <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-indigo-600 via-violet-600 to-pink-600 dark:from-indigo-400 dark:via-violet-400 dark:to-pink-400 bg-clip-text text-transparent">
+            <span className="text-base md:text-xl font-bold tracking-tight bg-gradient-to-r from-indigo-600 via-violet-600 to-pink-600 dark:from-indigo-400 dark:via-violet-400 dark:to-pink-400 bg-clip-text text-transparent shrink-0">
               Glick X Notes
             </span>
           </div>
@@ -105,22 +105,22 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
             <a href="#faq" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">FAQs</a>
           </nav>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 md:gap-4 shrink-0">
 
 
             {/* Auth CTAs */}
             <button 
               onClick={onLogin}
-              className="hidden sm:inline-flex text-sm font-semibold text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 px-4 py-2 transition-colors cursor-pointer"
+              className="inline-flex text-xs md:text-sm font-semibold text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 px-2 md:px-4 py-2 transition-colors cursor-pointer shrink-0"
             >
               Sign In
             </button>
             <button 
               onClick={onSignup}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-5 py-2.5 rounded-xl shadow-lg shadow-indigo-500/20 hover:shadow-xl hover:shadow-indigo-500/30 transition-all flex items-center gap-1.5 cursor-pointer"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs md:text-sm font-semibold px-3 py-2 md:px-5 md:py-2.5 rounded-lg md:rounded-xl shadow-lg shadow-indigo-500/20 hover:shadow-xl hover:shadow-indigo-500/30 transition-all flex items-center gap-1 cursor-pointer shrink-0"
             >
               Get Started
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight className="w-3.5 h-3.5 md:w-4 md:h-4" />
             </button>
           </div>
         </div>
