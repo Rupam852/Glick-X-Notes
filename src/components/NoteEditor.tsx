@@ -113,7 +113,8 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     if (selection && selection.rangeCount > 0) {
       const parentNode = selection.focusNode?.parentElement;
       if (parentNode) {
-        currentFontSize = window.getComputedStyle(parentNode).fontSize.replace('px', '');
+        const computedSize = window.getComputedStyle(parentNode).fontSize;
+        currentFontSize = Math.round(parseFloat(computedSize)).toString();
       }
     }
 
@@ -202,22 +203,33 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     const selection = window.getSelection();
     if (!selection || !selection.rangeCount) return;
 
-    try {
-      const range = selection.getRangeAt(0);
-      if (!range.collapsed) {
+    let sizeIndex = 3;
+    if (px <= 10) sizeIndex = 1;
+    else if (px <= 12) sizeIndex = 2;
+    else if (px <= 16) sizeIndex = 3;
+    else if (px <= 18) sizeIndex = 4;
+    else if (px <= 24) sizeIndex = 5;
+    else if (px <= 32) sizeIndex = 6;
+    else sizeIndex = 7;
+
+    const range = selection.getRangeAt(0);
+    if (range.collapsed) {
+      document.execCommand('fontSize', false, sizeIndex.toString());
+    } else {
+      try {
         const span = document.createElement('span');
         span.style.fontSize = px + 'px';
         range.surroundContents(span);
-      }
-    } catch (e) {
-      // Fallback for complex selections
-      document.execCommand('fontSize', false, '7');
-      if (contentRef.current) {
-        const fonts = contentRef.current.querySelectorAll('font[size="7"]');
-        fonts.forEach(f => {
-          f.removeAttribute('size');
-          (f as HTMLElement).style.fontSize = px + 'px';
-        });
+      } catch (e) {
+        // Fallback for complex selections
+        document.execCommand('fontSize', false, '7');
+        if (contentRef.current) {
+          const fonts = contentRef.current.querySelectorAll('font[size="7"]');
+          fonts.forEach(f => {
+            f.removeAttribute('size');
+            (f as HTMLElement).style.fontSize = px + 'px';
+          });
+        }
       }
     }
     
@@ -278,8 +290,8 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
   };
 
   const handleCustomTableInsert = () => {
-    const r = parseInt(customRows, 10);
-    const c = parseInt(customCols, 10);
+    const r = Math.min(50, Math.max(1, parseInt(customRows, 10)));
+    const c = Math.min(50, Math.max(1, parseInt(customCols, 10)));
     if (isNaN(r) || isNaN(c) || r <= 0 || c <= 0) return;
     handleGridClick(r - 1, c - 1);
   };
@@ -911,15 +923,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
                       <p className="text-xs text-slate-500 dark:text-slate-400 mb-2 px-1 font-semibold uppercase tracking-wider">Font size</p>
                       <div className="flex items-center gap-6 px-2 overflow-x-auto no-scrollbar">
                         {[10, 12, 14, 16, 18, 20, 24, 36].map(size => {
-                          let sizeIndex = 3;
-                          if (size <= 10) sizeIndex = 1;
-                          else if (size <= 12) sizeIndex = 2;
-                          else if (size <= 16) sizeIndex = 3;
-                          else if (size <= 18) sizeIndex = 4;
-                          else if (size <= 24) sizeIndex = 5;
-                          else if (size <= 32) sizeIndex = 6;
-                          else sizeIndex = 7;
-                          const isActive = activeFormats.fontSize === sizeIndex.toString();
+                          const isActive = Math.round(parseFloat(activeFormats.fontSize)) === size;
                           
                           return (
                             <button 
