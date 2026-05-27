@@ -70,6 +70,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
   const undoStack = useRef<string[]>([note?.body || '']);
   const redoStack = useRef<string[]>([]);
   const historyTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const savedSelectionRef = useRef<Range | null>(null);
 
   // Auto-Save Refs
   const latestContent = useRef(note?.body || '');
@@ -432,7 +433,10 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     const selection = window.getSelection();
     if (!selection || !selection.rangeCount) return;
 
-    const savedRange = saveSelection();
+    if (contentRef.current) {
+      pushToHistoryImmediate(contentRef.current.innerHTML);
+    }
+
     const range = selection.getRangeAt(0);
 
     if (range.collapsed) {
@@ -442,15 +446,21 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
         parent &&
         parent.tagName === 'SPAN' &&
         parent.style.fontSize &&
-        parent.childNodes.length === 1 &&
         (parent.textContent === '' || parent.textContent === '\u200B')
       ) {
         parent.style.fontSize = px + 'px';
+        // Place cursor inside
+        const newRange = document.createRange();
+        newRange.selectNodeContents(parent);
+        newRange.collapse(false);
+        selection.removeAllRanges();
+        selection.addRange(newRange);
       } else {
         const span = document.createElement('span');
         span.style.fontSize = px + 'px';
         span.innerHTML = '&#8203;';
         range.insertNode(span);
+        
         const newRange = document.createRange();
         newRange.setStart(span.firstChild!, 1);
         newRange.collapse(true);
@@ -458,32 +468,37 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
         selection.addRange(newRange);
       }
     } else {
+      // Non-collapsed text selection: use the bulletproof HTML-tag temporary wrapper approach
       try {
-        const fragment = range.extractContents();
-        const span = document.createElement('span');
-        span.style.fontSize = px + 'px';
-        span.appendChild(fragment);
-        range.insertNode(span);
-        const newRange = document.createRange();
-        newRange.selectNodeContents(span);
-        selection.removeAllRanges();
-        selection.addRange(newRange);
-      } catch (e) {
-        document.execCommand('fontSize', false, '7');
-        if (contentRef.current) {
-          contentRef.current.querySelectorAll('font[size="7"]').forEach(f => {
-            f.removeAttribute('size');
-            (f as HTMLElement).style.fontSize = px + 'px';
-          });
-        }
+        document.execCommand('styleWithCSS', false, 'false');
+      } catch (e) {}
+      
+      document.execCommand('fontSize', false, '7');
+      
+      try {
+        document.execCommand('styleWithCSS', false, 'true');
+      } catch (e) {}
+
+      // Now we find all <font size="7"> and convert them to <span style="font-size: px px">
+      if (contentRef.current) {
+        const fontElements = Array.from(contentRef.current.querySelectorAll('font[size="7"]'));
+        fontElements.forEach(fontEl => {
+          const span = document.createElement('span');
+          span.style.fontSize = px + 'px';
+          // Transfer all child nodes
+          while (fontEl.firstChild) {
+            span.appendChild(fontEl.firstChild);
+          }
+          fontEl.parentNode?.replaceChild(span, fontEl);
+        });
       }
     }
 
-    restoreSelection(savedRange);
     if (contentRef.current) {
       const html = contentRef.current.innerHTML;
       latestContent.current = html;
       setBody(html);
+      pushToHistory(html);
       contentRef.current.focus();
     }
     updateFormatState();
@@ -1431,23 +1446,22 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
           </div>
         </div>
 
-        {/* ROW 2: Styling and formatting controls (scrollable on mobile) */}
         <div ref={popupRef} className="flex flex-nowrap items-center gap-1.5 p-2 overflow-x-auto no-scrollbar bg-slate-50/50 dark:bg-slate-900/50">
           
-          <button onClick={() => setActivePopup(p => p === 'text' ? null : 'text')} className={`p-2 w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all ${activePopup === 'text' ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Text Styles">
+          <button onMouseDown={(e) => e.preventDefault()} onClick={() => setActivePopup(p => p === 'text' ? null : 'text')} className={`p-2 w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all ${activePopup === 'text' ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Text Styles">
             <Type className="w-5 h-5" />
           </button>
           
-          <button onClick={() => setActivePopup(p => p === 'paragraph' ? null : 'paragraph')} className={`p-2 w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all ${activePopup === 'paragraph' ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Paragraph styles">
+          <button onMouseDown={(e) => e.preventDefault()} onClick={() => setActivePopup(p => p === 'paragraph' ? null : 'paragraph')} className={`p-2 w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all ${activePopup === 'paragraph' ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Paragraph styles">
             <AlignLeft className="w-5 h-5" />
           </button>
 
           <div className="w-px h-5 bg-slate-250 dark:bg-slate-800 mx-1 shrink-0" />
 
           {/* Heading Blocks */}
-          <button onClick={() => handleHeading('h1')} className={`px-2.5 py-1 text-xs font-black rounded-lg shrink-0 transition-colors ${activeFormats.h1 ? 'bg-indigo-150 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`}>H1</button>
-          <button onClick={() => handleHeading('h2')} className={`px-2.5 py-1 text-xs font-black rounded-lg shrink-0 transition-colors ${activeFormats.h2 ? 'bg-indigo-150 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`}>H2</button>
-          <button onClick={() => handleHeading('h3')} className={`px-2.5 py-1 text-xs font-black rounded-lg shrink-0 transition-colors ${activeFormats.h3 ? 'bg-indigo-150 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`}>H3</button>
+          <button onMouseDown={(e) => e.preventDefault()} onClick={() => handleHeading('h1')} className={`px-2.5 py-1 text-xs font-black rounded-lg shrink-0 transition-colors ${activeFormats.h1 ? 'bg-indigo-150 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`}>H1</button>
+          <button onMouseDown={(e) => e.preventDefault()} onClick={() => handleHeading('h2')} className={`px-2.5 py-1 text-xs font-black rounded-lg shrink-0 transition-colors ${activeFormats.h2 ? 'bg-indigo-150 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`}>H2</button>
+          <button onMouseDown={(e) => e.preventDefault()} onClick={() => handleHeading('h3')} className={`px-2.5 py-1 text-xs font-black rounded-lg shrink-0 transition-colors ${activeFormats.h3 ? 'bg-indigo-150 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`}>H3</button>
 
           <div className="w-px h-5 bg-slate-250 dark:bg-slate-800 mx-1 shrink-0" />
 
@@ -1458,11 +1472,15 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
               min={1}
               max={120}
               value={localFontSize}
+              onFocus={() => {
+                savedSelectionRef.current = saveSelection();
+              }}
               onChange={(e) => setLocalFontSize(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   const val = parseInt(localFontSize, 10);
                   if (!isNaN(val) && val >= 1 && val <= 120) {
+                    restoreSelection(savedSelectionRef.current);
                     handleFontSize(val);
                   }
                   contentRef.current?.focus();
@@ -1471,6 +1489,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
               onBlur={() => {
                 const val = parseInt(localFontSize, 10);
                 if (!isNaN(val) && val >= 1 && val <= 120) {
+                  restoreSelection(savedSelectionRef.current);
                   handleFontSize(val);
                 } else {
                   setLocalFontSize(Math.round(parseFloat(activeFormats.fontSize) || 16).toString());
@@ -1481,6 +1500,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
             <div className="flex flex-col gap-0.5 border-l border-slate-300 dark:border-slate-700 pl-1.5 ml-1.5">
               <button 
                 type="button"
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={() => {
                   const current = Math.round(parseFloat(activeFormats.fontSize)) || 16;
                   handleFontSize(Math.min(120, current + 1));
@@ -1491,6 +1511,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
               </button>
               <button 
                 type="button"
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={() => {
                   const current = Math.round(parseFloat(activeFormats.fontSize)) || 16;
                   handleFontSize(Math.max(1, current - 1));
@@ -1505,41 +1526,41 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
           <div className="w-px h-5 bg-slate-250 dark:bg-slate-800 mx-1 shrink-0" />
 
           {/* Quick list togglers & blockquote */}
-          <button onClick={() => handleListToggle('insertUnorderedList')} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-colors ${activeFormats.unorderedList ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Bullet List">
+          <button onMouseDown={(e) => e.preventDefault()} onClick={() => handleListToggle('insertUnorderedList')} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-colors ${activeFormats.unorderedList ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Bullet List">
             <List className="w-5 h-5" />
           </button>
           
-          <button onClick={() => handleListToggle('insertOrderedList')} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-colors ${activeFormats.orderedList ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Ordered List">
+          <button onMouseDown={(e) => e.preventDefault()} onClick={() => handleListToggle('insertOrderedList')} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-colors ${activeFormats.orderedList ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Ordered List">
             <ListOrdered className="w-5 h-5" />
           </button>
 
-          <button onClick={() => toggleBlock('blockquote', 'blockquote')} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-colors ${activeFormats.blockquote ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Blockquote">
+          <button onMouseDown={(e) => e.preventDefault()} onClick={() => toggleBlock('blockquote', 'blockquote')} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-colors ${activeFormats.blockquote ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Blockquote">
             <Quote className="w-5 h-5" />
           </button>
 
           <div className="w-px h-5 bg-slate-250 dark:bg-slate-800 mx-1 shrink-0" />
 
           {/* Action Popups toggler links */}
-          <button onClick={() => setActivePopup(p => p === 'link' ? null : 'link')} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-colors ${activePopup === 'link' || selectedLinkUrl ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Insert link">
+          <button onMouseDown={(e) => e.preventDefault()} onClick={() => setActivePopup(p => p === 'link' ? null : 'link')} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-colors ${activePopup === 'link' || selectedLinkUrl ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Insert link">
             <Link className="w-5 h-5" />
           </button>
 
-          <button onClick={handleChecklist} className="p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all" title="Insert checklist">
+          <button onMouseDown={(e) => e.preventDefault()} onClick={handleChecklist} className="p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all" title="Insert checklist">
             <CheckSquare className="w-5 h-5" />
           </button>
           
-          <button onClick={() => document.getElementById('image-upload')?.click()} className="p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all" title="Attach file">
+          <button onMouseDown={(e) => e.preventDefault()} onClick={() => document.getElementById('image-upload')?.click()} className="p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all" title="Attach file">
             <ImageIcon className="w-5 h-5" />
           </button>
           
-          <button onClick={handleTable} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-colors ${activeFormats.isInsideTable ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Table commands">
+          <button onMouseDown={(e) => e.preventDefault()} onClick={handleTable} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-colors ${activeFormats.isInsideTable ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Table commands">
             <Table className="w-5 h-5" />
           </button>
 
           <div className="w-px h-5 bg-slate-250 dark:bg-slate-800 mx-1 shrink-0" />
 
           {/* Search tool */}
-          <button onClick={() => setShowFindReplace(prev => !prev)} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-colors ${showFindReplace ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Find and Replace">
+          <button onMouseDown={(e) => e.preventDefault()} onClick={() => setShowFindReplace(prev => !prev)} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-colors ${showFindReplace ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Find and Replace">
             <Search className="w-5 h-5" />
           </button>
 
@@ -1552,13 +1573,13 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 absolute top-full left-0 w-full z-30 shadow-xl">
               <div className="p-4 space-y-4">
                 <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl max-w-sm">
-                  <button onClick={() => handleFormat('bold')} className={`p-2 rounded-lg transition-all ${activeFormats.bold ? 'bg-white dark:bg-slate-700 text-indigo-600 font-bold' : 'text-slate-500'}`} title="Bold"><Bold className="w-4 h-4" /></button>
-                  <button onClick={() => handleFormat('italic')} className={`p-2 rounded-lg transition-all ${activeFormats.italic ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Italic"><Italic className="w-4 h-4" /></button>
-                  <button onClick={() => handleFormat('underline')} className={`p-2 rounded-lg transition-all ${activeFormats.underline ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Underline"><Underline className="w-4 h-4" /></button>
-                  <button onClick={() => handleFormat('strikeThrough')} className={`p-2 rounded-lg transition-all ${activeFormats.strikeThrough ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Strikethrough"><Strikethrough className="w-4 h-4" /></button>
+                  <button onMouseDown={(e) => e.preventDefault()} onClick={() => handleFormat('bold')} className={`p-2 rounded-lg transition-all ${activeFormats.bold ? 'bg-white dark:bg-slate-700 text-indigo-600 font-bold' : 'text-slate-500'}`} title="Bold"><Bold className="w-4 h-4" /></button>
+                  <button onMouseDown={(e) => e.preventDefault()} onClick={() => handleFormat('italic')} className={`p-2 rounded-lg transition-all ${activeFormats.italic ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Italic"><Italic className="w-4 h-4" /></button>
+                  <button onMouseDown={(e) => e.preventDefault()} onClick={() => handleFormat('underline')} className={`p-2 rounded-lg transition-all ${activeFormats.underline ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Underline"><Underline className="w-4 h-4" /></button>
+                  <button onMouseDown={(e) => e.preventDefault()} onClick={() => handleFormat('strikeThrough')} className={`p-2 rounded-lg transition-all ${activeFormats.strikeThrough ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Strikethrough"><Strikethrough className="w-4 h-4" /></button>
                   <div className="w-px h-6 bg-slate-350 dark:bg-slate-750 mx-1" />
-                  <button onClick={handleHighlight} className={`p-2 rounded-lg transition-all ${activeFormats.highlight ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Text Highlight"><Highlighter className="w-4 h-4" /></button>
-                  <button onClick={handleClearFormatting} className="p-2 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-white" title="Clear styling"><Eraser className="w-4 h-4" /></button>
+                  <button onMouseDown={(e) => e.preventDefault()} onClick={handleHighlight} className={`p-2 rounded-lg transition-all ${activeFormats.highlight ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Text Highlight"><Highlighter className="w-4 h-4" /></button>
+                  <button onMouseDown={(e) => e.preventDefault()} onClick={handleClearFormatting} className="p-2 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-white" title="Clear styling"><Eraser className="w-4 h-4" /></button>
                 </div>
                 
                 <div>
@@ -1570,6 +1591,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
                         <button 
                           key={color} 
                           type="button" 
+                          onMouseDown={(e) => e.preventDefault()}
                           onClick={() => handleFontColor(color)} 
                           className={`w-7 h-7 rounded-lg shrink-0 shadow-sm transition-transform hover:scale-105 flex items-center justify-center ${isActive ? 'ring-2 ring-indigo-500 border-none' : 'border border-slate-200 dark:border-slate-850'}`} 
                           style={{ backgroundColor: color }} 
@@ -1588,9 +1610,9 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
               <div className="p-4 space-y-4">
                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Text Alignment</p>
                 <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl max-w-xs">
-                  <button onClick={() => handleFormat('justifyLeft')} className={`flex-1 p-2 rounded-lg flex justify-center transition-all ${activeFormats.justifyLeft ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Align Left"><AlignLeft className="w-4 h-4" /></button>
-                  <button onClick={() => handleFormat('justifyCenter')} className={`flex-1 p-2 rounded-lg flex justify-center transition-all ${activeFormats.justifyCenter ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Align Center"><AlignCenter className="w-4 h-4" /></button>
-                  <button onClick={() => handleFormat('justifyRight')} className={`flex-1 p-2 rounded-lg flex justify-center transition-all ${activeFormats.justifyRight ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Align Right"><AlignRight className="w-4 h-4" /></button>
+                  <button onMouseDown={(e) => e.preventDefault()} onClick={() => handleFormat('justifyLeft')} className={`flex-1 p-2 rounded-lg flex justify-center transition-all ${activeFormats.justifyLeft ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Align Left"><AlignLeft className="w-4 h-4" /></button>
+                  <button onMouseDown={(e) => e.preventDefault()} onClick={() => handleFormat('justifyCenter')} className={`flex-1 p-2 rounded-lg flex justify-center transition-all ${activeFormats.justifyCenter ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Align Center"><AlignCenter className="w-4 h-4" /></button>
+                  <button onMouseDown={(e) => e.preventDefault()} onClick={() => handleFormat('justifyRight')} className={`flex-1 p-2 rounded-lg flex justify-center transition-all ${activeFormats.justifyRight ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Align Right"><AlignRight className="w-4 h-4" /></button>
                 </div>
               </div>
             </motion.div>
