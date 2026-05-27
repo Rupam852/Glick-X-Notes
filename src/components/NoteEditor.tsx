@@ -1053,6 +1053,16 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     }
   };
 
+  const handleToolbarTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    const button = target.closest('button');
+    if (button) {
+      if (target.tagName === 'INPUT') return;
+      e.preventDefault();
+      button.click();
+    }
+  };
+
   // Main KeyDown events + Shortcuts interceptor
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === ' ' || e.key === 'Enter') {
@@ -1562,7 +1572,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       </AnimatePresence>
 
       {/* 2-Row Adaptive Toolbar */}
-      <div ref={popupRef} className="sticky top-0 z-35 flex flex-col border-b border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md relative">
+      <div ref={popupRef} onTouchStart={handleToolbarTouchStart} className="sticky top-0 z-35 flex flex-col border-b border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md relative">
         
         {/* ROW 1: Navigation and status controls */}
         <div className="flex items-center justify-between px-4 py-2 border-b border-slate-100/60 dark:border-slate-800/60">
