@@ -165,7 +165,7 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
               onClick={onSignup}
               className="w-full sm:w-auto px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-xl shadow-indigo-500/20 hover:shadow-2xl hover:shadow-indigo-500/40 hover:-translate-y-0.5 transition-all text-base cursor-pointer"
             >
-              Start Free Vault
+              Start Free Notes
             </button>
             <a
               href="#features"
@@ -438,7 +438,7 @@ service cloud.firestore {
               onClick={onLogin}
               className="w-full sm:w-auto px-10 py-4 bg-slate-900/80 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-700 font-extrabold rounded-2xl hover:-translate-y-0.5 transition-all text-base cursor-pointer flex items-center justify-center gap-2"
             >
-              Access Vault
+              Access Notes
               <ArrowRight className="w-5 h-5 transition-transform" />
             </button>
           </div>
