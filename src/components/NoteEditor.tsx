@@ -539,6 +539,15 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         fontElements.forEach(fontEl => {
           const span = document.createElement('span');
           span.style.fontSize = px + 'px';
+          
+          // Reset any nested font-size styles inside the selection to guarantee the new size applies consistently
+          const nestedSpans = fontEl.querySelectorAll('span, font');
+          nestedSpans.forEach(child => {
+            if (child instanceof HTMLElement) {
+              child.style.fontSize = '';
+            }
+          });
+
           // Transfer all child nodes
           while (fontEl.firstChild) {
             span.appendChild(fontEl.firstChild);
@@ -1705,7 +1714,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
           <div className="w-px h-5 bg-slate-250 dark:bg-slate-800 mx-1 shrink-0" />
 
           {/* Stepper block */}
-          <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1.5 rounded-xl border border-slate-200/50 dark:border-slate-700/50 shadow-inner shrink-0">
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200/50 dark:border-slate-700/50 shadow-inner shrink-0">
             <input
               type="number"
               min={1}
@@ -1732,32 +1741,33 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                   setLocalFontSize(Math.round(parseFloat(activeFormats.fontSize) || 16).toString());
                 }
               }}
-              className="w-8 bg-transparent text-slate-800 dark:text-slate-100 text-xs font-bold text-center outline-none border-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              className="w-10 bg-transparent text-slate-800 dark:text-slate-100 text-xs font-bold text-center outline-none border-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
-            <div className="flex flex-col gap-0.5 border-l border-slate-300 dark:border-slate-700 pl-1.5 ml-1.5">
-              <button 
-                type="button"
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  const current = Math.round(parseFloat(activeFormats.fontSize)) || 16;
-                  handleFontSize(Math.min(120, current + 1));
-                }}
-                className="text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-white transition-colors"
-              >
-                <ChevronUp className="w-3 h-3" />
-              </button>
-              <button 
-                type="button"
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  const current = Math.round(parseFloat(activeFormats.fontSize)) || 16;
-                  handleFontSize(Math.max(1, current - 1));
-                }}
-                className="text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-white transition-colors"
-              >
-                <ChevronDown className="w-3 h-3" />
-              </button>
-            </div>
+            <div className="w-px h-4 bg-slate-300 dark:bg-slate-700 mx-0.5" />
+            <button 
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                const current = Math.round(parseFloat(activeFormats.fontSize)) || 16;
+                handleFontSize(Math.max(1, current - 1));
+              }}
+              className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-white transition-colors cursor-pointer flex items-center justify-center"
+              title="Decrease font size"
+            >
+              <ChevronDown className="w-4 h-4" />
+            </button>
+            <button 
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                const current = Math.round(parseFloat(activeFormats.fontSize)) || 16;
+                handleFontSize(Math.min(120, current + 1));
+              }}
+              className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-white transition-colors cursor-pointer flex items-center justify-center"
+              title="Increase font size"
+            >
+              <ChevronUp className="w-4 h-4" />
+            </button>
           </div>
 
           <div className="w-px h-5 bg-slate-250 dark:bg-slate-800 mx-1 shrink-0" />
