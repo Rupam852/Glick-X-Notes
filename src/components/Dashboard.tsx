@@ -10,16 +10,17 @@ import { format } from 'date-fns';
 const stripHtmlForPreview = (html: string) => {
   if (!html) return '';
   return html
-    .replace(/<br\s*\/?>/gi, ' ')
-    .replace(/<\/div>/gi, ' ')
-    .replace(/<\/p>/gi, ' ')
-    .replace(/<\/li>/gi, ' ')
-    .replace(/<div[^>]*>/gi, ' ')
-    .replace(/<p[^>]*>/gi, ' ')
-    .replace(/<li[^>]*>/gi, ' ')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/div>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<\/li>/gi, '\n')
+    .replace(/<div[^>]*>/gi, '')
+    .replace(/<p[^>]*>/gi, '')
+    .replace(/<li[^>]*>/gi, '')
     .replace(/<[^>]+>/g, '') // Strip remaining tags
     .replace(/&nbsp;/g, ' ')
-    .replace(/\s+/g, ' ') // Collapse multiple spaces
+    .replace(/[ \t]+/g, ' ') // Collapse horizontal spaces, keep newlines
+    .replace(/\n\s*\n/g, '\n') // Collapse consecutive newlines
     .trim();
 };
 
@@ -266,7 +267,7 @@ export default function Dashboard({ user, onEditNote, onNewNote }: DashboardProp
                       ) : null}
                     </div>
 
-                    <p className="text-slate-400 text-sm line-clamp-3 leading-relaxed font-medium">
+                    <p className="text-slate-400 text-sm line-clamp-3 leading-relaxed font-medium whitespace-pre-line break-words">
                       {highlightText(stripHtmlForPreview(note.body), search)}
                     </p>
                   </div>
@@ -324,7 +325,7 @@ export default function Dashboard({ user, onEditNote, onNewNote }: DashboardProp
                       <h3 className="font-bold text-base text-slate-100 group-hover:text-indigo-300 transition-colors duration-200">
                         {highlightText(note.title, search)}
                       </h3>
-                      <p className="text-slate-400 text-xs line-clamp-1 max-w-xl">
+                      <p className="text-slate-400 text-xs line-clamp-1 max-w-xl whitespace-pre-line break-words">
                         {stripHtmlForPreview(note.body)}
                       </p>
                     </div>
