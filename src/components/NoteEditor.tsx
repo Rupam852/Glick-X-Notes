@@ -549,6 +549,16 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
 
   const handleLinkInsert = (url: string) => {
     if (!url) return;
+
+    // Restore saved selection so the link wraps the correct text
+    if (savedSelectionRef.current) {
+      restoreSelection(savedSelectionRef.current);
+      savedSelectionRef.current = null;
+    }
+    if (contentRef.current) {
+      contentRef.current.focus();
+    }
+
     const selection = window.getSelection();
     if (!selection || !selection.rangeCount) return;
 
@@ -1377,7 +1387,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
       </AnimatePresence>
 
       {/* 2-Row Adaptive Toolbar */}
-      <div className="sticky top-0 z-35 flex flex-col border-b border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md">
+      <div ref={popupRef} className="sticky top-0 z-35 flex flex-col border-b border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md relative">
         
         {/* ROW 1: Navigation and status controls */}
         <div className="flex items-center justify-between px-4 py-2 border-b border-slate-100/60 dark:border-slate-800/60">
@@ -1473,7 +1483,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
           </div>
         </div>
 
-        <div ref={popupRef} className="flex flex-nowrap items-center gap-1.5 p-2 overflow-x-auto no-scrollbar bg-slate-50/50 dark:bg-slate-900/50">
+        <div className="flex flex-nowrap items-center gap-1.5 p-2 overflow-x-auto no-scrollbar bg-slate-50/50 dark:bg-slate-900/50">
           
           <button onMouseDown={(e) => e.preventDefault()} onClick={() => setActivePopup(p => p === 'text' ? null : 'text')} className={`p-2 w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all ${activePopup === 'text' ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Text Styles">
             <Type className="w-5 h-5" />
@@ -1566,7 +1576,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
           <div className="w-px h-5 bg-slate-250 dark:bg-slate-800 mx-1 shrink-0" />
 
           {/* Action Popups toggler links */}
-          <button onMouseDown={(e) => e.preventDefault()} onClick={() => setActivePopup(p => p === 'link' ? null : 'link')} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-colors ${activePopup === 'link' || selectedLinkUrl ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Insert link">
+          <button onMouseDown={(e) => e.preventDefault()} onClick={() => { savedSelectionRef.current = saveSelection(); setActivePopup(p => p === 'link' ? null : 'link'); }} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-colors ${activePopup === 'link' || selectedLinkUrl ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Insert link">
             <Link className="w-5 h-5" />
           </button>
 
@@ -1702,25 +1712,25 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
                 <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-center">Table Commands</p>
                 
                 <div className="grid grid-cols-2 gap-2">
-                  <button onClick={handleAddRow} className="flex items-center justify-center gap-1.5 p-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-100 rounded-lg text-xs font-semibold border border-slate-200 dark:border-slate-750 transition-colors">
+                  <button onMouseDown={(e) => e.preventDefault()} onClick={handleAddRow} className="flex items-center justify-center gap-1.5 p-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-100 rounded-lg text-xs font-semibold border border-slate-200 dark:border-slate-750 transition-colors">
                     <Plus className="w-3.5 h-3.5 text-emerald-500" /> Row
                   </button>
                   
-                  <button onClick={handleDeleteRow} className="flex items-center justify-center gap-1.5 p-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-100 rounded-lg text-xs font-semibold border border-slate-200 dark:border-slate-750 transition-colors">
+                  <button onMouseDown={(e) => e.preventDefault()} onClick={handleDeleteRow} className="flex items-center justify-center gap-1.5 p-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-100 rounded-lg text-xs font-semibold border border-slate-200 dark:border-slate-750 transition-colors">
                     <Trash2 className="w-3.5 h-3.5 text-rose-500" /> Row
                   </button>
 
-                  <button onClick={handleAddColumn} className="flex items-center justify-center gap-1.5 p-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-100 rounded-lg text-xs font-semibold border border-slate-200 dark:border-slate-750 transition-colors">
+                  <button onMouseDown={(e) => e.preventDefault()} onClick={handleAddColumn} className="flex items-center justify-center gap-1.5 p-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-100 rounded-lg text-xs font-semibold border border-slate-200 dark:border-slate-750 transition-colors">
                     <Plus className="w-3.5 h-3.5 text-emerald-500" /> Col
                   </button>
 
-                  <button onClick={handleDeleteColumn} className="flex items-center justify-center gap-1.5 p-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-100 rounded-lg text-xs font-semibold border border-slate-200 dark:border-slate-750 transition-colors">
+                  <button onMouseDown={(e) => e.preventDefault()} onClick={handleDeleteColumn} className="flex items-center justify-center gap-1.5 p-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-100 rounded-lg text-xs font-semibold border border-slate-200 dark:border-slate-750 transition-colors">
                     <Trash2 className="w-3.5 h-3.5 text-rose-500" /> Col
                   </button>
                 </div>
 
                 <div className="border-t border-slate-100 dark:border-slate-800 pt-2 mt-2">
-                  <button onClick={handleDeleteTable} className="w-full flex items-center justify-center gap-1.5 p-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 dark:hover:bg-rose-950/30 text-rose-600 dark:text-rose-400 rounded-lg text-xs font-bold transition-colors border border-rose-100 dark:border-rose-900/20">
+                  <button onMouseDown={(e) => e.preventDefault()} onClick={handleDeleteTable} className="w-full flex items-center justify-center gap-1.5 p-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 dark:hover:bg-rose-950/30 text-rose-600 dark:text-rose-400 rounded-lg text-xs font-bold transition-colors border border-rose-100 dark:border-rose-900/20">
                     <Trash2 className="w-3.5 h-3.5" /> Delete Table
                   </button>
                 </div>
@@ -1862,14 +1872,14 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
 
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Tags</label>
-                    <div className="flex items-center gap-2 text-slate-400 bg-slate-50 dark:bg-slate-850 border border-slate-200/50 dark:border-slate-750 p-2 py-1.5 rounded-xl">
+                    <div className="flex items-center gap-2 text-slate-400 bg-slate-100 dark:bg-slate-800 border border-slate-200/50 dark:border-slate-700 p-2 py-1.5 rounded-xl">
                       <Tag className="w-3.5 h-3.5" />
                       <input
                         type="text"
                         placeholder="work, life, ideas..."
                         value={tags}
                         onChange={(e) => setTags(e.target.value)}
-                        className="flex-1 bg-transparent border-none outline-none text-xs text-slate-750 dark:text-slate-200"
+                        className="flex-1 bg-transparent border-none outline-none text-xs text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
                       />
                     </div>
                   </div>
