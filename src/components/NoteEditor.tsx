@@ -2127,16 +2127,26 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                       if (!isCustom) return null;
                       const isActive = rgbToHex(activeFormats.fontColor) === selectedFontColor.toLowerCase();
                       return (
-                        <button
-                          type="button"
-                          onMouseDown={handleButtonMouseDown}
-                          onClick={() => handleFontColor(selectedFontColor)}
-                          className={`w-7 h-7 rounded-lg shrink-0 shadow-sm transition-transform hover:scale-105 flex items-center justify-center ${isActive ? 'ring-2 ring-indigo-500 border-none' : 'border border-slate-200 dark:border-slate-850'}`}
-                          style={{ backgroundColor: selectedFontColor }}
-                          title={`Custom Color: ${selectedFontColor}`}
-                        >
-                          {isActive && <Check className={`w-3.5 h-3.5 ${selectedFontColor === '#ffffff' ? 'text-slate-800' : 'text-white'}`} />}
-                        </button>
+                        <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800/80 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700 shrink-0">
+                          <button
+                            type="button"
+                            onMouseDown={handleButtonMouseDown}
+                            onClick={() => handleFontColor(selectedFontColor)}
+                            className={`w-6 h-6 rounded-md shadow-sm transition-transform hover:scale-105 flex items-center justify-center`}
+                            style={{ backgroundColor: selectedFontColor }}
+                            title={`Custom Color: ${selectedFontColor}`}
+                          >
+                            {isActive && <Check className={`w-3 h-3 ${selectedFontColor === '#ffffff' ? 'text-slate-800' : 'text-white'}`} />}
+                          </button>
+                          <button
+                            type="button"
+                            onMouseDown={handleButtonMouseDown}
+                            onClick={() => handleFontColor(selectedFontColor)}
+                            className="px-2 py-0.5 text-[9px] font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md shadow-sm transition-colors uppercase tracking-wider"
+                          >
+                            Apply
+                          </button>
+                        </div>
                       );
                     })()}
                     
@@ -2205,16 +2215,26 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                       if (!isCustom) return null;
                       const isActive = activeFormats.highlight && selectedHighlightColor.toLowerCase() === selectedHighlightColor.toLowerCase();
                       return (
-                        <button
-                          type="button"
-                          onMouseDown={handleButtonMouseDown}
-                          onClick={() => handleHighlightColor(selectedHighlightColor)}
-                          className={`w-7 h-7 rounded-lg shrink-0 shadow-sm transition-transform hover:scale-105 flex items-center justify-center ${isActive ? 'ring-2 ring-indigo-500 border-none' : 'border border-slate-200 dark:border-slate-850'}`}
-                          style={{ backgroundColor: selectedHighlightColor }}
-                          title={`Custom Highlight Color: ${selectedHighlightColor}`}
-                        >
-                          {isActive && <Check className="w-3.5 h-3.5 text-slate-800" />}
-                        </button>
+                        <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800/80 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700 shrink-0">
+                          <button
+                            type="button"
+                            onMouseDown={handleButtonMouseDown}
+                            onClick={() => handleHighlightColor(selectedHighlightColor)}
+                            className={`w-6 h-6 rounded-md shadow-sm transition-transform hover:scale-105 flex items-center justify-center`}
+                            style={{ backgroundColor: selectedHighlightColor }}
+                            title={`Custom Highlight Color: ${selectedHighlightColor}`}
+                          >
+                            {isActive && <Check className="w-3 h-3 text-slate-800" />}
+                          </button>
+                          <button
+                            type="button"
+                            onMouseDown={handleButtonMouseDown}
+                            onClick={() => handleHighlightColor(selectedHighlightColor)}
+                            className="px-2 py-0.5 text-[9px] font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md shadow-sm transition-colors uppercase tracking-wider"
+                          >
+                            Apply
+                          </button>
+                        </div>
                       );
                     })()}
                     
