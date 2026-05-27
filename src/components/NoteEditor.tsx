@@ -1971,11 +1971,11 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
         {/* Content Pane */}
         <div className="flex-1 flex flex-col bg-white dark:bg-slate-900 overflow-hidden relative">
           
-          <div className="flex-1 overflow-y-auto no-scrollbar relative p-4">
+          <div className="flex-1 overflow-y-auto no-scrollbar relative">
             
             {/* Inline Title input (Visible only in focusMode or on narrow screens) */}
             {(focusMode || window.innerWidth < 768) && (
-              <div className="max-w-[720px] w-full mx-auto pt-6 px-6 md:px-12">
+              <div className="w-full pt-4 px-4 md:px-8">
                 <input
                   type="text"
                   placeholder="Untitled Note..."
@@ -1988,7 +1988,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
             )}
 
             {/* Center Content Editor container */}
-            <div className="max-w-[720px] w-full mx-auto flex-1 flex flex-col">
+            <div className="w-full">
               
               <div
                 ref={contentRef}
@@ -1998,7 +1998,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
                 onKeyUp={updateFormatState}
                 onMouseUp={updateFormatState}
                 data-placeholder="Start writing your note..."
-                className={`editor-content flex-1 w-full px-6 md:px-12 py-6 bg-transparent border-none outline-none text-[17px] text-slate-700 dark:text-slate-300 leading-relaxed outline-transparent focus:ring-0 ${
+                className={`editor-content flex-1 w-full px-4 md:px-8 py-4 bg-transparent border-none outline-none text-[17px] text-slate-700 dark:text-slate-300 leading-relaxed outline-transparent focus:ring-0 ${
                   activeFont === 'sans' ? 'font-sans' : activeFont === 'serif' ? 'font-serif font-medium tracking-wide' : 'font-mono text-base'
                 }`}
                 style={{ minHeight: '400px' }}
