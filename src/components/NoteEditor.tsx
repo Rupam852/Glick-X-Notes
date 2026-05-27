@@ -871,18 +871,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
                       <ToolbarButton icon={<Highlighter className="w-5 h-5" />} onClick={handleHighlight} title="Highlight" isActive={activeFormats.highlight} />
                       <ToolbarButton icon={<Eraser className="w-5 h-5" />} onClick={handleClearFormatting} title="Clear Format" />
                     </div>
-                    
-                    <div className="flex items-center justify-between bg-[#2a2a2a] p-1.5 rounded-xl max-w-sm">
-                      <ToolbarButton icon={<Code className="w-5 h-5" />} onClick={() => toggleBlock('PRE', 'PRE')} title="Code Block" isActive={activeFormats.pre} />
-                      <ToolbarButton icon={<Heading1 className="w-5 h-5" />} onClick={() => toggleBlock('H1', 'H1')} title="Heading 1" isActive={activeFormats.h1} />
-                      <ToolbarButton icon={<Quote className="w-5 h-5" />} onClick={() => toggleBlock('BLOCKQUOTE', 'BLOCKQUOTE')} title="Quote Block" isActive={activeFormats.blockquote} />
-                      <div className="w-px h-6 bg-slate-700 mx-1" />
-                      <ToolbarButton icon={<Link className="w-5 h-5" />} onClick={() => {
-                        const url = prompt('Enter link URL:');
-                        if (url) handleFormat('createLink', url);
-                      }} title="Link" />
-                    </div>
-                    
+
                     <div>
                       <p className="text-xs text-slate-400 mb-2 px-1">Font size</p>
                       <div className="flex items-center gap-6 px-2 overflow-x-auto no-scrollbar">
