@@ -152,6 +152,13 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       return next;
     });
   };
+
+  const handleButtonMouseDown = (e: React.MouseEvent) => {
+    if (window.innerWidth >= 768) {
+      e.preventDefault();
+    }
+  };
+
   const [showFindReplace, setShowFindReplace] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(320);
@@ -1171,34 +1178,8 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     const target = e.target as HTMLElement;
     if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
 
-    // Bulletproof manual ancestor walker to find closest button (supports all mobile devices & SVGs)
-    let button: HTMLElement | null = null;
-    let curr: HTMLElement | null = target;
-    while (curr && curr !== e.currentTarget) {
-      if (curr.tagName === 'BUTTON') {
-        button = curr;
-        break;
-      }
-      curr = curr.parentElement;
-    }
-
-    if (button) {
-      e.preventDefault();
-      
-      // Directly execute React's internal click handler to bypass browser native .click() blocks on mobile touchstart
-      const reactPropKey = Object.keys(button).find(
-        key => key.startsWith('__reactProps') || key.startsWith('__reactEventHandlers')
-      );
-      if (reactPropKey) {
-        const reactProps = (button as any)[reactPropKey];
-        if (reactProps && typeof reactProps.onClick === 'function') {
-          reactProps.onClick(e);
-          return;
-        }
-      }
-      
-      button.click();
-    }
+    // Save selection immediately on touch start before any blur occurs, then let touch events bubble naturally
+    savedSelectionRef.current = saveSelection();
   };
 
   // Main KeyDown events + Shortcuts interceptor
@@ -1803,20 +1784,20 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
 
         <div className="flex flex-wrap items-center gap-1.5 p-2 bg-slate-50/50 dark:bg-slate-900/50">
           
-          <button onMouseDown={(e) => e.preventDefault()} onClick={() => togglePopup('text')} className={`p-2 w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all ${activePopup === 'text' ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Text Styles">
+          <button onMouseDown={handleButtonMouseDown} onClick={() => togglePopup('text')} className={`p-2 w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all ${activePopup === 'text' ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Text Styles">
             <Type className="w-5 h-5" />
           </button>
           
-          <button onMouseDown={(e) => e.preventDefault()} onClick={() => togglePopup('paragraph')} className={`p-2 w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all ${activePopup === 'paragraph' ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Paragraph styles">
+          <button onMouseDown={handleButtonMouseDown} onClick={() => togglePopup('paragraph')} className={`p-2 w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all ${activePopup === 'paragraph' ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Paragraph styles">
             <AlignLeft className="w-5 h-5" />
           </button>
 
           <div className="w-px h-5 bg-slate-250 dark:bg-slate-800 mx-1 shrink-0" />
 
           {/* Heading Blocks */}
-          <button onMouseDown={(e) => e.preventDefault()} onClick={() => handleHeading('h1')} className={`px-2.5 py-1 text-xs font-black rounded-lg shrink-0 transition-colors ${activeFormats.h1 ? 'bg-indigo-150 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`}>H1</button>
-          <button onMouseDown={(e) => e.preventDefault()} onClick={() => handleHeading('h2')} className={`px-2.5 py-1 text-xs font-black rounded-lg shrink-0 transition-colors ${activeFormats.h2 ? 'bg-indigo-150 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`}>H2</button>
-          <button onMouseDown={(e) => e.preventDefault()} onClick={() => handleHeading('h3')} className={`px-2.5 py-1 text-xs font-black rounded-lg shrink-0 transition-colors ${activeFormats.h3 ? 'bg-indigo-150 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`}>H3</button>
+          <button onMouseDown={handleButtonMouseDown} onClick={() => handleHeading('h1')} className={`px-2.5 py-1 text-xs font-black rounded-lg shrink-0 transition-colors ${activeFormats.h1 ? 'bg-indigo-150 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`}>H1</button>
+          <button onMouseDown={handleButtonMouseDown} onClick={() => handleHeading('h2')} className={`px-2.5 py-1 text-xs font-black rounded-lg shrink-0 transition-colors ${activeFormats.h2 ? 'bg-indigo-150 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`}>H2</button>
+          <button onMouseDown={handleButtonMouseDown} onClick={() => handleHeading('h3')} className={`px-2.5 py-1 text-xs font-black rounded-lg shrink-0 transition-colors ${activeFormats.h3 ? 'bg-indigo-150 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`}>H3</button>
 
           <div className="w-px h-5 bg-slate-250 dark:bg-slate-800 mx-1 shrink-0" />
 
@@ -1824,7 +1805,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
           <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200/50 dark:border-slate-700/50 shadow-inner shrink-0 relative" ref={fontSizeMenuRef}>
             <button 
               type="button"
-              onMouseDown={(e) => e.preventDefault()}
+              onMouseDown={handleButtonMouseDown}
               onClick={() => {
                 const current = Math.round(parseFloat(activeFormats.fontSize)) || 16;
                 handleFontSize(Math.max(1, current - 1));
@@ -1869,7 +1850,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
               />
               <button
                 type="button"
-                onMouseDown={(e) => e.preventDefault()}
+                onMouseDown={handleButtonMouseDown}
                 onClick={() => setShowFontSizeMenu(prev => !prev)}
                 className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer"
                 title="Select popular size"
@@ -1882,7 +1863,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
 
             <button 
               type="button"
-              onMouseDown={(e) => e.preventDefault()}
+              onMouseDown={handleButtonMouseDown}
               onClick={() => {
                 const current = Math.round(parseFloat(activeFormats.fontSize)) || 16;
                 handleFontSize(Math.min(120, current + 1));
@@ -1906,7 +1887,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                     <button
                       key={size}
                       type="button"
-                      onMouseDown={(e) => e.preventDefault()}
+                      onMouseDown={handleButtonMouseDown}
                       onClick={() => {
                         handleFontSize(size);
                         setShowFontSizeMenu(false);
@@ -1923,31 +1904,31 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
 
           <div className="w-px h-5 bg-slate-250 dark:bg-slate-800 mx-1 shrink-0" />
 
-          {/* Quick list togglers & blockquote */}
-          <button onMouseDown={(e) => e.preventDefault()} onClick={() => handleListToggle('insertUnorderedList')} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-colors ${activeFormats.unorderedList ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Bullet List">
+           {/* Quick list togglers & blockquote */}
+          <button onMouseDown={handleButtonMouseDown} onClick={() => handleListToggle('insertUnorderedList')} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-colors ${activeFormats.unorderedList ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Bullet List">
             <List className="w-5 h-5" />
           </button>
           
-          <button onMouseDown={(e) => e.preventDefault()} onClick={() => handleListToggle('insertOrderedList')} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-colors ${activeFormats.orderedList ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Ordered List">
+          <button onMouseDown={handleButtonMouseDown} onClick={() => handleListToggle('insertOrderedList')} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-colors ${activeFormats.orderedList ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Ordered List">
             <ListOrdered className="w-5 h-5" />
           </button>
 
-          <button onMouseDown={(e) => e.preventDefault()} onClick={() => toggleBlock('blockquote', 'blockquote')} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-colors ${activeFormats.blockquote ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Blockquote">
+          <button onMouseDown={handleButtonMouseDown} onClick={() => toggleBlock('blockquote', 'blockquote')} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-colors ${activeFormats.blockquote ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Blockquote">
             <Quote className="w-5 h-5" />
           </button>
 
           <div className="w-px h-5 bg-slate-250 dark:bg-slate-800 mx-1 shrink-0" />
 
           {/* Action Popups toggler links */}
-          <button onMouseDown={(e) => e.preventDefault()} onClick={() => togglePopup('link')} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-colors ${activePopup === 'link' || selectedLinkUrl ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Insert link">
+          <button onMouseDown={handleButtonMouseDown} onClick={() => togglePopup('link')} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-colors ${activePopup === 'link' || selectedLinkUrl ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Insert link">
             <Link className="w-5 h-5" />
           </button>
 
-          <button onMouseDown={(e) => e.preventDefault()} onClick={handleChecklist} className="p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all" title="Insert checklist">
+          <button onMouseDown={handleButtonMouseDown} onClick={handleChecklist} className="p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all" title="Insert checklist">
             <CheckSquare className="w-5 h-5" />
           </button>
           
-          <button onMouseDown={(e) => e.preventDefault()} onClick={() => document.getElementById('image-upload')?.click()} className="p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all" title="Attach file">
+          <button onMouseDown={handleButtonMouseDown} onClick={() => document.getElementById('image-upload')?.click()} className="p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all" title="Attach file">
             <ImageIcon className="w-5 h-5" />
           </button>
           
@@ -1956,7 +1937,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
           <div className="w-px h-5 bg-slate-250 dark:bg-slate-800 mx-1 shrink-0" />
 
           {/* Search tool */}
-          <button onMouseDown={(e) => e.preventDefault()} onClick={() => setShowFindReplace(prev => !prev)} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-colors ${showFindReplace ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Find and Replace">
+          <button onMouseDown={handleButtonMouseDown} onClick={() => setShowFindReplace(prev => !prev)} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-colors ${showFindReplace ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Find and Replace">
             <Search className="w-5 h-5" />
           </button>
 
@@ -1969,13 +1950,13 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 absolute top-full left-0 w-full z-30 shadow-xl">
               <div className="p-4 space-y-4">
                 <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl max-w-sm">
-                  <button onMouseDown={(e) => e.preventDefault()} onClick={() => handleFormat('bold')} className={`p-2 rounded-lg transition-all ${activeFormats.bold ? 'bg-white dark:bg-slate-700 text-indigo-600 font-bold' : 'text-slate-500'}`} title="Bold"><Bold className="w-4 h-4" /></button>
-                  <button onMouseDown={(e) => e.preventDefault()} onClick={() => handleFormat('italic')} className={`p-2 rounded-lg transition-all ${activeFormats.italic ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Italic"><Italic className="w-4 h-4" /></button>
-                  <button onMouseDown={(e) => e.preventDefault()} onClick={() => handleFormat('underline')} className={`p-2 rounded-lg transition-all ${activeFormats.underline ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Underline"><Underline className="w-4 h-4" /></button>
-                  <button onMouseDown={(e) => e.preventDefault()} onClick={() => handleFormat('strikeThrough')} className={`p-2 rounded-lg transition-all ${activeFormats.strikeThrough ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Strikethrough"><Strikethrough className="w-4 h-4" /></button>
+                  <button onMouseDown={handleButtonMouseDown} onClick={() => handleFormat('bold')} className={`p-2 rounded-lg transition-all ${activeFormats.bold ? 'bg-white dark:bg-slate-700 text-indigo-600 font-bold' : 'text-slate-500'}`} title="Bold"><Bold className="w-4 h-4" /></button>
+                  <button onMouseDown={handleButtonMouseDown} onClick={() => handleFormat('italic')} className={`p-2 rounded-lg transition-all ${activeFormats.italic ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Italic"><Italic className="w-4 h-4" /></button>
+                  <button onMouseDown={handleButtonMouseDown} onClick={() => handleFormat('underline')} className={`p-2 rounded-lg transition-all ${activeFormats.underline ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Underline"><Underline className="w-4 h-4" /></button>
+                  <button onMouseDown={handleButtonMouseDown} onClick={() => handleFormat('strikeThrough')} className={`p-2 rounded-lg transition-all ${activeFormats.strikeThrough ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Strikethrough"><Strikethrough className="w-4 h-4" /></button>
                   <div className="w-px h-6 bg-slate-350 dark:bg-slate-750 mx-1" />
-                  <button onMouseDown={(e) => e.preventDefault()} onClick={handleHighlight} className={`p-2 rounded-lg transition-all ${activeFormats.highlight ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Text Highlight"><Highlighter className="w-4 h-4" /></button>
-                  <button onMouseDown={(e) => e.preventDefault()} onClick={handleClearFormatting} className="p-2 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-white" title="Clear styling"><Eraser className="w-4 h-4" /></button>
+                  <button onMouseDown={handleButtonMouseDown} onClick={handleHighlight} className={`p-2 rounded-lg transition-all ${activeFormats.highlight ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Text Highlight"><Highlighter className="w-4 h-4" /></button>
+                  <button onMouseDown={handleButtonMouseDown} onClick={handleClearFormatting} className="p-2 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-white" title="Clear styling"><Eraser className="w-4 h-4" /></button>
                 </div>
                 
                 <div>
@@ -1987,7 +1968,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                         <button 
                           key={color} 
                           type="button" 
-                          onMouseDown={(e) => e.preventDefault()}
+                          onMouseDown={handleButtonMouseDown}
                           onClick={() => handleFontColor(color)} 
                           className={`w-7 h-7 rounded-lg shrink-0 shadow-sm transition-transform hover:scale-105 flex items-center justify-center ${isActive ? 'ring-2 ring-indigo-500 border-none' : 'border border-slate-200 dark:border-slate-850'}`} 
                           style={{ backgroundColor: color }} 
@@ -2006,9 +1987,9 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
               <div className="p-4 space-y-4">
                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Text Alignment</p>
                 <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl max-w-xs">
-                  <button onMouseDown={(e) => e.preventDefault()} onClick={() => handleFormat('justifyLeft')} className={`flex-1 p-2 rounded-lg flex justify-center transition-all ${activeFormats.justifyLeft ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Align Left"><AlignLeft className="w-4 h-4" /></button>
-                  <button onMouseDown={(e) => e.preventDefault()} onClick={() => handleFormat('justifyCenter')} className={`flex-1 p-2 rounded-lg flex justify-center transition-all ${activeFormats.justifyCenter ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Align Center"><AlignCenter className="w-4 h-4" /></button>
-                  <button onMouseDown={(e) => e.preventDefault()} onClick={() => handleFormat('justifyRight')} className={`flex-1 p-2 rounded-lg flex justify-center transition-all ${activeFormats.justifyRight ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Align Right"><AlignRight className="w-4 h-4" /></button>
+                  <button onMouseDown={handleButtonMouseDown} onClick={() => handleFormat('justifyLeft')} className={`flex-1 p-2 rounded-lg flex justify-center transition-all ${activeFormats.justifyLeft ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Align Left"><AlignLeft className="w-4 h-4" /></button>
+                  <button onMouseDown={handleButtonMouseDown} onClick={() => handleFormat('justifyCenter')} className={`flex-1 p-2 rounded-lg flex justify-center transition-all ${activeFormats.justifyCenter ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Align Center"><AlignCenter className="w-4 h-4" /></button>
+                  <button onMouseDown={handleButtonMouseDown} onClick={() => handleFormat('justifyRight')} className={`flex-1 p-2 rounded-lg flex justify-center transition-all ${activeFormats.justifyRight ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Align Right"><AlignRight className="w-4 h-4" /></button>
                 </div>
               </div>
             </motion.div>
