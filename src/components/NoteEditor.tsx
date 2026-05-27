@@ -1091,9 +1091,20 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
 
   const handleToolbarTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
-    const button = target.closest('button');
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+
+    // Bulletproof manual ancestor walker to find closest button (supports all mobile devices & SVGs)
+    let button: HTMLElement | null = null;
+    let curr: HTMLElement | null = target;
+    while (curr && curr !== e.currentTarget) {
+      if (curr.tagName === 'BUTTON') {
+        button = curr;
+        break;
+      }
+      curr = curr.parentElement;
+    }
+
     if (button) {
-      if (target.tagName === 'INPUT') return;
       e.preventDefault();
       button.click();
     }
