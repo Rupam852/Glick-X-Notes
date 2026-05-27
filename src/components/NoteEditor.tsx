@@ -2002,27 +2002,28 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 absolute top-full left-0 w-full z-30 shadow-xl">
               <div className="p-4 space-y-4">
                 <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl max-w-sm">
-                  <button onMouseDown={handleButtonMouseDown} onClick={() => handleFormat('bold')} className={`p-2 rounded-lg transition-all ${activeFormats.bold ? 'bg-white dark:bg-slate-700 text-indigo-600 font-bold' : 'text-slate-500'}`} title="Bold"><Bold className="w-4 h-4" /></button>
-                  <button onMouseDown={handleButtonMouseDown} onClick={() => handleFormat('italic')} className={`p-2 rounded-lg transition-all ${activeFormats.italic ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Italic"><Italic className="w-4 h-4" /></button>
-                  <button onMouseDown={handleButtonMouseDown} onClick={() => handleFormat('underline')} className={`p-2 rounded-lg transition-all ${activeFormats.underline ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Underline"><Underline className="w-4 h-4" /></button>
-                  <button onMouseDown={handleButtonMouseDown} onClick={() => handleFormat('strikeThrough')} className={`p-2 rounded-lg transition-all ${activeFormats.strikeThrough ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Strikethrough"><Strikethrough className="w-4 h-4" /></button>
+                  <button type="button" onMouseDown={handleButtonMouseDown} onClick={() => handleFormat('bold')} className={`p-2 rounded-lg transition-all ${activeFormats.bold ? 'bg-white dark:bg-slate-700 text-indigo-600 font-bold' : 'text-slate-500'}`} title="Bold"><Bold className="w-4 h-4 pointer-events-none" /></button>
+                  <button type="button" onMouseDown={handleButtonMouseDown} onClick={() => handleFormat('italic')} className={`p-2 rounded-lg transition-all ${activeFormats.italic ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Italic"><Italic className="w-4 h-4 pointer-events-none" /></button>
+                  <button type="button" onMouseDown={handleButtonMouseDown} onClick={() => handleFormat('underline')} className={`p-2 rounded-lg transition-all ${activeFormats.underline ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Underline"><Underline className="w-4 h-4 pointer-events-none" /></button>
+                  <button type="button" onMouseDown={handleButtonMouseDown} onClick={() => handleFormat('strikeThrough')} className={`p-2 rounded-lg transition-all ${activeFormats.strikeThrough ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Strikethrough"><Strikethrough className="w-4 h-4 pointer-events-none" /></button>
                   
                   <div className="w-px h-6 bg-slate-350 dark:bg-slate-750 mx-1" />
                   
                   <button 
+                    type="button"
                     onMouseDown={handleButtonMouseDown} 
                     onClick={handleHighlight} 
                     className={`p-2 rounded-lg transition-all flex items-center gap-1.5 ${activeFormats.highlight ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} 
                     title="Text Highlight"
                   >
-                    <Highlighter className="w-4 h-4" />
+                    <Highlighter className="w-4 h-4 pointer-events-none" />
                     <span 
-                      className="w-2.5 h-2.5 rounded-full border border-slate-300 dark:border-slate-600 shadow-sm shrink-0" 
+                      className="w-2.5 h-2.5 rounded-full border border-slate-300 dark:border-slate-600 shadow-sm shrink-0 pointer-events-none" 
                       style={{ backgroundColor: selectedHighlightColor }} 
                     />
                   </button>
                   
-                  <button onMouseDown={handleButtonMouseDown} onClick={handleClearFormatting} className="p-2 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-white" title="Clear styling"><Eraser className="w-4 h-4" /></button>
+                  <button type="button" onMouseDown={handleButtonMouseDown} onClick={handleClearFormatting} className="p-2 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-white" title="Clear styling"><Eraser className="w-4 h-4 pointer-events-none" /></button>
                 </div>
                 
                 <div>
@@ -2101,9 +2102,9 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
               <div className="p-4 space-y-4">
                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Text Alignment</p>
                 <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl max-w-xs">
-                  <button onMouseDown={handleButtonMouseDown} onClick={() => handleFormat('justifyLeft')} className={`flex-1 p-2 rounded-lg flex justify-center transition-all ${activeFormats.justifyLeft ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Align Left"><AlignLeft className="w-4 h-4" /></button>
-                  <button onMouseDown={handleButtonMouseDown} onClick={() => handleFormat('justifyCenter')} className={`flex-1 p-2 rounded-lg flex justify-center transition-all ${activeFormats.justifyCenter ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Align Center"><AlignCenter className="w-4 h-4" /></button>
-                  <button onMouseDown={handleButtonMouseDown} onClick={() => handleFormat('justifyRight')} className={`flex-1 p-2 rounded-lg flex justify-center transition-all ${activeFormats.justifyRight ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Align Right"><AlignRight className="w-4 h-4" /></button>
+                  <button type="button" onMouseDown={handleButtonMouseDown} onClick={() => handleFormat('justifyLeft')} className={`flex-1 p-2 rounded-lg flex justify-center transition-all ${activeFormats.justifyLeft ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Align Left"><AlignLeft className="w-4 h-4" /></button>
+                  <button type="button" onMouseDown={handleButtonMouseDown} onClick={() => handleFormat('justifyCenter')} className={`flex-1 p-2 rounded-lg flex justify-center transition-all ${activeFormats.justifyCenter ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Align Center"><AlignCenter className="w-4 h-4" /></button>
+                  <button type="button" onMouseDown={handleButtonMouseDown} onClick={() => handleFormat('justifyRight')} className={`flex-1 p-2 rounded-lg flex justify-center transition-all ${activeFormats.justifyRight ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Align Right"><AlignRight className="w-4 h-4" /></button>
                 </div>
               </div>
             </motion.div>
@@ -2127,6 +2128,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                     className="flex-1 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs outline-none focus:border-indigo-500"
                   />
                   <button
+                    type="button"
                     onClick={() => handleLinkInsert(linkUrl || selectedLinkUrl)}
                     className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-550 text-white rounded-lg text-xs font-bold transition-all"
                   >
@@ -2134,7 +2136,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                   </button>
                 </div>
                 {selectedLinkUrl && (
-                  <button onClick={handleLinkRemove} className="w-full py-1 text-center text-xs font-bold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-lg transition-all">
+                  <button type="button" onClick={handleLinkRemove} className="w-full py-1 text-center text-xs font-bold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-lg transition-all">
                     Remove Link
                   </button>
                 )}
