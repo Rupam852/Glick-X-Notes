@@ -347,10 +347,15 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         let element: HTMLElement | null = node.nodeType === Node.ELEMENT_NODE ? (node as HTMLElement) : node.parentElement;
         while (element && element !== contentRef.current) {
           const bg = element.style.backgroundColor;
-          if (bg && bg !== 'transparent' && bg !== 'rgba(0, 0, 0, 0)') {
-            isHighlighted = true;
-            detectedHighlightColor = bg;
-            break;
+          if (bg) {
+            if (bg === 'transparent' || bg === 'rgba(0, 0, 0, 0)') {
+              isHighlighted = false;
+              break;
+            } else {
+              isHighlighted = true;
+              detectedHighlightColor = bg;
+              break;
+            }
           }
           element = element.parentElement;
         }
