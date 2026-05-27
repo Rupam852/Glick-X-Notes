@@ -26,10 +26,16 @@ const COLORS = [
   { name: 'Emerald', value: '#10b981' },
   { name: 'Sky', value: '#0ea5e9' },
   { name: 'Violet', value: '#8b5cf6' },
-  { name: 'Slate', value: '#64748b' },
+  { name: 'Slate', value: '#64748b' }
 ];
 
-// Helper to save selection
+const safeToDate = (ts: any): Date => {
+  if (!ts) return new Date();
+  if (typeof ts.toDate === 'function') return ts.toDate();
+  if (ts.seconds !== undefined) return new Date(ts.seconds * 1000);
+  if (ts._seconds !== undefined) return new Date(ts._seconds * 1000);
+  return new Date(ts);
+};// Helper to save selection
 function saveSelection(): Range | null {
   const sel = window.getSelection();
   if (sel && sel.rangeCount > 0) {
@@ -1901,7 +1907,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
                 <div className="space-y-2 bg-slate-100/40 dark:bg-slate-900/30 p-4 rounded-2xl text-[11px] text-slate-500 dark:text-slate-400 border border-slate-200/40 dark:border-slate-800">
                   <div className="flex justify-between">
                     <span className="font-semibold uppercase tracking-wider text-[9px] flex items-center gap-1"><Clock className="w-3 h-3 text-slate-400" /> Created</span>
-                    <span className="text-slate-700 dark:text-slate-300 font-bold">{note ? format(note.createdAt.toDate(), 'MMM dd, yyyy') : 'Just now'}</span>
+                    <span className="text-slate-700 dark:text-slate-300 font-bold">{note && note.createdAt ? format(safeToDate(note.createdAt), 'MMM dd, yyyy') : 'Just now'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="font-semibold uppercase tracking-wider text-[9px] flex items-center gap-1"><Clock className="w-3 h-3 text-slate-400" /> Updated</span>
