@@ -268,9 +268,22 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     
     setSelectedLinkUrl(linkUrlDetected);
 
-    // Check highlight (background color)
-    const bgColor = document.queryCommandValue('backColor');
-    const isHighlighted = bgColor && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent' && bgColor !== 'rgb(255, 255, 255)' && bgColor !== '#ffffff' && bgColor !== 'false';
+    // Check highlight (background color) using explicit inline styles to avoid dark-theme background false positives
+    let isHighlighted = false;
+    if (selection && selection.rangeCount > 0) {
+      let node: Node | null = selection.focusNode;
+      if (node) {
+        let element: HTMLElement | null = node.nodeType === Node.ELEMENT_NODE ? (node as HTMLElement) : node.parentElement;
+        while (element && element !== contentRef.current) {
+          const bg = element.style.backgroundColor;
+          if (bg && bg !== 'transparent' && bg !== 'rgba(0, 0, 0, 0)') {
+            isHighlighted = true;
+            break;
+          }
+          element = element.parentElement;
+        }
+      }
+    }
 
     // Check exact pixel font size
     let currentFontSize = '16';
@@ -404,6 +417,9 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     if (contentRef.current) {
       pushToHistoryImmediate(contentRef.current.innerHTML);
     }
+    try {
+      document.execCommand('styleWithCSS', false, 'true');
+    } catch (e) {}
     if (activeFormats.highlight) {
       document.execCommand('hiliteColor', false, 'transparent');
       document.execCommand('backColor', false, 'transparent');
@@ -425,6 +441,9 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     if (contentRef.current) {
       pushToHistoryImmediate(contentRef.current.innerHTML);
     }
+    try {
+      document.execCommand('styleWithCSS', false, 'true');
+    } catch (e) {}
     document.execCommand('removeFormat', false, '');
     document.execCommand('hiliteColor', false, 'transparent');
     document.execCommand('backColor', false, 'transparent');
@@ -559,6 +578,9 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     if (contentRef.current) {
       pushToHistoryImmediate(contentRef.current.innerHTML);
     }
+    try {
+      document.execCommand('styleWithCSS', false, 'true');
+    } catch (e) {}
     document.execCommand('foreColor', false, color);
     if (contentRef.current) {
       const html = contentRef.current.innerHTML;
