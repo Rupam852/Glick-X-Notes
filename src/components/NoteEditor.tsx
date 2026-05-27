@@ -1066,7 +1066,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
           {/* popupRef wraps the ENTIRE toolbar container so popup clicks don't trigger click-outside */}
           <div ref={popupRef} className="w-full z-20 flex flex-col border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md">
             {/* Main Bar */}
-            <div className="flex flex-wrap items-center gap-1.5 p-2">
+            <div className="flex flex-nowrap items-center gap-1.5 p-2 overflow-x-auto no-scrollbar">
               <button onClick={() => setActivePopup(p => p === 'text' ? null : 'text')} className={`p-2 rounded-xl transition-all ${activePopup === 'text' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'}`}>
                 <Type className="w-5 h-5" />
               </button>
