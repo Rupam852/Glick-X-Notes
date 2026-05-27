@@ -65,6 +65,17 @@ const rgbToHex = (color: string) => {
   return '#' + match.slice(1).map(n => parseInt(n, 10).toString(16).padStart(2, '0')).join('').toLowerCase();
 };
 
+const FONT_OPTIONS = [
+  { value: 'outfit', label: 'Outfit Sans', desc: 'Modern Clean', class: 'font-outfit' },
+  { value: 'inter', label: 'Inter Sans', desc: 'Sleek Professional', class: 'font-inter' },
+  { value: 'jakarta', label: 'Plus Jakarta', desc: 'Tech Elegant', class: 'font-jakarta' },
+  { value: 'playfair', label: 'Playfair Serif', desc: 'Editorial Serif', class: 'font-playfair' },
+  { value: 'lora', label: 'Lora Serif', desc: 'Cozy Reader', class: 'font-lora' },
+  { value: 'merriweather', label: 'Merriweather', desc: 'Classic Literary', class: 'font-merriweather' },
+  { value: 'fira', label: 'Fira Mono', desc: 'Developer Mono', class: 'font-fira-mono' },
+  { value: 'jetbrains', label: 'JetBrains Mono', desc: 'IDE Style', class: 'font-jetbrains' }
+];
+
 export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorProps) {
   const { showToast } = useToast();
 
@@ -166,7 +177,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   const [isDraggingFile, setIsDraggingFile] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [viewingAttachment, setViewingAttachment] = useState<Attachment | null>(null);
-  const [activeFont, setActiveFont] = useState<'sans' | 'serif' | 'mono'>('sans');
+  const [activeFont, setActiveFont] = useState<string>('outfit');
   const [showFontMenu, setShowFontMenu] = useState(false);
   const [showFontSizeMenu, setShowFontSizeMenu] = useState(false);
   const [hoveredTable, setHoveredTable] = useState({ row: -1, col: -1 });
@@ -1775,7 +1786,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                 onClick={() => setShowFontMenu(prev => !prev)}
                 className="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 rounded-xl px-3 py-1.5 text-xs font-semibold outline-none hover:bg-slate-200 dark:hover:bg-slate-800 cursor-pointer transition-all duration-150 flex items-center gap-1.5 justify-between min-w-[120px]"
               >
-                <span>{activeFont === 'sans' ? 'Outfit Sans' : activeFont === 'serif' ? 'Playfair Serif' : 'Fira Mono'}</span>
+                <span>{FONT_OPTIONS.find(f => f.value === activeFont)?.label || 'Outfit Sans'}</span>
                 <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
               </button>
               <AnimatePresence>
@@ -1784,18 +1795,14 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                     initial={{ opacity: 0, y: 5, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 5, scale: 0.95 }}
-                    className="absolute right-0 mt-1.5 w-44 z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-1.5 shadow-2xl space-y-0.5"
+                    className="absolute right-0 mt-1.5 w-44 max-h-[300px] overflow-y-auto z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-1.5 shadow-2xl space-y-0.5"
                   >
-                    {[
-                      { value: 'sans', label: 'Outfit Sans', desc: 'Modern Clean' },
-                      { value: 'serif', label: 'Playfair Serif', desc: 'Editorial Serif' },
-                      { value: 'mono', label: 'Fira Mono', desc: 'Developer Mono' }
-                    ].map(item => (
+                    {FONT_OPTIONS.map(item => (
                       <button
                         key={item.value}
                         type="button"
                         onClick={() => {
-                          setActiveFont(item.value as any);
+                          setActiveFont(item.value);
                           setShowFontMenu(false);
                         }}
                         className={`w-full text-left px-3 py-1.5 rounded-lg transition-all cursor-pointer flex flex-col justify-start ${activeFont === item.value ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
@@ -2365,7 +2372,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                 onClick={handleContentClick}
                 data-placeholder="Start writing your note..."
                 className={`editor-content flex-1 w-full px-4 md:px-8 py-4 bg-transparent border-none outline-none text-[17px] text-slate-700 dark:text-slate-300 leading-relaxed outline-transparent focus:ring-0 ${
-                  activeFont === 'sans' ? 'font-sans' : activeFont === 'serif' ? 'font-serif font-medium tracking-wide' : 'font-mono text-base'
+                  FONT_OPTIONS.find(f => f.value === activeFont)?.class || 'font-outfit'
                 }`}
                 style={{ minHeight: '400px' }}
               />
