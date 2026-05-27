@@ -81,7 +81,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
   const [currentNoteId, setCurrentNoteId] = useState<string | null>(note?.id || null);
   const [title, setTitle] = useState(note?.title || '');
   const [body, setBody] = useState(note?.body || '');
-  const [tags, setTags] = useState(note?.tags.join(', ') || '');
+  const [tags, setTags] = useState(note?.tags?.join(', ') || '');
   const [color, setColor] = useState(note?.color || COLORS[0].value);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [saving, setSaving] = useState(false);
@@ -91,7 +91,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
   const [lastSavedSnapshot, setLastSavedSnapshot] = useState({
     title: note?.title || '',
     body: note?.body || '',
-    tags: note?.tags.join(', ') || '',
+    tags: note?.tags?.join(', ') || '',
     color: note?.color || COLORS[0].value
   });
 
@@ -335,7 +335,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
       setCurrentNoteId(targetNoteId);
       setTitle(note?.title || '');
       setBody(note?.body || '');
-      setTags(note?.tags.join(', ') || '');
+      setTags(note?.tags?.join(', ') || '');
       setColor(note?.color || COLORS[0].value);
       setLastSaved(note ? new Date() : null);
       
@@ -347,7 +347,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
       setLastSavedSnapshot({
         title: note?.title || '',
         body: note?.body || '',
-        tags: note?.tags.join(', ') || '',
+        tags: note?.tags?.join(', ') || '',
         color: note?.color || COLORS[0].value
       });
 
