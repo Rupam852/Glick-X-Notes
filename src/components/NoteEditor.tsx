@@ -73,7 +73,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     setLocalFontSize(Math.round(parseFloat(activeFormats.fontSize) || 16).toString());
   }, [activeFormats.fontSize]);
 
-  // Click-Outside Listener for Custom Font Dropdown Menu and Popups
+  // Click-Outside Listener — always active, closes both font menu and active popups
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (fontMenuRef.current && !fontMenuRef.current.contains(event.target as Node)) {
@@ -83,13 +83,11 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
         setActivePopup(null);
       }
     }
-    if (showFontMenu) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
+    document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showFontMenu]);
+  }, []);
 
   const updateFormatState = () => {
     let isPre = false;
@@ -171,25 +169,22 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
   };
 
   useEffect(() => {
-    if (contentRef.current && contentRef.current.innerHTML !== body) {
-      if (!body && contentRef.current.innerHTML) return;
-      contentRef.current.innerHTML = body;
-    }
+    // Only sync innerHTML when switching between notes (avoid clobbering live edits)
+    if (!contentRef.current) return;
+    contentRef.current.innerHTML = body;
     // Auto-focus and move caret to the end
-    if (contentRef.current) {
-      contentRef.current.focus();
-      try {
-        const range = document.createRange();
-        const sel = window.getSelection();
-        range.selectNodeContents(contentRef.current);
-        range.collapse(false);
-        sel?.removeAllRanges();
-        sel?.addRange(range);
-      } catch (e) {
-        // Ignore
-      }
+    contentRef.current.focus();
+    try {
+      const range = document.createRange();
+      const sel = window.getSelection();
+      range.selectNodeContents(contentRef.current);
+      range.collapse(false);
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+    } catch (e) {
+      // Ignore
     }
-  }, [currentNoteId]);
+  }, [currentNoteId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
     setBody(e.currentTarget.innerHTML);
@@ -238,17 +233,21 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
 
     const range = selection.getRangeAt(0);
     if (range.collapsed) {
-      // Check if we are already inside a size span
-      let parent = range.startContainer.parentElement;
-      if (parent && parent.tagName === 'SPAN' && parent.style.fontSize && parent.childNodes.length === 1 && (parent.textContent === '' || parent.textContent === '\u200B')) {
+      // Check if already inside a size-only span (caret span)
+      const parent = range.startContainer.parentElement;
+      if (
+        parent &&
+        parent.tagName === 'SPAN' &&
+        parent.style.fontSize &&
+        parent.childNodes.length === 1 &&
+        (parent.textContent === '' || parent.textContent === '\u200B')
+      ) {
         parent.style.fontSize = px + 'px';
       } else {
         const span = document.createElement('span');
         span.style.fontSize = px + 'px';
-        span.innerHTML = '&#8203;'; // Zero Width Space
-        
+        span.innerHTML = '&#8203;'; // Zero Width Space caret anchor
         range.insertNode(span);
-        
         const newRange = document.createRange();
         newRange.setStart(span.firstChild!, 1);
         newRange.collapse(true);
@@ -256,22 +255,30 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
         selection.addRange(newRange);
       }
     } else {
+      // Use extractContents + clone to safely handle cross-element selections
       try {
+        const fragment = range.extractContents();
         const span = document.createElement('span');
         span.style.fontSize = px + 'px';
-        range.surroundContents(span);
+        span.appendChild(fragment);
+        range.insertNode(span);
+        // Restore selection over newly inserted span
+        const newRange = document.createRange();
+        newRange.selectNodeContents(span);
+        selection.removeAllRanges();
+        selection.addRange(newRange);
       } catch (e) {
+        // Last resort fallback
         document.execCommand('fontSize', false, '7');
         if (contentRef.current) {
-          const fonts = contentRef.current.querySelectorAll('font[size="7"]');
-          fonts.forEach(f => {
+          contentRef.current.querySelectorAll('font[size="7"]').forEach(f => {
             f.removeAttribute('size');
             (f as HTMLElement).style.fontSize = px + 'px';
           });
         }
       }
     }
-    
+
     if (contentRef.current) {
       setBody(contentRef.current.innerHTML);
     }
@@ -402,15 +409,16 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
-      const isHeader = row.querySelector('th') !== null || i === 0;
-      const newCell = isHeader ? document.createElement('th') : document.createElement('td');
-      
-      // Style the cell
+      // Correctly detect header row: check if THIS row's cell at colIndex is a TH
+      const existingCell = row.cells[colIndex];
+      const isHeaderRow = existingCell?.tagName === 'TH';
+      const newCell = isHeaderRow ? document.createElement('th') : document.createElement('td');
+
       newCell.style.padding = '12px 16px';
       newCell.style.color = 'inherit';
       newCell.style.fontSize = '14px';
-      
-      if (isHeader) {
+
+      if (isHeaderRow) {
         newCell.style.border = '1px solid rgba(148, 163, 184, 0.35)';
         newCell.style.background = 'rgba(99, 102, 241, 0.15)';
         newCell.style.fontWeight = '600';
@@ -421,7 +429,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
         newCell.innerHTML = '<br>';
       }
 
-      // Insert at the correct position
+      // Insert after the current colIndex
       if (colIndex + 1 < row.cells.length) {
         row.insertBefore(newCell, row.cells[colIndex + 1]);
       } else {
@@ -481,18 +489,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
 
 
   const handleListToggle = (command: string) => {
-    const isActive = document.queryCommandState(command);
-    
-    // Toggle the list
     document.execCommand(command, false);
-    
-    // If it was active (turning OFF), shift to next line
-    if (isActive) {
-      // Standard behavior of execCommand turns <li> into <p> or <div>.
-      // To shift to next line, we insert a paragraph.
-      document.execCommand('insertParagraph', false);
-    }
-    
     if (contentRef.current) {
       setBody(contentRef.current.innerHTML);
       contentRef.current.focus();
@@ -507,7 +504,8 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     
     if (selection && selection.rangeCount > 0) {
       let node: Node | null = selection.getRangeAt(0).commonAncestorContainer;
-      while (node && node.nodeName !== 'DIV') {
+      // Walk up to contentRef.current (not just any DIV) to correctly detect block tags
+      while (node && node !== contentRef.current) {
         if (node.nodeName === tagName.toUpperCase()) {
           isBlock = true;
           break;
@@ -1065,9 +1063,10 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
         <div className="flex-1 flex flex-col bg-white dark:bg-slate-900 border-l border-transparent overflow-hidden relative">
           
           {/* Top Formatting Toolbar */}
-          <div className="w-full z-20 flex flex-col border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md">
+          {/* popupRef wraps the ENTIRE toolbar container so popup clicks don't trigger click-outside */}
+          <div ref={popupRef} className="w-full z-20 flex flex-col border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md">
             {/* Main Bar */}
-            <div ref={popupRef} className="flex flex-wrap items-center gap-1.5 p-2">
+            <div className="flex flex-wrap items-center gap-1.5 p-2">
               <button onClick={() => setActivePopup(p => p === 'text' ? null : 'text')} className={`p-2 rounded-xl transition-all ${activePopup === 'text' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'}`}>
                 <Type className="w-5 h-5" />
               </button>
