@@ -799,7 +799,92 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
         )}
 
         {/* Right Pane: Content */}
-        <div className="flex-1 flex flex-col bg-white dark:bg-slate-900 border-l border-transparent overflow-hidden">
+        <div className="flex-1 flex flex-col bg-white dark:bg-slate-900 border-l border-transparent overflow-hidden relative">
+          
+          {/* Top Formatting Toolbar */}
+          <div className="w-full z-20 flex flex-col border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md">
+            {/* Main Bar */}
+            <div ref={popupRef} className="flex flex-wrap items-center gap-1 p-2">
+              <button onClick={() => setActivePopup(p => p === 'text' ? null : 'text')} className={`p-2 rounded-xl transition-all ${activePopup === 'text' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'}`}>
+                <Type className="w-5 h-5" />
+              </button>
+              <button onClick={() => setActivePopup(p => p === 'paragraph' ? null : 'paragraph')} className={`p-2 rounded-xl transition-all ${activePopup === 'paragraph' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'}`}>
+                <AlignLeft className="w-5 h-5" />
+              </button>
+              <div className="w-px h-5 bg-slate-300 dark:bg-slate-700 mx-2" />
+              <button onClick={handleChecklist} className="p-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-all">
+                <CheckSquare className="w-5 h-5" />
+              </button>
+              <button onClick={() => document.getElementById('image-upload')?.click()} className="p-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-all">
+                <ImageIcon className="w-5 h-5" />
+              </button>
+              <button onClick={handleTable} className="p-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-all">
+                <Table className="w-5 h-5" />
+              </button>
+              <input type="file" id="image-upload" className="hidden" accept="image/*" onChange={handleImageUpload} />
+            </div>
+
+            {/* Popups */}
+            <AnimatePresence>
+              {activePopup === 'text' && (
+                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 absolute top-full left-0 w-full z-30 shadow-xl">
+                  <div className="p-4 space-y-5">
+                    <div className="flex items-center justify-between bg-slate-100 dark:bg-slate-800 p-1.5 rounded-xl max-w-sm">
+                      <ToolbarButton icon={<Bold className="w-5 h-5" />} onClick={() => handleFormat('bold')} title="Bold" isActive={activeFormats.bold} />
+                      <ToolbarButton icon={<Italic className="w-5 h-5" />} onClick={() => handleFormat('italic')} title="Italic" isActive={activeFormats.italic} />
+                      <ToolbarButton icon={<Underline className="w-5 h-5" />} onClick={() => handleFormat('underline')} title="Underline" isActive={activeFormats.underline} />
+                      <ToolbarButton icon={<Strikethrough className="w-5 h-5" />} onClick={() => handleFormat('strikeThrough')} title="Strikethrough" isActive={activeFormats.strikeThrough} />
+                      <div className="w-px h-6 bg-slate-300 dark:bg-slate-700 mx-1" />
+                      <ToolbarButton icon={<Highlighter className="w-5 h-5" />} onClick={handleHighlight} title="Highlight" isActive={activeFormats.highlight} />
+                      <ToolbarButton icon={<Eraser className="w-5 h-5" />} onClick={handleClearFormatting} title="Clear Format" />
+                    </div>
+
+                    <div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-2 px-1 font-semibold uppercase tracking-wider">Font size</p>
+                      <div className="flex items-center gap-6 px-2 overflow-x-auto no-scrollbar">
+                        {[10, 12, 14, 16, 18, 20, 24, 36].map(size => (
+                          <button key={size} type="button" onClick={() => handleFontSize(size)} className="text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-white font-medium text-lg transition-colors whitespace-nowrap">
+                            {size}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-2 px-1 font-semibold uppercase tracking-wider">Font color</p>
+                      <div className="flex items-center gap-4 px-2 overflow-x-auto no-scrollbar pb-2">
+                        {['#0f172a', '#64748b', '#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6'].map(color => (
+                          <button key={color} type="button" onClick={() => handleFontColor(color)} className="w-8 h-8 rounded-md shrink-0 shadow-sm border border-slate-200 dark:border-slate-800 transition-transform hover:scale-110" style={{ backgroundColor: color }} />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+              {activePopup === 'paragraph' && (
+                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 absolute top-full left-0 w-full z-30 shadow-xl">
+                  <div className="p-4 space-y-4">
+                    <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-xl max-w-xs">
+                      <ToolbarButton icon={<AlignLeft className="w-5 h-5" />} onClick={() => handleFormat('justifyLeft')} title="Align Left" isActive={activeFormats.justifyLeft} />
+                      <ToolbarButton icon={<AlignCenter className="w-5 h-5" />} onClick={() => handleFormat('justifyCenter')} title="Align Center" isActive={activeFormats.justifyCenter} />
+                      <ToolbarButton icon={<AlignRight className="w-5 h-5" />} onClick={() => handleFormat('justifyRight')} title="Align Right" isActive={activeFormats.justifyRight} />
+                    </div>
+                    <div className="flex items-center gap-2 max-w-sm">
+                      <button onClick={() => handleListToggle('insertUnorderedList')} className={`flex-1 flex flex-col items-center justify-center p-3 rounded-xl gap-2 transition-colors ${activeFormats.unorderedList ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}`}>
+                        <List className="w-6 h-6" />
+                        <span className="text-xs font-medium">Bullet List</span>
+                      </button>
+                      <button onClick={() => handleListToggle('insertOrderedList')} className={`flex-1 flex flex-col items-center justify-center p-3 rounded-xl gap-2 transition-colors ${activeFormats.orderedList ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}`}>
+                        <ListOrdered className="w-6 h-6" />
+                        <span className="text-xs font-medium">Numbered List</span>
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
           <div className="flex-1 flex flex-col overflow-y-auto relative no-scrollbar">
 
           {focusMode && (
@@ -857,86 +942,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
           </div>
 
           {/* New Mobile-Style Bottom Toolbar */}
-          <div className="w-full z-20 flex flex-col bg-[#111111] text-white border-t border-slate-800 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.5)]">
-            <AnimatePresence>
-              {activePopup === 'text' && (
-                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-b border-slate-800">
-                  <div className="p-4 space-y-5 bg-[#1c1c1c]">
-                    <div className="flex items-center justify-between bg-[#2a2a2a] p-1.5 rounded-xl max-w-sm">
-                      <ToolbarButton icon={<Bold className="w-5 h-5" />} onClick={() => handleFormat('bold')} title="Bold" isActive={activeFormats.bold} />
-                      <ToolbarButton icon={<Italic className="w-5 h-5" />} onClick={() => handleFormat('italic')} title="Italic" isActive={activeFormats.italic} />
-                      <ToolbarButton icon={<Underline className="w-5 h-5" />} onClick={() => handleFormat('underline')} title="Underline" isActive={activeFormats.underline} />
-                      <ToolbarButton icon={<Strikethrough className="w-5 h-5" />} onClick={() => handleFormat('strikeThrough')} title="Strikethrough" isActive={activeFormats.strikeThrough} />
-                      <div className="w-px h-6 bg-slate-700 mx-1" />
-                      <ToolbarButton icon={<Highlighter className="w-5 h-5" />} onClick={handleHighlight} title="Highlight" isActive={activeFormats.highlight} />
-                      <ToolbarButton icon={<Eraser className="w-5 h-5" />} onClick={handleClearFormatting} title="Clear Format" />
-                    </div>
 
-                    <div>
-                      <p className="text-xs text-slate-400 mb-2 px-1">Font size</p>
-                      <div className="flex items-center gap-6 px-2 overflow-x-auto no-scrollbar">
-                        {[10, 12, 14, 16, 18, 20, 24, 36].map(size => (
-                          <button key={size} type="button" onClick={() => handleFontSize(size)} className="text-slate-300 hover:text-white font-medium text-lg transition-colors whitespace-nowrap">
-                            {size}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <p className="text-xs text-slate-400 mb-2 px-1">Font color</p>
-                      <div className="flex items-center gap-4 px-2 overflow-x-auto no-scrollbar pb-2">
-                        {['#ffffff', '#e2e8f0', '#94a3b8', '#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6'].map(color => (
-                          <button key={color} type="button" onClick={() => handleFontColor(color)} className="w-8 h-8 rounded-md shrink-0 shadow-sm transition-transform hover:scale-110" style={{ backgroundColor: color }} />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-              {activePopup === 'paragraph' && (
-                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-b border-slate-800">
-                  <div className="p-4 space-y-4 bg-[#1c1c1c]">
-                    <div className="flex items-center gap-2 bg-[#2a2a2a] p-1.5 rounded-xl max-w-xs">
-                      <ToolbarButton icon={<AlignLeft className="w-5 h-5" />} onClick={() => handleFormat('justifyLeft')} title="Align Left" isActive={activeFormats.justifyLeft} />
-                      <ToolbarButton icon={<AlignCenter className="w-5 h-5" />} onClick={() => handleFormat('justifyCenter')} title="Align Center" isActive={activeFormats.justifyCenter} />
-                      <ToolbarButton icon={<AlignRight className="w-5 h-5" />} onClick={() => handleFormat('justifyRight')} title="Align Right" isActive={activeFormats.justifyRight} />
-                    </div>
-                    <div className="flex items-center gap-2 max-w-sm">
-                      <button onClick={() => handleListToggle('insertUnorderedList')} className={`flex-1 flex flex-col items-center justify-center p-3 rounded-xl gap-2 transition-colors ${activeFormats.unorderedList ? 'bg-indigo-600 text-white' : 'bg-[#2a2a2a] text-slate-300 hover:text-white'}`}>
-                        <List className="w-6 h-6" />
-                        <span className="text-xs font-medium">Dot number</span>
-                      </button>
-                      <button onClick={() => handleListToggle('insertOrderedList')} className={`flex-1 flex flex-col items-center justify-center p-3 rounded-xl gap-2 transition-colors ${activeFormats.orderedList ? 'bg-indigo-600 text-white' : 'bg-[#2a2a2a] text-slate-300 hover:text-white'}`}>
-                        <ListOrdered className="w-6 h-6" />
-                        <span className="text-xs font-medium">Digit number</span>
-                      </button>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-            
-            {/* Main Bar */}
-            <div ref={popupRef} className="flex items-center justify-around px-2 py-3 bg-[#0a0a0a]">
-              <button onClick={() => setActivePopup(p => p === 'text' ? null : 'text')} className={`p-3 rounded-xl transition-all ${activePopup === 'text' ? 'bg-white/10 text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white'}`}>
-                <Type className="w-6 h-6" />
-              </button>
-              <button onClick={() => setActivePopup(p => p === 'paragraph' ? null : 'paragraph')} className={`p-3 rounded-xl transition-all ${activePopup === 'paragraph' ? 'bg-white/10 text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white'}`}>
-                <AlignLeft className="w-6 h-6" />
-              </button>
-              <button onClick={handleChecklist} className="p-3 rounded-xl text-slate-300 hover:bg-white/5 hover:text-white transition-all">
-                <CheckSquare className="w-6 h-6" />
-              </button>
-              <button onClick={() => document.getElementById('image-upload')?.click()} className="p-3 rounded-xl text-slate-300 hover:bg-white/5 hover:text-white transition-all">
-                <ImageIcon className="w-6 h-6" />
-              </button>
-              <button onClick={handleTable} className="p-3 rounded-xl text-slate-300 hover:bg-white/5 hover:text-white transition-all">
-                <Table className="w-6 h-6" />
-              </button>
-              <input type="file" id="image-upload" className="hidden" accept="image/*" onChange={handleImageUpload} />
-            </div>
-          </div>
         </div>
       </div>
 
