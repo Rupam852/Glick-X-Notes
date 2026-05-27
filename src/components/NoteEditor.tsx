@@ -1971,7 +1971,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
         {/* Content Pane */}
         <div className="flex-1 flex flex-col bg-white dark:bg-slate-900 overflow-hidden relative">
           
-          <div className="flex-1 flex flex-col overflow-y-auto no-scrollbar relative p-4">
+          <div className="flex-1 overflow-y-auto no-scrollbar relative p-4">
             
             {/* Inline Title input (Visible only in focusMode or on narrow screens) */}
             {(focusMode || window.innerWidth < 768) && (
