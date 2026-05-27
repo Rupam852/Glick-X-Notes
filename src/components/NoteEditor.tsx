@@ -55,7 +55,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
   const { showToast } = useToast();
   const contentRef = useRef<HTMLDivElement>(null);
   const fontMenuRef = useRef<HTMLDivElement>(null);
-  const [activeFormats, setActiveFormats] = useState({ bold: false, italic: false, underline: false, strikeThrough: false, unorderedList: false, orderedList: false, pre: false, h1: false, blockquote: false, highlight: false, justifyLeft: false, justifyCenter: false, justifyRight: false, fontSize: '3', fontColor: '', isInsideTable: false });
+  const [activeFormats, setActiveFormats] = useState({ bold: false, italic: false, underline: false, strikeThrough: false, unorderedList: false, orderedList: false, pre: false, h1: false, blockquote: false, highlight: false, justifyLeft: false, justifyCenter: false, justifyRight: false, fontSize: '16', fontColor: '', isInsideTable: false });
   const [isDragging, setIsDragging] = useState(false);
   const [viewingAttachment, setViewingAttachment] = useState<Attachment | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -119,7 +119,21 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
       const parentNode = selection.focusNode?.parentElement;
       if (parentNode) {
         const computedSize = window.getComputedStyle(parentNode).fontSize;
-        currentFontSize = Math.round(parseFloat(computedSize)).toString();
+        let parsed = Math.round(parseFloat(computedSize));
+        // Map legacy browser font size indexes (1-7) to clean pixel sizes
+        if (parsed <= 7) {
+          const legacyMap: Record<number, number> = {
+            1: 10,
+            2: 12,
+            3: 16,
+            4: 18,
+            5: 24,
+            6: 32,
+            7: 48
+          };
+          parsed = legacyMap[parsed] || 16;
+        }
+        currentFontSize = parsed.toString();
       }
     }
 
