@@ -520,8 +520,12 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       document.execCommand('hiliteColor', false, 'transparent');
       document.execCommand('backColor', false, 'transparent');
     } else {
-      document.execCommand('hiliteColor', false, selectedHighlightColor);
-      document.execCommand('backColor', false, selectedHighlightColor);
+      const colorToApply = (selectedHighlightColor && selectedHighlightColor !== 'transparent') ? selectedHighlightColor : '#fcd34d';
+      if (colorToApply !== selectedHighlightColor) {
+        setSelectedHighlightColor(colorToApply);
+      }
+      document.execCommand('hiliteColor', false, colorToApply);
+      document.execCommand('backColor', false, colorToApply);
     }
     if (contentRef.current) {
       const html = contentRef.current.innerHTML;
@@ -547,15 +551,23 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       document.execCommand('styleWithCSS', false, 'true');
     } catch (e) {}
 
-    const isSameColorActive = activeFormats.highlight && selectedHighlightColor.toLowerCase() === color.toLowerCase();
-
-    if (isSameColorActive) {
+    if (color === 'transparent') {
       document.execCommand('hiliteColor', false, 'transparent');
       document.execCommand('backColor', false, 'transparent');
+      if (selectedHighlightColor === 'transparent') {
+        setSelectedHighlightColor('#fcd34d');
+      }
     } else {
-      setSelectedHighlightColor(color);
-      document.execCommand('hiliteColor', false, color);
-      document.execCommand('backColor', false, color);
+      const isSameColorActive = activeFormats.highlight && selectedHighlightColor.toLowerCase() === color.toLowerCase();
+
+      if (isSameColorActive) {
+        document.execCommand('hiliteColor', false, 'transparent');
+        document.execCommand('backColor', false, 'transparent');
+      } else {
+        setSelectedHighlightColor(color);
+        document.execCommand('hiliteColor', false, color);
+        document.execCommand('backColor', false, color);
+      }
     }
 
     if (contentRef.current) {
