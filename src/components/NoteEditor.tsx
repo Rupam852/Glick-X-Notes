@@ -66,7 +66,12 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
   const [hoveredTable, setHoveredTable] = useState({ row: -1, col: -1 });
   const [customRows, setCustomRows] = useState('3');
   const [customCols, setCustomCols] = useState('3');
+  const [localFontSize, setLocalFontSize] = useState('16');
   const popupRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setLocalFontSize(Math.round(parseFloat(activeFormats.fontSize) || 16).toString());
+  }, [activeFormats.fontSize]);
 
   // Click-Outside Listener for Custom Font Dropdown Menu and Popups
   useEffect(() => {
@@ -217,25 +222,31 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     const selection = window.getSelection();
     if (!selection || !selection.rangeCount) return;
 
-    let sizeIndex = 3;
-    if (px <= 10) sizeIndex = 1;
-    else if (px <= 12) sizeIndex = 2;
-    else if (px <= 16) sizeIndex = 3;
-    else if (px <= 18) sizeIndex = 4;
-    else if (px <= 24) sizeIndex = 5;
-    else if (px <= 32) sizeIndex = 6;
-    else sizeIndex = 7;
-
     const range = selection.getRangeAt(0);
     if (range.collapsed) {
-      document.execCommand('fontSize', false, sizeIndex.toString());
+      // Check if we are already inside a size span
+      let parent = range.startContainer.parentElement;
+      if (parent && parent.tagName === 'SPAN' && parent.style.fontSize && parent.childNodes.length === 1 && (parent.textContent === '' || parent.textContent === '\u200B')) {
+        parent.style.fontSize = px + 'px';
+      } else {
+        const span = document.createElement('span');
+        span.style.fontSize = px + 'px';
+        span.innerHTML = '&#8203;'; // Zero Width Space
+        
+        range.insertNode(span);
+        
+        const newRange = document.createRange();
+        newRange.setStart(span.firstChild!, 1);
+        newRange.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(newRange);
+      }
     } else {
       try {
         const span = document.createElement('span');
         span.style.fontSize = px + 'px';
         range.surroundContents(span);
       } catch (e) {
-        // Fallback for complex selections
         document.execCommand('fontSize', false, '7');
         if (contentRef.current) {
           const fonts = contentRef.current.querySelectorAll('font[size="7"]');
@@ -249,10 +260,8 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     
     if (contentRef.current) {
       setBody(contentRef.current.innerHTML);
-      contentRef.current.focus();
     }
     updateFormatState();
-    setActivePopup(null);
   };
 
   const handleFontColor = (color: string) => {
@@ -1060,11 +1069,23 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
                   type="number"
                   min={1}
                   max={120}
-                  value={Math.round(parseFloat(activeFormats.fontSize)) || 16}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value, 10);
-                    if (!isNaN(val)) {
+                  value={localFontSize}
+                  onChange={(e) => setLocalFontSize(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const val = parseInt(localFontSize, 10);
+                      if (!isNaN(val) && val >= 1 && val <= 120) {
+                        handleFontSize(val);
+                      }
+                      contentRef.current?.focus();
+                    }
+                  }}
+                  onBlur={() => {
+                    const val = parseInt(localFontSize, 10);
+                    if (!isNaN(val) && val >= 1 && val <= 120) {
                       handleFontSize(val);
+                    } else {
+                      setLocalFontSize(Math.round(parseFloat(activeFormats.fontSize) || 16).toString());
                     }
                   }}
                   className="w-10 bg-transparent text-slate-800 dark:text-slate-100 text-xs font-bold text-center outline-none border-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
