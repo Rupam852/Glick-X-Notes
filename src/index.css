@@ -97,11 +97,16 @@ input:-webkit-autofill:active {
   transition: background-color 5000s ease-in-out 0s;
 }
 
-/* Force hand gesture (pointer cursor) globally on all clickable / interactive elements */
-a, 
-button, 
-[role="button"], 
+/* Force hand gesture (pointer cursor) globally on all clickable / interactive elements and their child components */
+a,
+a *,
+button,
+button *,
+[role="button"],
+[role="button"] *,
 .cursor-pointer,
-.editor-content a {
+.cursor-pointer *,
+.editor-content a,
+.editor-content a * {
   cursor: pointer !important;
 }
