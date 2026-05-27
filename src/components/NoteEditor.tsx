@@ -125,6 +125,27 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   });
 
   const [activePopup, setActivePopup] = useState<'text' | 'paragraph' | 'table' | 'tableActions' | 'link' | null>(null);
+
+  const togglePopup = (popupName: 'text' | 'paragraph' | 'table' | 'tableActions' | 'link' | null) => {
+    setActivePopup(current => {
+      const next = current === popupName ? null : popupName;
+      if (next) {
+        // Save selection before opening the popup
+        savedSelectionRef.current = saveSelection();
+        // On mobile/touch screens, blur active element to dismiss soft keyboard and prevent layout jumps
+        if (window.innerWidth < 768) {
+          (document.activeElement as HTMLElement)?.blur();
+        }
+      } else {
+        // When closing the popup, restore selection if available
+        if (savedSelectionRef.current) {
+          restoreSelection(savedSelectionRef.current);
+          savedSelectionRef.current = null;
+        }
+      }
+      return next;
+    });
+  };
   const [showFindReplace, setShowFindReplace] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(320);
@@ -426,6 +447,9 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
 
   // Core Formatting Engine
   const handleFormat = (command: string, value?: string) => {
+    if (savedSelectionRef.current) {
+      restoreSelection(savedSelectionRef.current);
+    }
     if (contentRef.current) {
       pushToHistoryImmediate(contentRef.current.innerHTML);
     }
@@ -435,12 +459,18 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       latestContent.current = html;
       setBody(html);
       pushToHistory(html);
-      contentRef.current.focus();
+      if (window.innerWidth >= 768) {
+        contentRef.current.focus();
+      }
     }
     updateFormatState();
+    savedSelectionRef.current = saveSelection();
   };
 
   const handleHighlight = () => {
+    if (savedSelectionRef.current) {
+      restoreSelection(savedSelectionRef.current);
+    }
     if (contentRef.current) {
       pushToHistoryImmediate(contentRef.current.innerHTML);
     }
@@ -459,12 +489,18 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       latestContent.current = html;
       setBody(html);
       pushToHistory(html);
-      contentRef.current.focus();
+      if (window.innerWidth >= 768) {
+        contentRef.current.focus();
+      }
     }
     updateFormatState();
+    savedSelectionRef.current = saveSelection();
   };
 
   const handleClearFormatting = () => {
+    if (savedSelectionRef.current) {
+      restoreSelection(savedSelectionRef.current);
+    }
     if (contentRef.current) {
       pushToHistoryImmediate(contentRef.current.innerHTML);
     }
@@ -479,12 +515,18 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       latestContent.current = html;
       setBody(html);
       pushToHistory(html);
-      contentRef.current.focus();
+      if (window.innerWidth >= 768) {
+        contentRef.current.focus();
+      }
     }
     updateFormatState();
+    savedSelectionRef.current = saveSelection();
   };
 
   const handleHeading = (level: 'h1' | 'h2' | 'h3') => {
+    if (savedSelectionRef.current) {
+      restoreSelection(savedSelectionRef.current);
+    }
     if (contentRef.current) {
       pushToHistoryImmediate(contentRef.current.innerHTML);
     }
@@ -494,18 +536,20 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       latestContent.current = html;
       setBody(html);
       pushToHistory(html);
-      contentRef.current.focus();
+      if (window.innerWidth >= 768) {
+        contentRef.current.focus();
+      }
     }
     updateFormatState();
+    savedSelectionRef.current = saveSelection();
   };
 
   const handleFontSize = (px: number) => {
     if (savedSelectionRef.current) {
       restoreSelection(savedSelectionRef.current);
-      savedSelectionRef.current = null;
     }
 
-    if (contentRef.current) {
+    if (contentRef.current && window.innerWidth >= 768) {
       contentRef.current.focus();
     }
 
@@ -605,12 +649,15 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       latestContent.current = html;
       setBody(html);
       pushToHistory(html);
-      contentRef.current.focus();
     }
     updateFormatState();
+    savedSelectionRef.current = saveSelection();
   };
 
   const handleFontColor = (color: string) => {
+    if (savedSelectionRef.current) {
+      restoreSelection(savedSelectionRef.current);
+    }
     if (contentRef.current) {
       pushToHistoryImmediate(contentRef.current.innerHTML);
     }
@@ -623,9 +670,12 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       latestContent.current = html;
       setBody(html);
       pushToHistory(html);
-      contentRef.current.focus();
+      if (window.innerWidth >= 768) {
+        contentRef.current.focus();
+      }
     }
     updateFormatState();
+    savedSelectionRef.current = saveSelection();
   };
 
   const handleLinkInsert = (url: string) => {
@@ -706,9 +756,9 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
 
   const handleTable = () => {
     if (activeFormats.isInsideTable) {
-      setActivePopup(p => p === 'tableActions' ? null : 'tableActions');
+      togglePopup('tableActions');
     } else {
-      setActivePopup(p => p === 'table' ? null : 'table');
+      togglePopup('table');
     }
   };
 
@@ -1734,11 +1784,11 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
 
         <div className="flex flex-wrap items-center gap-1.5 p-2 bg-slate-50/50 dark:bg-slate-900/50">
           
-          <button onMouseDown={(e) => e.preventDefault()} onClick={() => setActivePopup(p => p === 'text' ? null : 'text')} className={`p-2 w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all ${activePopup === 'text' ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Text Styles">
+          <button onMouseDown={(e) => e.preventDefault()} onClick={() => togglePopup('text')} className={`p-2 w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all ${activePopup === 'text' ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Text Styles">
             <Type className="w-5 h-5" />
           </button>
           
-          <button onMouseDown={(e) => e.preventDefault()} onClick={() => setActivePopup(p => p === 'paragraph' ? null : 'paragraph')} className={`p-2 w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all ${activePopup === 'paragraph' ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Paragraph styles">
+          <button onMouseDown={(e) => e.preventDefault()} onClick={() => togglePopup('paragraph')} className={`p-2 w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all ${activePopup === 'paragraph' ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Paragraph styles">
             <AlignLeft className="w-5 h-5" />
           </button>
 
@@ -1870,7 +1920,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
           <div className="w-px h-5 bg-slate-250 dark:bg-slate-800 mx-1 shrink-0" />
 
           {/* Action Popups toggler links */}
-          <button onMouseDown={(e) => e.preventDefault()} onClick={() => { savedSelectionRef.current = saveSelection(); setActivePopup(p => p === 'link' ? null : 'link'); }} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-colors ${activePopup === 'link' || selectedLinkUrl ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Insert link">
+          <button onMouseDown={(e) => e.preventDefault()} onClick={() => togglePopup('link')} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-colors ${activePopup === 'link' || selectedLinkUrl ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Insert link">
             <Link className="w-5 h-5" />
           </button>
 
