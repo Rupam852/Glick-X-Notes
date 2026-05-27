@@ -916,6 +916,21 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     }
   };
 
+  const handleContentClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    const anchor = target.closest('a');
+    if (anchor) {
+      const isMac = navigator.userAgent.toUpperCase().indexOf('MAC') >= 0;
+      const modifier = isMac ? e.metaKey : e.ctrlKey;
+      if (modifier) {
+        e.preventDefault();
+        window.open(anchor.href, '_blank', 'noopener,noreferrer');
+      } else {
+        updateFormatState();
+      }
+    }
+  };
+
   // Main KeyDown events + Shortcuts interceptor
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     const isMac = navigator.userAgent.toUpperCase().indexOf('MAC') >= 0;
@@ -1997,6 +2012,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
                 onKeyDown={handleKeyDown}
                 onKeyUp={updateFormatState}
                 onMouseUp={updateFormatState}
+                onClick={handleContentClick}
                 data-placeholder="Start writing your note..."
                 className={`editor-content flex-1 w-full px-4 md:px-8 py-4 bg-transparent border-none outline-none text-[17px] text-slate-700 dark:text-slate-300 leading-relaxed outline-transparent focus:ring-0 ${
                   activeFont === 'sans' ? 'font-sans' : activeFont === 'serif' ? 'font-serif font-medium tracking-wide' : 'font-mono text-base'
