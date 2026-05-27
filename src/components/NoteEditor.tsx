@@ -329,6 +329,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
 
     // Check highlight (background color) using explicit inline styles to avoid dark-theme background false positives
     let isHighlighted = false;
+    let detectedHighlightColor = '';
     if (selection && selection.rangeCount > 0) {
       let node: Node | null = selection.focusNode;
       if (node) {
@@ -337,10 +338,18 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
           const bg = element.style.backgroundColor;
           if (bg && bg !== 'transparent' && bg !== 'rgba(0, 0, 0, 0)') {
             isHighlighted = true;
+            detectedHighlightColor = bg;
             break;
           }
           element = element.parentElement;
         }
+      }
+    }
+
+    if (isHighlighted && detectedHighlightColor) {
+      const hex = rgbToHex(detectedHighlightColor);
+      if (hex) {
+        setSelectedHighlightColor(hex);
       }
     }
 
@@ -512,7 +521,6 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   };
 
   const handleHighlightColor = (color: string) => {
-    setSelectedHighlightColor(color);
     if (savedSelectionRef.current) {
       restoreSelection(savedSelectionRef.current);
     }
@@ -522,8 +530,18 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     try {
       document.execCommand('styleWithCSS', false, 'true');
     } catch (e) {}
-    document.execCommand('hiliteColor', false, color);
-    document.execCommand('backColor', false, color);
+
+    const isSameColorActive = activeFormats.highlight && selectedHighlightColor.toLowerCase() === color.toLowerCase();
+
+    if (isSameColorActive) {
+      document.execCommand('hiliteColor', false, 'transparent');
+      document.execCommand('backColor', false, 'transparent');
+    } else {
+      setSelectedHighlightColor(color);
+      document.execCommand('hiliteColor', false, color);
+      document.execCommand('backColor', false, color);
+    }
+
     if (contentRef.current) {
       const html = contentRef.current.innerHTML;
       latestContent.current = html;
@@ -2042,7 +2060,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                       '#fde047', '#86efac', '#93c5fd', '#fca5a5', '#fed7aa', 
                       '#c084fc', '#fbcfe8', '#a5f3fc', '#e2e8f0'
                     ].map(color => {
-                      const isActive = selectedHighlightColor.toLowerCase() === color.toLowerCase();
+                      const isActive = activeFormats.highlight && selectedHighlightColor.toLowerCase() === color.toLowerCase();
                       return (
                         <button 
                           key={color} 
