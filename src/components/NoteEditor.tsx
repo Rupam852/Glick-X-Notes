@@ -430,6 +430,15 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
   };
 
   const handleFontSize = (px: number) => {
+    if (savedSelectionRef.current) {
+      restoreSelection(savedSelectionRef.current);
+      savedSelectionRef.current = null;
+    }
+
+    if (contentRef.current) {
+      contentRef.current.focus();
+    }
+
     const selection = window.getSelection();
     if (!selection || !selection.rangeCount) return;
 
@@ -482,6 +491,8 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
       // Now we find all <font size="7"> and convert them to <span style="font-size: px px">
       if (contentRef.current) {
         const fontElements = Array.from(contentRef.current.querySelectorAll('font[size="7"]'));
+        const createdSpans: HTMLSpanElement[] = [];
+
         fontElements.forEach(fontEl => {
           const span = document.createElement('span');
           span.style.fontSize = px + 'px';
@@ -490,7 +501,23 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
             span.appendChild(fontEl.firstChild);
           }
           fontEl.parentNode?.replaceChild(span, fontEl);
+          createdSpans.push(span);
         });
+
+        // Restore active selection over newly created styled spans
+        if (createdSpans.length > 0) {
+          const newRange = document.createRange();
+          if (createdSpans.length === 1) {
+            newRange.selectNodeContents(createdSpans[0]);
+          } else {
+            const first = createdSpans[0];
+            const last = createdSpans[createdSpans.length - 1];
+            newRange.setStart(first, 0);
+            newRange.setEnd(last, last.childNodes.length);
+          }
+          selection.removeAllRanges();
+          selection.addRange(newRange);
+        }
       }
     }
 
@@ -1480,7 +1507,6 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
                 if (e.key === 'Enter') {
                   const val = parseInt(localFontSize, 10);
                   if (!isNaN(val) && val >= 1 && val <= 120) {
-                    restoreSelection(savedSelectionRef.current);
                     handleFontSize(val);
                   }
                   contentRef.current?.focus();
@@ -1489,7 +1515,6 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
               onBlur={() => {
                 const val = parseInt(localFontSize, 10);
                 if (!isNaN(val) && val >= 1 && val <= 120) {
-                  restoreSelection(savedSelectionRef.current);
                   handleFontSize(val);
                 } else {
                   setLocalFontSize(Math.round(parseFloat(activeFormats.fontSize) || 16).toString());
@@ -1500,8 +1525,8 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
             <div className="flex flex-col gap-0.5 border-l border-slate-300 dark:border-slate-700 pl-1.5 ml-1.5">
               <button 
                 type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => {
+                onMouseDown={(e) => {
+                  e.preventDefault();
                   const current = Math.round(parseFloat(activeFormats.fontSize)) || 16;
                   handleFontSize(Math.min(120, current + 1));
                 }}
@@ -1511,8 +1536,8 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
               </button>
               <button 
                 type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => {
+                onMouseDown={(e) => {
+                  e.preventDefault();
                   const current = Math.round(parseFloat(activeFormats.fontSize)) || 16;
                   handleFontSize(Math.max(1, current - 1));
                 }}
