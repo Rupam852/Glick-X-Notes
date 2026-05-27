@@ -55,14 +55,14 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
   const { showToast } = useToast();
   const contentRef = useRef<HTMLDivElement>(null);
   const fontMenuRef = useRef<HTMLDivElement>(null);
-  const [activeFormats, setActiveFormats] = useState({ bold: false, italic: false, underline: false, strikeThrough: false, unorderedList: false, orderedList: false, pre: false, h1: false, blockquote: false, highlight: false, justifyLeft: false, justifyCenter: false, justifyRight: false, fontSize: '3', fontColor: '' });
+  const [activeFormats, setActiveFormats] = useState({ bold: false, italic: false, underline: false, strikeThrough: false, unorderedList: false, orderedList: false, pre: false, h1: false, blockquote: false, highlight: false, justifyLeft: false, justifyCenter: false, justifyRight: false, fontSize: '3', fontColor: '', isInsideTable: false });
   const [isDragging, setIsDragging] = useState(false);
   const [viewingAttachment, setViewingAttachment] = useState<Attachment | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [activeFont, setActiveFont] = useState<'sans' | 'serif' | 'mono'>('sans');
   const [focusMode, setFocusMode] = useState(false);
   const [showFontMenu, setShowFontMenu] = useState(false);
-  const [activePopup, setActivePopup] = useState<'text' | 'paragraph' | 'table' | null>(null);
+  const [activePopup, setActivePopup] = useState<'text' | 'paragraph' | 'table' | 'tableActions' | null>(null);
   const [hoveredTable, setHoveredTable] = useState({ row: -1, col: -1 });
   const [customRows, setCustomRows] = useState('3');
   const [customCols, setCustomCols] = useState('3');
@@ -118,6 +118,19 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
       }
     }
 
+    // Check if inside table
+    let isInsideTable = false;
+    if (selection && selection.rangeCount > 0) {
+      let node: Node | null = selection.getRangeAt(0).commonAncestorContainer;
+      while (node && node !== contentRef.current) {
+        if (node.nodeName === 'TD' || node.nodeName === 'TH' || node.nodeName === 'TABLE') {
+          isInsideTable = true;
+          break;
+        }
+        node = node.parentNode;
+      }
+    }
+
     setActiveFormats({
       bold: document.queryCommandState('bold'),
       italic: document.queryCommandState('italic'),
@@ -133,7 +146,8 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
       justifyCenter: document.queryCommandState('justifyCenter'),
       justifyRight: document.queryCommandState('justifyRight'),
       fontSize: currentFontSize,
-      fontColor: document.queryCommandValue('foreColor') || ''
+      fontColor: document.queryCommandValue('foreColor') || '',
+      isInsideTable
     });
   };
 
@@ -260,7 +274,11 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
   };
 
   const handleTable = () => {
-    setActivePopup(p => p === 'table' ? null : 'table');
+    if (activeFormats.isInsideTable) {
+      setActivePopup(p => p === 'tableActions' ? null : 'tableActions');
+    } else {
+      setActivePopup(p => p === 'table' ? null : 'table');
+    }
   };
 
   const handleGridClick = (r: number, c: number) => {
@@ -287,6 +305,148 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     }
     setActivePopup(null);
     setHoveredTable({ row: -1, col: -1 });
+  };
+
+  // Helper to find the active table element and cell
+  const getActiveTableCell = () => {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return null;
+    let node: Node | null = selection.getRangeAt(0).commonAncestorContainer;
+    let cell: HTMLTableCellElement | null = null;
+    let table: HTMLTableElement | null = null;
+
+    while (node && node !== contentRef.current) {
+      if (node.nodeName === 'TD' || node.nodeName === 'TH') {
+        cell = node as HTMLTableCellElement;
+      }
+      if (node.nodeName === 'TABLE') {
+        table = node as HTMLTableElement;
+        break;
+      }
+      node = node.parentNode;
+    }
+    return { cell, table };
+  };
+
+  const handleAddRow = () => {
+    const { cell, table } = getActiveTableCell() || {};
+    if (!table || !cell) return;
+
+    const row = cell.parentElement as HTMLTableRowElement;
+    const rowIndex = row.rowIndex;
+    const colCount = row.cells.length;
+
+    const newRow = table.insertRow(rowIndex + 1);
+    for (let i = 0; i < colCount; i++) {
+      const newCell = newRow.insertCell(i);
+      newCell.style.padding = '12px 16px';
+      newCell.style.border = '1px solid rgba(148, 163, 184, 0.2)';
+      newCell.style.fontSize = '14px';
+      newCell.style.color = 'inherit';
+      newCell.innerHTML = '<br>';
+    }
+
+    if (contentRef.current) {
+      setBody(contentRef.current.innerHTML);
+    }
+    setActivePopup(null);
+  };
+
+  const handleDeleteRow = () => {
+    const { cell, table } = getActiveTableCell() || {};
+    if (!table || !cell) return;
+
+    const row = cell.parentElement as HTMLTableRowElement;
+    table.deleteRow(row.rowIndex);
+
+    // If table is now empty, delete the whole table
+    if (table.rows.length === 0) {
+      table.remove();
+    }
+
+    if (contentRef.current) {
+      setBody(contentRef.current.innerHTML);
+    }
+    setActivePopup(null);
+  };
+
+  const handleAddColumn = () => {
+    const { cell, table } = getActiveTableCell() || {};
+    if (!table || !cell) return;
+
+    const colIndex = cell.cellIndex;
+    const rows = table.rows;
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const isHeader = row.querySelector('th') !== null || i === 0;
+      const newCell = isHeader ? document.createElement('th') : document.createElement('td');
+      
+      // Style the cell
+      newCell.style.padding = '12px 16px';
+      newCell.style.color = 'inherit';
+      newCell.style.fontSize = '14px';
+      
+      if (isHeader) {
+        newCell.style.border = '1px solid rgba(148, 163, 184, 0.35)';
+        newCell.style.background = 'rgba(99, 102, 241, 0.15)';
+        newCell.style.fontWeight = '600';
+        newCell.style.textAlign = 'left';
+        newCell.innerHTML = `Col ${colIndex + 2}`;
+      } else {
+        newCell.style.border = '1px solid rgba(148, 163, 184, 0.2)';
+        newCell.innerHTML = '<br>';
+      }
+
+      // Insert at the correct position
+      if (colIndex + 1 < row.cells.length) {
+        row.insertBefore(newCell, row.cells[colIndex + 1]);
+      } else {
+        row.appendChild(newCell);
+      }
+    }
+
+    if (contentRef.current) {
+      setBody(contentRef.current.innerHTML);
+    }
+    setActivePopup(null);
+  };
+
+  const handleDeleteColumn = () => {
+    const { cell, table } = getActiveTableCell() || {};
+    if (!table || !cell) return;
+
+    const colIndex = cell.cellIndex;
+    const rows = table.rows;
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      if (row.cells.length > colIndex) {
+        row.deleteCell(colIndex);
+      }
+    }
+
+    // If table now has 0 columns, remove it
+    if (rows.length > 0 && rows[0].cells.length === 0) {
+      table.remove();
+    }
+
+    if (contentRef.current) {
+      setBody(contentRef.current.innerHTML);
+    }
+    setActivePopup(null);
+  };
+
+  const handleDeleteTable = () => {
+    const { table } = getActiveTableCell() || {};
+    if (!table) return;
+
+    table.remove();
+
+    if (contentRef.current) {
+      setBody(contentRef.current.innerHTML);
+    }
+    setActivePopup(null);
   };
 
   const handleCustomTableInsert = () => {
@@ -1056,6 +1216,59 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
                           Insert
                         </button>
                       </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+              {activePopup === 'tableActions' && (
+                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 absolute top-full left-0 w-full z-30 shadow-xl">
+                  <div className="p-4 max-w-sm mx-auto space-y-3">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider text-center">
+                      Table Options
+                    </p>
+                    
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={handleAddRow}
+                        className="flex items-center justify-center gap-2 p-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-xl text-xs font-semibold transition-colors"
+                      >
+                        <Plus className="w-4 h-4 text-emerald-500" />
+                        Add Row
+                      </button>
+                      
+                      <button
+                        onClick={handleDeleteRow}
+                        className="flex items-center justify-center gap-2 p-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-xl text-xs font-semibold transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4 text-rose-500" />
+                        Delete Row
+                      </button>
+
+                      <button
+                        onClick={handleAddColumn}
+                        className="flex items-center justify-center gap-2 p-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-xl text-xs font-semibold transition-colors"
+                      >
+                        <Plus className="w-4 h-4 text-emerald-500" />
+                        Add Column
+                      </button>
+
+                      <button
+                        onClick={handleDeleteColumn}
+                        className="flex items-center justify-center gap-2 p-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-xl text-xs font-semibold transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4 text-rose-500" />
+                        Delete Column
+                      </button>
+                    </div>
+
+                    <div className="border-t border-slate-100 dark:border-slate-800 pt-2 mt-2">
+                      <button
+                        onClick={handleDeleteTable}
+                        className="w-full flex items-center justify-center gap-2 p-2.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-950/50 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-bold transition-colors border border-rose-100 dark:border-rose-900/30"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Delete Entire Table
+                      </button>
                     </div>
                   </div>
                 </motion.div>
