@@ -171,6 +171,25 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     };
   }, []);
 
+  // Document-level Selection Change Listener to dynamically update formats & font sizes
+  useEffect(() => {
+    const handleSelectionChange = () => {
+      // Only update if the active selection is inside our editor contentRef
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0 && contentRef.current) {
+        const range = selection.getRangeAt(0);
+        if (contentRef.current.contains(range.commonAncestorContainer)) {
+          updateFormatState();
+        }
+      }
+    };
+
+    document.addEventListener('selectionchange', handleSelectionChange);
+    return () => {
+      document.removeEventListener('selectionchange', handleSelectionChange);
+    };
+  }, []);
+
   // Drag-to-Resize Sidebar Event Handlers
   const startResizing = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -291,26 +310,29 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     }
 
     // Check exact pixel font size
-    let currentFontSize = '16';
-    if (selection && selection.rangeCount > 0) {
-      const parentNode = selection.focusNode?.parentElement;
-      if (parentNode) {
-        const computedSize = window.getComputedStyle(parentNode).fontSize;
-        let parsed = Math.round(parseFloat(computedSize));
-        // Map legacy browser font size indexes (1-7) to clean pixel sizes
-        if (parsed <= 7) {
-          const legacyMap: Record<number, number> = {
-            1: 10,
-            2: 12,
-            3: 16,
-            4: 18,
-            5: 24,
-            6: 32,
-            7: 48
-          };
-          parsed = legacyMap[parsed] || 16;
+    let currentFontSize = '17';
+    if (selection && selection.rangeCount > 0 && contentRef.current) {
+      let node: Node | null = selection.focusNode;
+      if (node && contentRef.current.contains(node)) {
+        const parentNode = node.nodeType === Node.ELEMENT_NODE ? (node as HTMLElement) : node.parentElement;
+        if (parentNode) {
+          const computedSize = window.getComputedStyle(parentNode).fontSize;
+          let parsed = Math.round(parseFloat(computedSize));
+          // Map legacy browser font size indexes (1-7) to clean pixel sizes
+          if (parsed <= 7) {
+            const legacyMap: Record<number, number> = {
+              1: 10,
+              2: 12,
+              3: 16,
+              4: 18,
+              5: 24,
+              6: 32,
+              7: 48
+            };
+            parsed = legacyMap[parsed] || 16;
+          }
+          currentFontSize = parsed.toString();
         }
-        currentFontSize = parsed.toString();
       }
     }
 
