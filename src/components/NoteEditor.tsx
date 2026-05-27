@@ -1603,9 +1603,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
             <ImageIcon className="w-5 h-5" />
           </button>
           
-          <button onMouseDown={(e) => e.preventDefault()} onClick={handleTable} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-colors ${activeFormats.isInsideTable ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Table commands">
-            <Table className="w-5 h-5" />
-          </button>
+
 
           <div className="w-px h-5 bg-slate-250 dark:bg-slate-800 mx-1 shrink-0" />
 
@@ -1667,91 +1665,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
               </div>
             </motion.div>
           )}
-          {activePopup === 'table' && (
-            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 absolute top-full left-0 w-full z-30 shadow-xl">
-              <div className="p-4 space-y-2 max-w-sm mx-auto flex flex-col items-center">
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-center mb-1">
-                  Insert Table {hoveredTable.row >= 0 ? `${hoveredTable.row + 1} x ${hoveredTable.col + 1}` : ''}
-                </p>
-                <div className="flex flex-col gap-1 bg-slate-50 dark:bg-slate-800/40 p-2 rounded-xl border border-slate-200/50 dark:border-slate-800">
-                  {Array.from({ length: 6 }, (_, r) => (
-                    <div key={r} className="flex gap-1">
-                      {Array.from({ length: 6 }, (_, c) => (
-                        <div
-                          key={c}
-                          onMouseEnter={() => setHoveredTable({ row: r, col: c })}
-                          onClick={() => handleGridClick(r, c)}
-                          className={`w-7 h-7 border rounded-md cursor-pointer transition-colors ${r <= hoveredTable.row && c <= hoveredTable.col ? 'bg-indigo-500 border-indigo-600 shadow-[0_0_8px_rgba(99,102,241,0.4)]' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-750'}`}
-                        />
-                      ))}
-                    </div>
-                  ))}
-                </div>
-                
-                <div className="w-full border-t border-slate-150 dark:border-slate-800 pt-3 mt-3 flex flex-col items-center">
-                  <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mb-2">Or Custom Size</p>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      placeholder="Rows"
-                      min={1}
-                      max={50}
-                      value={customRows}
-                      onChange={(e) => setCustomRows(e.target.value)}
-                      className="w-14 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-850 dark:text-slate-100 text-xs text-center outline-none focus:border-indigo-500"
-                    />
-                    <span className="text-slate-400 text-xs">x</span>
-                    <input
-                      type="number"
-                      placeholder="Cols"
-                      min={1}
-                      max={50}
-                      value={customCols}
-                      onChange={(e) => setCustomCols(e.target.value)}
-                      className="w-14 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-850 dark:text-slate-100 text-xs text-center outline-none focus:border-indigo-500"
-                    />
-                    <button
-                      onClick={handleCustomTableInsert}
-                      className="px-3 py-1 bg-indigo-600 hover:bg-indigo-550 text-white rounded-lg text-xs font-bold transition-all"
-                    >
-                      Insert
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          )}
-          {activePopup === 'tableActions' && (
-            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 absolute top-full left-0 w-full z-30 shadow-xl">
-              <div className="p-4 max-w-xs mx-auto space-y-3">
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-center">Table Commands</p>
-                
-                <div className="grid grid-cols-2 gap-2">
-                  <button onMouseDown={(e) => e.preventDefault()} onClick={handleAddRow} className="flex items-center justify-center gap-1.5 p-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-100 rounded-lg text-xs font-semibold border border-slate-200 dark:border-slate-750 transition-colors">
-                    <Plus className="w-3.5 h-3.5 text-emerald-500" /> Row
-                  </button>
-                  
-                  <button onMouseDown={(e) => e.preventDefault()} onClick={handleDeleteRow} className="flex items-center justify-center gap-1.5 p-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-100 rounded-lg text-xs font-semibold border border-slate-200 dark:border-slate-750 transition-colors">
-                    <Trash2 className="w-3.5 h-3.5 text-rose-500" /> Row
-                  </button>
 
-                  <button onMouseDown={(e) => e.preventDefault()} onClick={handleAddColumn} className="flex items-center justify-center gap-1.5 p-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-100 rounded-lg text-xs font-semibold border border-slate-200 dark:border-slate-750 transition-colors">
-                    <Plus className="w-3.5 h-3.5 text-emerald-500" /> Col
-                  </button>
-
-                  <button onMouseDown={(e) => e.preventDefault()} onClick={handleDeleteColumn} className="flex items-center justify-center gap-1.5 p-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-100 rounded-lg text-xs font-semibold border border-slate-200 dark:border-slate-750 transition-colors">
-                    <Trash2 className="w-3.5 h-3.5 text-rose-500" /> Col
-                  </button>
-                </div>
-
-                <div className="border-t border-slate-100 dark:border-slate-800 pt-2 mt-2">
-                  <button onMouseDown={(e) => e.preventDefault()} onClick={handleDeleteTable} className="w-full flex items-center justify-center gap-1.5 p-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 dark:hover:bg-rose-950/30 text-rose-600 dark:text-rose-400 rounded-lg text-xs font-bold transition-colors border border-rose-100 dark:border-rose-900/20">
-                    <Trash2 className="w-3.5 h-3.5" /> Delete Table
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          )}
           {activePopup === 'link' && (
             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 absolute top-full left-0 w-full z-30 shadow-xl">
               <div className="p-4 max-w-sm mx-auto space-y-3">
