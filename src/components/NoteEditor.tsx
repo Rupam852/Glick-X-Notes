@@ -1280,7 +1280,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   };
 
   // Find & Replace match counter helper
-  const updateMatchCount = () => {
+  const updateMatchCount = useCallback(() => {
     if (!findText || !contentRef.current) {
       setMatchCount(0);
       return;
@@ -1289,7 +1289,11 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     const regex = new RegExp(findText.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'gi');
     const matches = text.match(regex);
     setMatchCount(matches ? matches.length : 0);
-  };
+  }, [findText]);
+
+  useEffect(() => {
+    updateMatchCount();
+  }, [findText, body, updateMatchCount]);
 
   const handleFind = (forward = true) => {
     if (!findText) return;
@@ -1776,8 +1780,8 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                   type="text"
                   placeholder="Find text..."
                   value={findText}
-                  onChange={(e) => { setFindText(e.target.value); updateMatchCount(); }}
-                  className="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-850 text-xs focus:border-indigo-500 outline-none"
+                  onChange={(e) => setFindText(e.target.value)}
+                  className="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:border-indigo-500 outline-none"
                 />
                 {findText && (
                   <span className="absolute right-2.5 top-1.5 text-[9px] font-bold text-slate-400 bg-slate-200 dark:bg-slate-800 px-1.5 py-0.5 rounded">
@@ -1791,7 +1795,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                 placeholder="Replace with..."
                 value={replaceText}
                 onChange={(e) => setReplaceText(e.target.value)}
-                className="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-850 text-xs focus:border-indigo-500 outline-none"
+                className="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:border-indigo-500 outline-none"
               />
 
               <div className="flex gap-2">
