@@ -62,7 +62,8 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
   const [activeFont, setActiveFont] = useState<'sans' | 'serif' | 'mono'>('sans');
   const [focusMode, setFocusMode] = useState(false);
   const [showFontMenu, setShowFontMenu] = useState(false);
-  const [activePopup, setActivePopup] = useState<'text' | 'paragraph' | null>(null);
+  const [activePopup, setActivePopup] = useState<'text' | 'paragraph' | 'table' | null>(null);
+  const [hoveredTable, setHoveredTable] = useState({ row: -1, col: -1 });
   const popupRef = useRef<HTMLDivElement>(null);
 
   // Click-Outside Listener for Custom Font Dropdown Menu and Popups
@@ -105,6 +106,15 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     const bgColor = document.queryCommandValue('backColor');
     const isHighlighted = bgColor && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent' && bgColor !== 'rgb(255, 255, 255)' && bgColor !== '#ffffff' && bgColor !== 'false';
 
+    // Check exact pixel font size
+    let currentFontSize = '16';
+    if (selection && selection.rangeCount > 0) {
+      const parentNode = selection.focusNode?.parentElement;
+      if (parentNode) {
+        currentFontSize = window.getComputedStyle(parentNode).fontSize.replace('px', '');
+      }
+    }
+
     setActiveFormats({
       bold: document.queryCommandState('bold'),
       italic: document.queryCommandState('italic'),
@@ -119,7 +129,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
       justifyLeft: document.queryCommandState('justifyLeft'),
       justifyCenter: document.queryCommandState('justifyCenter'),
       justifyRight: document.queryCommandState('justifyRight'),
-      fontSize: document.queryCommandValue('fontSize') || '3',
+      fontSize: currentFontSize,
       fontColor: document.queryCommandValue('foreColor') || ''
     });
   };
@@ -183,17 +193,29 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     updateFormatState();
   };
 
-  const handleFontSize = (size: number) => {
-    let sizeIndex = 3;
-    if (size <= 10) sizeIndex = 1;
-    else if (size <= 12) sizeIndex = 2;
-    else if (size <= 16) sizeIndex = 3;
-    else if (size <= 18) sizeIndex = 4;
-    else if (size <= 24) sizeIndex = 5;
-    else if (size <= 32) sizeIndex = 6;
-    else sizeIndex = 7;
+  const handleFontSize = (px: number) => {
+    const selection = window.getSelection();
+    if (!selection || !selection.rangeCount) return;
+
+    try {
+      const range = selection.getRangeAt(0);
+      if (!range.collapsed) {
+        const span = document.createElement('span');
+        span.style.fontSize = px + 'px';
+        range.surroundContents(span);
+      }
+    } catch (e) {
+      // Fallback for complex selections
+      document.execCommand('fontSize', false, '7');
+      if (contentRef.current) {
+        const fonts = contentRef.current.querySelectorAll('font[size="7"]');
+        fonts.forEach(f => {
+          f.removeAttribute('size');
+          (f as HTMLElement).style.fontSize = px + 'px';
+        });
+      }
+    }
     
-    document.execCommand('fontSize', false, sizeIndex.toString());
     if (contentRef.current) {
       setBody(contentRef.current.innerHTML);
       contentRef.current.focus();
@@ -219,12 +241,33 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
   };
 
   const handleTable = () => {
-    const tableHTML = '<br><table style="width: 100%; border-collapse: collapse; border: 1px solid #cbd5e1; margin: 10px 0;"><tbody><tr><td style="border: 1px solid #cbd5e1; padding: 8px;"><br></td><td style="border: 1px solid #cbd5e1; padding: 8px;"><br></td></tr><tr><td style="border: 1px solid #cbd5e1; padding: 8px;"><br></td><td style="border: 1px solid #cbd5e1; padding: 8px;"><br></td></tr></tbody></table><br>';
-    document.execCommand('insertHTML', false, tableHTML);
+    setActivePopup(p => p === 'table' ? null : 'table');
+  };
+
+  const handleGridClick = (r: number, c: number) => {
+    const rows = r + 1;
+    const cols = c + 1;
+    let html = '<table border="1" style="border-collapse:collapse; width:100%; margin: 10px 0;">';
+    for (let i = 0; i < rows; i++) {
+      html += '<tr>';
+      for (let j = 0; j < cols; j++) {
+        if (i === 0) {
+          html += '<th style="padding:6px 10px; background:#f3f4f6;">Col ' + (j + 1) + '</th>';
+        } else {
+          html += '<td style="padding:6px 10px;">&nbsp;</td>';
+        }
+      }
+      html += '</tr>';
+    }
+    html += '</table><p></p>';
+    
+    document.execCommand('insertHTML', false, html);
     if (contentRef.current) {
       setBody(contentRef.current.innerHTML);
       contentRef.current.focus();
     }
+    setActivePopup(null);
+    setHoveredTable({ row: -1, col: -1 });
   };
 
 
@@ -916,6 +959,29 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
                         <ListOrdered className="w-6 h-6" />
                         <span className="text-xs font-medium">Numbered List</span>
                       </button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+              {activePopup === 'table' && (
+                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 absolute top-full left-0 w-full z-30 shadow-xl">
+                  <div className="p-4 space-y-2 max-w-sm mx-auto flex flex-col items-center">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider text-center mb-1">
+                      Insert Table {hoveredTable.row >= 0 ? `${hoveredTable.row + 1} x ${hoveredTable.col + 1}` : ''}
+                    </p>
+                    <div className="flex flex-col gap-1 w-fit bg-slate-50 dark:bg-slate-800/50 p-2 rounded-xl border border-slate-100 dark:border-slate-800">
+                      {Array.from({ length: 6 }, (_, r) => (
+                        <div key={r} className="flex gap-1">
+                          {Array.from({ length: 6 }, (_, c) => (
+                            <div
+                              key={c}
+                              onMouseEnter={() => setHoveredTable({ row: r, col: c })}
+                              onClick={() => handleGridClick(r, c)}
+                              className={`w-8 h-8 border rounded-md cursor-pointer transition-colors ${r <= hoveredTable.row && c <= hoveredTable.col ? 'bg-indigo-500 border-indigo-600 shadow-[0_0_10px_rgba(99,102,241,0.5)]' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-400'}`}
+                            />
+                          ))}
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </motion.div>
