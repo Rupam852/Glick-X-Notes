@@ -398,7 +398,6 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       contentRef.current.focus();
     }
     updateFormatState();
-    setActivePopup(null);
   };
 
   const handleHighlight = () => {
@@ -420,7 +419,6 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       contentRef.current.focus();
     }
     updateFormatState();
-    setActivePopup(null);
   };
 
   const handleClearFormatting = () => {
@@ -438,7 +436,6 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       contentRef.current.focus();
     }
     updateFormatState();
-    setActivePopup(null);
   };
 
   const handleHeading = (level: 'h1' | 'h2' | 'h3') => {
@@ -571,7 +568,6 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       contentRef.current.focus();
     }
     updateFormatState();
-    setActivePopup(null);
   };
 
   const handleLinkInsert = (url: string) => {
