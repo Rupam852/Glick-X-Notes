@@ -2052,6 +2052,10 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
             <ImageIcon className="w-5 h-5" />
           </button>
           
+          <button onMouseDown={handleButtonMouseDown} onClick={handleTable} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-all ${activeFormats.isInsideTable || activePopup === 'table' || activePopup === 'tableActions' ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Table options">
+            <Table className="w-5 h-5" />
+          </button>
+          
 
 
           <div className="w-px h-5 bg-slate-250 dark:bg-slate-800 mx-1 shrink-0" />
@@ -2299,6 +2303,96 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                     Remove Link
                   </button>
                 )}
+              </div>
+            </motion.div>
+          )}
+
+          {activePopup === 'table' && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 absolute top-full left-0 w-full z-30 shadow-xl">
+              <div className="p-4 max-w-sm mx-auto space-y-4">
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
+                  <Table className="w-4 h-4 text-indigo-500" /> Create Table
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1 px-1">Rows</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="20"
+                      value={customRows}
+                      onChange={(e) => setCustomRows(e.target.value)}
+                      className="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-bold outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1 px-1">Columns</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="15"
+                      value={customCols}
+                      onChange={(e) => setCustomCols(e.target.value)}
+                      className="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-bold outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onMouseDown={handleButtonMouseDown}
+                  onClick={() => {
+                    const r = parseInt(customRows) || 3;
+                    const c = parseInt(customCols) || 3;
+                    handleGridClick(r - 1, c - 1);
+                  }}
+                  className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1"
+                >
+                  <Plus className="w-4 h-4" /> Create {customRows} x {customCols} Table
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {activePopup === 'tableActions' && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 absolute top-full left-0 w-full z-30 shadow-xl">
+              <div className="p-4 max-w-sm mx-auto space-y-4">
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
+                  <Table className="w-4 h-4 text-indigo-500" /> Table Actions
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onMouseDown={handleButtonMouseDown}
+                    onClick={handleAddRow}
+                    className="flex items-center justify-center gap-1.5 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold transition-all"
+                  >
+                    Add Row
+                  </button>
+                  <button
+                    type="button"
+                    onMouseDown={handleButtonMouseDown}
+                    onClick={handleDeleteRow}
+                    className="flex items-center justify-center gap-1.5 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-rose-50 dark:hover:bg-rose-950/20 text-rose-600 dark:text-rose-400 text-xs font-bold transition-all"
+                  >
+                    Delete Row
+                  </button>
+                  <button
+                    type="button"
+                    onMouseDown={handleButtonMouseDown}
+                    onClick={handleAddColumn}
+                    className="flex items-center justify-center gap-1.5 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold transition-all"
+                  >
+                    Add Column
+                  </button>
+                  <button
+                    type="button"
+                    onMouseDown={handleButtonMouseDown}
+                    onClick={handleDeleteColumn}
+                    className="flex items-center justify-center gap-1.5 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-rose-50 dark:hover:bg-rose-950/20 text-rose-600 dark:text-rose-400 text-xs font-bold transition-all"
+                  >
+                    Delete Column
+                  </button>
+                </div>
               </div>
             </motion.div>
           )}
