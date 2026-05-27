@@ -510,6 +510,27 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     if (savedSelectionRef.current) {
       restoreSelection(savedSelectionRef.current);
     }
+    if (activeFormats.highlight) {
+      const sel = window.getSelection();
+      if (sel && sel.isCollapsed && contentRef.current) {
+        let node: Node | null = sel.focusNode;
+        if (node && contentRef.current.contains(node)) {
+          let element: HTMLElement | null = node.nodeType === Node.ELEMENT_NODE ? (node as HTMLElement) : node.parentElement;
+          while (element && element !== contentRef.current) {
+            const bg = element.style.backgroundColor;
+            if (bg && bg !== 'transparent' && bg !== 'rgba(0, 0, 0, 0)') {
+              const range = document.createRange();
+              range.selectNodeContents(element);
+              sel.removeAllRanges();
+              sel.addRange(range);
+              savedSelectionRef.current = range.cloneRange();
+              break;
+            }
+            element = element.parentElement;
+          }
+        }
+      }
+    }
     if (contentRef.current) {
       pushToHistoryImmediate(contentRef.current.innerHTML);
     }
@@ -544,6 +565,28 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     if (savedSelectionRef.current) {
       restoreSelection(savedSelectionRef.current);
     }
+    const isSameColorActive = activeFormats.highlight && selectedHighlightColor.toLowerCase() === color.toLowerCase();
+    if (color === 'transparent' || isSameColorActive) {
+      const sel = window.getSelection();
+      if (sel && sel.isCollapsed && contentRef.current) {
+        let node: Node | null = sel.focusNode;
+        if (node && contentRef.current.contains(node)) {
+          let element: HTMLElement | null = node.nodeType === Node.ELEMENT_NODE ? (node as HTMLElement) : node.parentElement;
+          while (element && element !== contentRef.current) {
+            const bg = element.style.backgroundColor;
+            if (bg && bg !== 'transparent' && bg !== 'rgba(0, 0, 0, 0)') {
+              const range = document.createRange();
+              range.selectNodeContents(element);
+              sel.removeAllRanges();
+              sel.addRange(range);
+              savedSelectionRef.current = range.cloneRange();
+              break;
+            }
+            element = element.parentElement;
+          }
+        }
+      }
+    }
     if (contentRef.current) {
       pushToHistoryImmediate(contentRef.current.innerHTML);
     }
@@ -558,8 +601,6 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         setSelectedHighlightColor('#fcd34d');
       }
     } else {
-      const isSameColorActive = activeFormats.highlight && selectedHighlightColor.toLowerCase() === color.toLowerCase();
-
       if (isSameColorActive) {
         document.execCommand('hiliteColor', false, 'transparent');
         document.execCommand('backColor', false, 'transparent');
