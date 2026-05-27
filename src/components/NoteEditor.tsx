@@ -75,6 +75,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
   // Auto-Save Refs
   const latestContent = useRef(note?.body || '');
   const prevNoteIdRef = useRef<string | null>(note?.id || null);
+  const isMountedRef = useRef(false);
 
   // --- STATE ---
   const [currentNoteId, setCurrentNoteId] = useState<string | null>(note?.id || null);
@@ -326,7 +327,11 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
   // Sync state when note prop changes from parent (e.g. switching notes)
   useEffect(() => {
     const targetNoteId = note?.id || null;
-    if (targetNoteId !== currentNoteId) {
+    const isFirstMount = !isMountedRef.current;
+    const isDifferentNote = targetNoteId !== currentNoteId;
+
+    if (isFirstMount || isDifferentNote) {
+      isMountedRef.current = true;
       setCurrentNoteId(targetNoteId);
       setTitle(note?.title || '');
       setBody(note?.body || '');
