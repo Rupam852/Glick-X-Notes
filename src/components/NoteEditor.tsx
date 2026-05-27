@@ -175,6 +175,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   const [localFontSize, setLocalFontSize] = useState('16');
   const [linkUrl, setLinkUrl] = useState('');
   const [selectedLinkUrl, setSelectedLinkUrl] = useState('');
+  const [selectedHighlightColor, setSelectedHighlightColor] = useState('#fcd34d');
 
   // Find & Replace state
   const [findText, setFindText] = useState('');
@@ -494,9 +495,35 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       document.execCommand('hiliteColor', false, 'transparent');
       document.execCommand('backColor', false, 'transparent');
     } else {
-      document.execCommand('hiliteColor', false, '#fcd34d');
-      document.execCommand('backColor', false, '#fcd34d');
+      document.execCommand('hiliteColor', false, selectedHighlightColor);
+      document.execCommand('backColor', false, selectedHighlightColor);
     }
+    if (contentRef.current) {
+      const html = contentRef.current.innerHTML;
+      latestContent.current = html;
+      setBody(html);
+      pushToHistory(html);
+      if (window.innerWidth >= 768) {
+        contentRef.current.focus();
+      }
+    }
+    updateFormatState();
+    savedSelectionRef.current = saveSelection();
+  };
+
+  const handleHighlightColor = (color: string) => {
+    setSelectedHighlightColor(color);
+    if (savedSelectionRef.current) {
+      restoreSelection(savedSelectionRef.current);
+    }
+    if (contentRef.current) {
+      pushToHistoryImmediate(contentRef.current.innerHTML);
+    }
+    try {
+      document.execCommand('styleWithCSS', false, 'true');
+    } catch (e) {}
+    document.execCommand('hiliteColor', false, color);
+    document.execCommand('backColor', false, color);
     if (contentRef.current) {
       const html = contentRef.current.innerHTML;
       latestContent.current = html;
@@ -1954,15 +1981,33 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                   <button onMouseDown={handleButtonMouseDown} onClick={() => handleFormat('italic')} className={`p-2 rounded-lg transition-all ${activeFormats.italic ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Italic"><Italic className="w-4 h-4" /></button>
                   <button onMouseDown={handleButtonMouseDown} onClick={() => handleFormat('underline')} className={`p-2 rounded-lg transition-all ${activeFormats.underline ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Underline"><Underline className="w-4 h-4" /></button>
                   <button onMouseDown={handleButtonMouseDown} onClick={() => handleFormat('strikeThrough')} className={`p-2 rounded-lg transition-all ${activeFormats.strikeThrough ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Strikethrough"><Strikethrough className="w-4 h-4" /></button>
+                  
                   <div className="w-px h-6 bg-slate-350 dark:bg-slate-750 mx-1" />
-                  <button onMouseDown={handleButtonMouseDown} onClick={handleHighlight} className={`p-2 rounded-lg transition-all ${activeFormats.highlight ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Text Highlight"><Highlighter className="w-4 h-4" /></button>
+                  
+                  <button 
+                    onMouseDown={handleButtonMouseDown} 
+                    onClick={handleHighlight} 
+                    className={`p-2 rounded-lg transition-all flex items-center gap-1.5 ${activeFormats.highlight ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} 
+                    title="Text Highlight"
+                  >
+                    <Highlighter className="w-4 h-4" />
+                    <span 
+                      className="w-2.5 h-2.5 rounded-full border border-slate-300 dark:border-slate-600 shadow-sm shrink-0" 
+                      style={{ backgroundColor: selectedHighlightColor }} 
+                    />
+                  </button>
+                  
                   <button onMouseDown={handleButtonMouseDown} onClick={handleClearFormatting} className="p-2 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-white" title="Clear styling"><Eraser className="w-4 h-4" /></button>
                 </div>
                 
                 <div>
                   <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2 px-1">Font Color</p>
                   <div className="flex items-center gap-3 overflow-x-auto no-scrollbar pb-2 px-1">
-                    {['#ffffff', '#0f172a', '#64748b', '#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#6366f1'].map(color => {
+                    {[
+                      '#0f172a', '#64748b', '#ef4444', '#f97316', '#eab308', 
+                      '#22c55e', '#06b6d4', '#3b82f6', '#6366f1', '#a855f7', 
+                      '#ec4899', '#ffffff'
+                    ].map(color => {
                       const isActive = rgbToHex(activeFormats.fontColor) === color.toLowerCase();
                       return (
                         <button 
@@ -1977,6 +2022,50 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                         </button>
                       );
                     })}
+                    
+                    <label className="w-7 h-7 rounded-lg shrink-0 shadow-sm border border-slate-200 dark:border-slate-850 hover:scale-105 transition-transform flex items-center justify-center cursor-pointer bg-gradient-to-tr from-rose-500 via-yellow-500 to-blue-500 relative" title="Custom color">
+                      <input 
+                        type="color" 
+                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                        value={rgbToHex(activeFormats.fontColor) || '#000000'}
+                        onChange={(e) => handleFontColor(e.target.value)}
+                      />
+                      <Plus className="w-3.5 h-3.5 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]" />
+                    </label>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2 px-1">Highlight Color</p>
+                  <div className="flex items-center gap-3 overflow-x-auto no-scrollbar pb-2 px-1">
+                    {[
+                      '#fde047', '#86efac', '#93c5fd', '#fca5a5', '#fed7aa', 
+                      '#c084fc', '#fbcfe8', '#a5f3fc', '#e2e8f0'
+                    ].map(color => {
+                      const isActive = selectedHighlightColor.toLowerCase() === color.toLowerCase();
+                      return (
+                        <button 
+                          key={color} 
+                          type="button" 
+                          onMouseDown={handleButtonMouseDown}
+                          onClick={() => handleHighlightColor(color)} 
+                          className={`w-7 h-7 rounded-lg shrink-0 shadow-sm transition-transform hover:scale-105 flex items-center justify-center ${isActive ? 'ring-2 ring-indigo-500 border-none' : 'border border-slate-200 dark:border-slate-850'}`} 
+                          style={{ backgroundColor: color }} 
+                        >
+                          {isActive && <Check className="w-3.5 h-3.5 text-slate-800" />}
+                        </button>
+                      );
+                    })}
+                    
+                    <label className="w-7 h-7 rounded-lg shrink-0 shadow-sm border border-slate-200 dark:border-slate-850 hover:scale-105 transition-transform flex items-center justify-center cursor-pointer bg-gradient-to-tr from-rose-400 via-yellow-300 to-blue-400 relative" title="Custom highlight color">
+                      <input 
+                        type="color" 
+                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                        value={selectedHighlightColor}
+                        onChange={(e) => handleHighlightColor(e.target.value)}
+                      />
+                      <Plus className="w-3.5 h-3.5 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]" />
+                    </label>
                   </div>
                 </div>
               </div>
