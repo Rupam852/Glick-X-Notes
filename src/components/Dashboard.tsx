@@ -140,29 +140,31 @@ export default function Dashboard({ user, onEditNote, onNewNote }: DashboardProp
               Manage your custom workflow across <span className="text-indigo-300 font-bold">{notes.length} dynamic nodes</span> • {(totalStorage / 1024).toFixed(2)} KB cloud storage
             </p>
           </div>
-          <button
-            onClick={onNewNote}
-            className="flex items-center justify-center gap-2.5 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white font-bold px-6 py-4 rounded-2xl shadow-lg hover:shadow-[0_0_30px_rgba(99,102,241,0.25)] transition-all duration-200 active:translate-y-0.5 cursor-pointer text-sm uppercase tracking-wider font-black lg:w-auto w-full"
-          >
-            <Plus className="w-5 h-5" />
-            Create New Note
-          </button>
         </div>
       </div>
 
       {/* Advanced Control Panel */}
       <div className="bg-slate-900/20 border border-slate-900/60 p-4 rounded-2xl space-y-4">
         <div className="flex flex-col lg:flex-row gap-4">
-          {/* Enhanced Search Input */}
-          <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search notes, tags, content..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-12 pr-4 py-3.5 bg-slate-950/60 border border-slate-850 focus:border-indigo-500/60 text-slate-100 rounded-xl outline-none transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)] focus:ring-1 focus:ring-indigo-500/20 text-sm"
-            />
+          {/* Enhanced Search Input and Compact New Button */}
+          <div className="flex items-center gap-3 flex-1">
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search notes, tags, content..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-12 pr-4 py-3.5 bg-slate-950/60 border border-slate-850 focus:border-indigo-500/60 text-slate-100 rounded-xl outline-none transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)] focus:ring-1 focus:ring-indigo-500/20 text-sm"
+              />
+            </div>
+            <button
+              onClick={onNewNote}
+              className="flex items-center justify-center gap-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-black px-5 py-3.5 rounded-xl shadow-lg hover:shadow-indigo-500/20 active:scale-95 transition-all duration-200 cursor-pointer text-xs uppercase tracking-wider shrink-0"
+            >
+              <Plus className="w-4 h-4" />
+              <span>New</span>
+            </button>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
