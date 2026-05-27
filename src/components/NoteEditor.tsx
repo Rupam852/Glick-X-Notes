@@ -943,6 +943,111 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     }
   };
 
+  const applyAutoLinks = () => {
+    const editor = contentRef.current;
+    if (!editor) return;
+
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+    
+    // Save current cursor position safely
+    const savedRange = selection.getRangeAt(0).cloneRange();
+    const startContainer = savedRange.startContainer;
+    const startOffset = savedRange.startOffset;
+    
+    // Text node walker
+    const textNodes: Text[] = [];
+    const walk = (node: Node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        let parent = node.parentNode;
+        let insideLink = false;
+        while (parent && parent !== editor) {
+          if (parent.nodeName === 'A') {
+            insideLink = true;
+            break;
+          }
+          parent = parent.parentNode;
+        }
+        if (!insideLink) {
+          textNodes.push(node as Text);
+        }
+      } else {
+        for (let i = 0; i < node.childNodes.length; i++) {
+          walk(node.childNodes[i]);
+        }
+      }
+    };
+    
+    walk(editor);
+    
+    let changed = false;
+    const urlRegex = /\b(https?:\/\/[^\s]+|www\.[^\s]+|[a-zA-Z0-9.-]+\.(?:com|org|net|io|co|in|edu|gov|xyz)(?:\/[^\s]*)?)\b/gi;
+    
+    for (const node of textNodes) {
+      const text = node.data;
+      urlRegex.lastIndex = 0;
+      const match = urlRegex.exec(text);
+      if (match) {
+        const matchedUrl = match[0];
+        const matchIndex = match.index;
+        
+        let formattedUrl = matchedUrl;
+        if (!/^https?:\/\//i.test(formattedUrl)) {
+          formattedUrl = 'https://' + formattedUrl;
+        }
+        
+        const beforeText = text.substring(0, matchIndex);
+        const afterText = text.substring(matchIndex + matchedUrl.length);
+        
+        const parent = node.parentNode;
+        if (parent) {
+          changed = true;
+          
+          const beforeNode = document.createTextNode(beforeText);
+          const anchorNode = document.createElement('a');
+          anchorNode.href = formattedUrl;
+          anchorNode.target = '_blank';
+          anchorNode.rel = 'noopener noreferrer';
+          anchorNode.style.color = '#6366f1';
+          anchorNode.style.textDecoration = 'underline';
+          anchorNode.textContent = matchedUrl;
+          
+          const afterNode = document.createTextNode(afterText);
+          
+          parent.insertBefore(beforeNode, node);
+          parent.insertBefore(anchorNode, node);
+          parent.insertBefore(afterNode, node);
+          parent.removeChild(node);
+          
+          // Re-position cursor accurately if it was inside the modified node
+          if (startContainer === node) {
+            if (startOffset <= matchIndex) {
+              savedRange.setStart(beforeNode, startOffset);
+              savedRange.setEnd(beforeNode, startOffset);
+            } else if (startOffset > matchIndex + matchedUrl.length) {
+              const newOffset = startOffset - (matchIndex + matchedUrl.length);
+              savedRange.setStart(afterNode, newOffset);
+              savedRange.setEnd(afterNode, newOffset);
+            } else {
+              savedRange.setStart(afterNode, 0);
+              savedRange.setEnd(afterNode, 0);
+            }
+          }
+        }
+      }
+    }
+    
+    if (changed) {
+      selection.removeAllRanges();
+      selection.addRange(savedRange);
+      
+      const html = editor.innerHTML;
+      latestContent.current = html;
+      setBody(html);
+      pushToHistory(html);
+    }
+  };
+
   const handleContentClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
     const anchor = target.closest('a');
@@ -954,6 +1059,11 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
 
   // Main KeyDown events + Shortcuts interceptor
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === ' ' || e.key === 'Enter') {
+      setTimeout(() => {
+        applyAutoLinks();
+      }, 50);
+    }
     const isMac = navigator.userAgent.toUpperCase().indexOf('MAC') >= 0;
     const modifier = isMac ? e.metaKey : e.ctrlKey;
 
