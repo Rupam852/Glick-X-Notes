@@ -168,11 +168,15 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     });
   };
 
+  // Keep a ref that always reflects the latest body so the sync effect can read it fresh
+  const bodyRef = React.useRef(body);
+  useEffect(() => { bodyRef.current = body; }, [body]);
+
   useEffect(() => {
-    // Only sync innerHTML when switching between notes (avoid clobbering live edits)
     if (!contentRef.current) return;
-    contentRef.current.innerHTML = body;
-    // Auto-focus and move caret to the end
+    // Sync the editor content only when the note changes (not during live typing)
+    contentRef.current.innerHTML = bodyRef.current;
+    // Move caret to end
     contentRef.current.focus();
     try {
       const range = document.createRange();
@@ -181,9 +185,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
       range.collapse(false);
       sel?.removeAllRanges();
       sel?.addRange(range);
-    } catch (e) {
-      // Ignore
-    }
+    } catch (e) { /* ignore */ }
   }, [currentNoteId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
