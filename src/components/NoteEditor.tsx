@@ -146,6 +146,9 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
       contentRef.current.focus();
     }
     updateFormatState();
+    if (['justifyLeft', 'justifyCenter', 'justifyRight'].includes(command)) {
+      setActivePopup(null);
+    }
   };
   const handleHighlight = () => {
     if (activeFormats.highlight) {
@@ -189,6 +192,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
       contentRef.current.focus();
     }
     updateFormatState();
+    setActivePopup(null);
   };
 
   const handleFontColor = (color: string) => {
@@ -198,6 +202,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
       contentRef.current.focus();
     }
     updateFormatState();
+    setActivePopup(null);
   };
 
   const handleChecklist = () => {
@@ -236,6 +241,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
       contentRef.current.focus();
     }
     updateFormatState();
+    setActivePopup(null);
   };
 
   const toggleBlock = (blockType: string, tagName: string) => {
