@@ -68,6 +68,8 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
   const [customCols, setCustomCols] = useState('3');
   const [localFontSize, setLocalFontSize] = useState('16');
   const popupRef = useRef<HTMLDivElement>(null);
+  // Always-fresh ref to the editor's live HTML — used by save to avoid stale closure
+  const liveBodyRef = useRef(note?.body || '');
 
   useEffect(() => {
     setLocalFontSize(Math.round(parseFloat(activeFormats.fontSize) || 16).toString());
@@ -172,10 +174,20 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
   const bodyRef = React.useRef(body);
   useEffect(() => { bodyRef.current = body; }, [body]);
 
+  // isPrevNewNote tracks if we were in new-note state before currentNoteId was assigned
+  const prevNoteIdRef = useRef<string | null>(note?.id || null);
+
   useEffect(() => {
     if (!contentRef.current) return;
-    // Sync the editor content only when the note changes (not during live typing)
+    // If switching TO a different existing note, load its content
+    // If currentNoteId just got set because a new note was saved, do NOT clobber
+    // (the editor already has the user's typed content)
+    const isNewlySaved = prevNoteIdRef.current === null && currentNoteId !== null;
+    prevNoteIdRef.current = currentNoteId;
+    if (isNewlySaved) return; // user just created a note — editor content is already correct
+
     contentRef.current.innerHTML = bodyRef.current;
+    liveBodyRef.current = bodyRef.current;
     // Move caret to end
     contentRef.current.focus();
     try {
@@ -189,7 +201,9 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
   }, [currentNoteId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
-    setBody(e.currentTarget.innerHTML);
+    const html = e.currentTarget.innerHTML;
+    liveBodyRef.current = html;
+    setBody(html);
   };
 
   const handleFormat = (command: string, value?: string) => {
@@ -282,7 +296,9 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     }
 
     if (contentRef.current) {
-      setBody(contentRef.current.innerHTML);
+      const html = contentRef.current.innerHTML;
+      liveBodyRef.current = html;
+      setBody(html);
     }
     updateFormatState();
   };
@@ -547,13 +563,19 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
 
       if ((isPre || isBlockquote) && e.shiftKey) {
         e.preventDefault();
-        // Break out by formatting as paragraph
         document.execCommand('insertParagraph', false);
         document.execCommand('formatBlock', false, 'P');
+        if (contentRef.current) {
+          liveBodyRef.current = contentRef.current.innerHTML;
+          setBody(contentRef.current.innerHTML);
+        }
       } else if (isPre && !e.shiftKey) {
-        // Normal enter in PRE should insert newline
         e.preventDefault();
         document.execCommand('insertText', false, '\n');
+        if (contentRef.current) {
+          liveBodyRef.current = contentRef.current.innerHTML;
+          setBody(contentRef.current.innerHTML);
+        }
       }
     }
   };
@@ -581,6 +603,9 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
   const handleSave = useCallback(async () => {
     if (!user || !title.trim()) return;
 
+    // Always read the freshest content from the live ref, not stale closure
+    const currentBody = liveBodyRef.current;
+
     setSaving(true);
     const noteId = currentNoteId || doc(collection(db, 'notes')).id;
     const isNewNote = !currentNoteId;
@@ -588,7 +613,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     const noteData = {
       userId: user.uid,
       title,
-      body,
+      body: currentBody,
       tags: tags.split(',').map(t => t.trim()).filter(t => t),
       color,
       updatedAt: serverTimestamp(),
@@ -598,7 +623,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     try {
       await setDoc(doc(db, 'notes', noteId), noteData, { merge: true });
       setLastSaved(new Date());
-      setLastSavedData({ title, body, tags, color });
+      setLastSavedData({ title, body: currentBody, tags, color });
       if (isNewNote) {
         setCurrentNoteId(noteId);
         showToast('Note created successfully', 'success');
@@ -609,13 +634,13 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     } finally {
       setSaving(false);
     }
-  }, [currentNoteId, title, body, tags, color, showToast]);
+  }, [currentNoteId, title, tags, color, showToast]); // body removed — we use liveBodyRef instead
 
   // Auto-save throttling
   useEffect(() => {
     const hasChanges = 
       title !== lastSavedData.title || 
-      body !== lastSavedData.body || 
+      liveBodyRef.current !== lastSavedData.body || 
       tags !== lastSavedData.tags || 
       color !== lastSavedData.color;
 
@@ -623,7 +648,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
 
     const timer = setTimeout(() => {
       handleSave();
-    }, 1500); // Auto-save after 1.5s of inactivity
+    }, 1500);
     
     return () => clearTimeout(timer);
   }, [handleSave, title, body, tags, color, lastSavedData]);
