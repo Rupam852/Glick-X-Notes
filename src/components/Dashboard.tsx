@@ -11,13 +11,17 @@ const stripHtmlForPreview = (html: string) => {
   if (!html) return '';
   return html
     .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<div[^>]*>/gi, '\n')
     .replace(/<\/div>/gi, '\n')
+    .replace(/<p[^>]*>/gi, '\n')
     .replace(/<\/p>/gi, '\n')
+    .replace(/<li[^>]*>/gi, '\n')
     .replace(/<\/li>/gi, '\n')
-    .replace(/<div[^>]*>/gi, '')
-    .replace(/<p[^>]*>/gi, '')
-    .replace(/<li[^>]*>/gi, '')
-    .replace(/<[^>]+>/g, '') // Strip remaining tags
+    .replace(/<h[1-6][^>]*>/gi, '\n')
+    .replace(/<\/h[1-6]>/gi, '\n')
+    .replace(/<blockquote[^>]*>/gi, '\n')
+    .replace(/<\/blockquote>/gi, '\n')
+    .replace(/<[^>]+>/g, '') // Strip remaining inline tags (em, strong, etc.)
     .replace(/&nbsp;/g, ' ')
     .replace(/[ \t]+/g, ' ') // Collapse horizontal spaces, keep newlines
     .replace(/\n\s*\n/g, '\n') // Collapse consecutive newlines
