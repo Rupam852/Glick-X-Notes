@@ -7,7 +7,7 @@ import {
   ArrowLeft, Save, Trash2, Paperclip, X, Download, FileText, Image as ImageIcon, Plus, Tag, Check, 
   Bold, Italic, List, ListOrdered, Link, Heading1, Heading2, Heading3, Quote, Undo, Redo, UploadCloud, 
   ChevronDown, ChevronUp, Underline, Strikethrough, Eraser, Type, AlignLeft, AlignCenter, AlignRight, 
-  CheckSquare, Table, Search, Replace, GripVertical, Info, Clock, Highlighter
+  CheckSquare, Table, Search, Replace, GripVertical, Info, Clock, Highlighter, Minus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useToast } from '../contexts/ToastContext';
@@ -72,6 +72,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   const contentRef = useRef<HTMLDivElement>(null);
   const fontMenuRef = useRef<HTMLDivElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
+  const fontSizeMenuRef = useRef<HTMLDivElement>(null);
   
   // Custom Undo/Redo Refs
   const undoStack = useRef<string[]>([note?.body || '']);
@@ -133,6 +134,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   const [viewingAttachment, setViewingAttachment] = useState<Attachment | null>(null);
   const [activeFont, setActiveFont] = useState<'sans' | 'serif' | 'mono'>('sans');
   const [showFontMenu, setShowFontMenu] = useState(false);
+  const [showFontSizeMenu, setShowFontSizeMenu] = useState(false);
   const [hoveredTable, setHoveredTable] = useState({ row: -1, col: -1 });
   const [customRows, setCustomRows] = useState('3');
   const [customCols, setCustomCols] = useState('3');
@@ -155,6 +157,9 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     function handleClickOutside(event: MouseEvent) {
       if (fontMenuRef.current && !fontMenuRef.current.contains(event.target as Node)) {
         setShowFontMenu(false);
+      }
+      if (fontSizeMenuRef.current && !fontSizeMenuRef.current.contains(event.target as Node)) {
+        setShowFontSizeMenu(false);
       }
       if (popupRef.current && !popupRef.current.contains(event.target as Node)) {
         setActivePopup(null);
@@ -1713,37 +1718,8 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
 
           <div className="w-px h-5 bg-slate-250 dark:bg-slate-800 mx-1 shrink-0" />
 
-          {/* Stepper block */}
-          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200/50 dark:border-slate-700/50 shadow-inner shrink-0">
-            <input
-              type="number"
-              min={1}
-              max={120}
-              value={localFontSize}
-              onFocus={() => {
-                savedSelectionRef.current = saveSelection();
-              }}
-              onChange={(e) => setLocalFontSize(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  const val = parseInt(localFontSize, 10);
-                  if (!isNaN(val) && val >= 1 && val <= 120) {
-                    handleFontSize(val);
-                  }
-                  contentRef.current?.focus();
-                }
-              }}
-              onBlur={() => {
-                const val = parseInt(localFontSize, 10);
-                if (!isNaN(val) && val >= 1 && val <= 120) {
-                  handleFontSize(val);
-                } else {
-                  setLocalFontSize(Math.round(parseFloat(activeFormats.fontSize) || 16).toString());
-                }
-              }}
-              className="w-10 bg-transparent text-slate-800 dark:text-slate-100 text-xs font-bold text-center outline-none border-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-            />
-            <div className="w-px h-4 bg-slate-300 dark:bg-slate-700 mx-0.5" />
+          {/* Professional Font Size Dropdown and Stepper */}
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200/50 dark:border-slate-700/50 shadow-inner shrink-0 relative" ref={fontSizeMenuRef}>
             <button 
               type="button"
               onMouseDown={(e) => e.preventDefault()}
@@ -1754,8 +1730,54 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
               className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-white transition-colors cursor-pointer flex items-center justify-center"
               title="Decrease font size"
             >
-              <ChevronDown className="w-4 h-4" />
+              <Minus className="w-4 h-4" />
             </button>
+
+            <div className="w-px h-4 bg-slate-300 dark:bg-slate-750 mx-0.5" />
+
+            {/* Numeric Input & Dropdown Toggle */}
+            <div className="flex items-center gap-1 relative">
+              <input
+                type="number"
+                min={1}
+                max={120}
+                value={localFontSize}
+                onFocus={() => {
+                  savedSelectionRef.current = saveSelection();
+                }}
+                onChange={(e) => setLocalFontSize(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const val = parseInt(localFontSize, 10);
+                    if (!isNaN(val) && val >= 1 && val <= 120) {
+                      handleFontSize(val);
+                    }
+                    contentRef.current?.focus();
+                  }
+                }}
+                onBlur={() => {
+                  const val = parseInt(localFontSize, 10);
+                  if (!isNaN(val) && val >= 1 && val <= 120) {
+                    handleFontSize(val);
+                  } else {
+                    setLocalFontSize(Math.round(parseFloat(activeFormats.fontSize) || 16).toString());
+                  }
+                }}
+                className="w-8 bg-transparent text-slate-800 dark:text-slate-100 text-xs font-black text-center outline-none border-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none cursor-text"
+              />
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => setShowFontSizeMenu(prev => !prev)}
+                className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer"
+                title="Select popular size"
+              >
+                <ChevronDown className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <div className="w-px h-4 bg-slate-300 dark:bg-slate-750 mx-0.5" />
+
             <button 
               type="button"
               onMouseDown={(e) => e.preventDefault()}
@@ -1766,8 +1788,35 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
               className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-white transition-colors cursor-pointer flex items-center justify-center"
               title="Increase font size"
             >
-              <ChevronUp className="w-4 h-4" />
+              <Plus className="w-4 h-4" />
             </button>
+
+            {/* Premium Font Size Dropdown Popover */}
+            <AnimatePresence>
+              {showFontSizeMenu && (
+                <motion.div
+                  initial={{ opacity: 0, y: 5, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 5, scale: 0.95 }}
+                  className="absolute left-1/2 -translate-x-1/2 mt-2 top-full w-28 z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-1.5 shadow-2xl max-h-56 overflow-y-auto no-scrollbar space-y-0.5"
+                >
+                  {[10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 64, 72].map(size => (
+                    <button
+                      key={size}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        handleFontSize(size);
+                        setShowFontSizeMenu(false);
+                      }}
+                      className={`w-full text-center py-1.5 rounded-lg transition-all text-xs font-bold cursor-pointer block ${parseInt(localFontSize, 10) === size ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                    >
+                      {size}px
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           <div className="w-px h-5 bg-slate-250 dark:bg-slate-800 mx-1 shrink-0" />
