@@ -1049,7 +1049,12 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
 
   // Save Note Callback
   const handleSave = useCallback(async () => {
-    if (!user || !title.trim()) return;
+    if (!user) return;
+
+    const finalTitle = title.trim() || 'Untitled Note';
+    if (!title.trim()) {
+      setTitle('Untitled Note');
+    }
 
     const currentBody = contentRef.current ? contentRef.current.innerHTML : latestContent.current;
     
@@ -1059,7 +1064,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     
     const noteData = {
       userId: user.uid,
-      title,
+      title: finalTitle,
       body: currentBody,
       tags: tags.split(',').map(t => t.trim()).filter(t => t),
       color,
@@ -1071,7 +1076,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
       await setDoc(doc(db, 'notes', noteId), noteData, { merge: true });
       const now = new Date();
       setLastSaved(now);
-      setLastSavedSnapshot({ title, body: currentBody, tags, color });
+      setLastSavedSnapshot({ title: finalTitle, body: currentBody, tags, color });
       if (isNewNote) {
         setCurrentNoteId(noteId);
         showToast('Note created successfully', 'success');
@@ -1097,7 +1102,9 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
 
   // Auto-save debounced effect
   useEffect(() => {
-    if (!title.trim() || !hasUnsavedChanges) return;
+    const currentBodyText = contentRef.current ? contentRef.current.innerText : latestContent.current;
+    const isEmptyNote = !title.trim() && !currentBodyText.trim();
+    if (isEmptyNote || !hasUnsavedChanges) return;
 
     const timer = setTimeout(() => {
       handleSave();
