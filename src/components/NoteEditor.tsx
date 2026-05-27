@@ -1746,8 +1746,8 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
             <div className="w-px h-4 bg-slate-300 dark:bg-slate-700 mx-0.5" />
             <button 
               type="button"
-              onMouseDown={(e) => {
-                e.preventDefault();
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
                 const current = Math.round(parseFloat(activeFormats.fontSize)) || 16;
                 handleFontSize(Math.max(1, current - 1));
               }}
@@ -1758,8 +1758,8 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
             </button>
             <button 
               type="button"
-              onMouseDown={(e) => {
-                e.preventDefault();
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
                 const current = Math.round(parseFloat(activeFormats.fontSize)) || 16;
                 handleFontSize(Math.min(120, current + 1));
               }}
