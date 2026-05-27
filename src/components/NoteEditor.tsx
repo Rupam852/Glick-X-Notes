@@ -64,6 +64,8 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
   const [showFontMenu, setShowFontMenu] = useState(false);
   const [activePopup, setActivePopup] = useState<'text' | 'paragraph' | 'table' | null>(null);
   const [hoveredTable, setHoveredTable] = useState({ row: -1, col: -1 });
+  const [customRows, setCustomRows] = useState('3');
+  const [customCols, setCustomCols] = useState('3');
   const popupRef = useRef<HTMLDivElement>(null);
 
   // Click-Outside Listener for Custom Font Dropdown Menu and Popups
@@ -166,6 +168,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
       contentRef.current.focus();
     }
     updateFormatState();
+    setActivePopup(null);
   };
   const handleHighlight = () => {
     if (activeFormats.highlight) {
@@ -180,6 +183,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
       contentRef.current.focus();
     }
     updateFormatState();
+    setActivePopup(null);
   };
 
   const handleClearFormatting = () => {
@@ -191,6 +195,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
       contentRef.current.focus();
     }
     updateFormatState();
+    setActivePopup(null);
   };
 
   const handleFontSize = (px: number) => {
@@ -221,6 +226,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
       contentRef.current.focus();
     }
     updateFormatState();
+    setActivePopup(null);
   };
 
   const handleFontColor = (color: string) => {
@@ -230,6 +236,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
       contentRef.current.focus();
     }
     updateFormatState();
+    setActivePopup(null);
   };
 
   const handleChecklist = () => {
@@ -270,6 +277,13 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     setHoveredTable({ row: -1, col: -1 });
   };
 
+  const handleCustomTableInsert = () => {
+    const r = parseInt(customRows, 10);
+    const c = parseInt(customCols, 10);
+    if (isNaN(r) || isNaN(c) || r <= 0 || c <= 0) return;
+    handleGridClick(r - 1, c - 1);
+  };
+
 
   const handleListToggle = (command: string) => {
     const isActive = document.queryCommandState(command);
@@ -289,6 +303,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
       contentRef.current.focus();
     }
     updateFormatState();
+    setActivePopup(null);
   };
 
   const toggleBlock = (blockType: string, tagName: string) => {
@@ -982,6 +997,37 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
                           ))}
                         </div>
                       ))}
+                    </div>
+                    
+                    <div className="w-full border-t border-slate-100 dark:border-slate-800 pt-3 mt-3 flex flex-col items-center">
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider mb-2">Or Custom Size</p>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          placeholder="Rows"
+                          min={1}
+                          max={50}
+                          value={customRows}
+                          onChange={(e) => setCustomRows(e.target.value)}
+                          className="w-16 px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 text-xs text-center outline-none focus:border-indigo-500"
+                        />
+                        <span className="text-slate-400 text-xs">x</span>
+                        <input
+                          type="number"
+                          placeholder="Cols"
+                          min={1}
+                          max={50}
+                          value={customCols}
+                          onChange={(e) => setCustomCols(e.target.value)}
+                          className="w-16 px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 text-xs text-center outline-none focus:border-indigo-500"
+                        />
+                        <button
+                          onClick={handleCustomTableInsert}
+                          className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition-all"
+                        >
+                          Insert
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </motion.div>
