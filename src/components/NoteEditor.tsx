@@ -341,9 +341,9 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     // Check highlight (background color) using explicit inline styles to avoid dark-theme background false positives
     let isHighlighted = false;
     let detectedHighlightColor = '';
-    if (selection && selection.rangeCount > 0) {
+    if (selection && selection.rangeCount > 0 && contentRef.current) {
       let node: Node | null = selection.focusNode;
-      if (node) {
+      if (node && contentRef.current.contains(node)) {
         let element: HTMLElement | null = node.nodeType === Node.ELEMENT_NODE ? (node as HTMLElement) : node.parentElement;
         while (element && element !== contentRef.current) {
           const bg = element.style.backgroundColor;
@@ -2070,9 +2070,27 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                   <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2 px-1">Highlight Color</p>
                   <div className="flex items-center gap-3 overflow-x-auto no-scrollbar pb-2 px-1">
                     {[
-                      '#fde047', '#86efac', '#93c5fd', '#fca5a5', '#fed7aa', 
+                      'none', '#fde047', '#86efac', '#93c5fd', '#fca5a5', '#fed7aa', 
                       '#c084fc', '#fbcfe8', '#a5f3fc', '#e2e8f0'
                     ].map(color => {
+                      if (color === 'none') {
+                        const isActive = !activeFormats.highlight;
+                        return (
+                          <button
+                            key="none"
+                            type="button"
+                            onMouseDown={handleButtonMouseDown}
+                            onClick={() => handleHighlightColor('transparent')}
+                            className={`w-7 h-7 rounded-lg shrink-0 shadow-sm transition-transform hover:scale-105 flex items-center justify-center bg-white dark:bg-slate-800 ${isActive ? 'ring-2 ring-indigo-500 border-none' : 'border border-slate-200 dark:border-slate-850'}`}
+                            title="No Highlight (None)"
+                          >
+                            <div className="w-5 h-5 relative flex items-center justify-center">
+                              <div className="absolute w-full h-[1.5px] bg-rose-500 rotate-45" />
+                              <div className="absolute w-4 h-4 rounded-full border border-slate-350 dark:border-slate-600" />
+                            </div>
+                          </button>
+                        );
+                      }
                       const isActive = activeFormats.highlight && selectedHighlightColor.toLowerCase() === color.toLowerCase();
                       return (
                         <button 
