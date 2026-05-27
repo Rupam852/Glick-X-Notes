@@ -1,12 +1,17 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { collection, doc, setDoc, deleteDoc, serverTimestamp, Timestamp, getDocs, addDoc, query, where, onSnapshot } from 'firebase/firestore';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { collection, doc, setDoc, deleteDoc, serverTimestamp, addDoc, query, onSnapshot } from 'firebase/firestore';
 import { User as FirebaseUser } from 'firebase/auth';
-import { db, auth, handleFirestoreError, OperationType } from '../firebase';
+import { db, handleFirestoreError, OperationType } from '../firebase';
 import { Note, Attachment } from '../types';
-import { ArrowLeft, Save, Trash2, Paperclip, X, Download, FileText, Image as ImageIcon, Plus, Tag, Palette, Check, Loader2, Bold, Italic, List, ListOrdered, Link, Heading1, Quote, Undo, Redo, UploadCloud, Sparkles, ChevronDown, ChevronUp, Underline, Strikethrough, Code, Highlighter, Eraser, CornerDownLeft, Type, AlignLeft, AlignCenter, AlignRight, CheckSquare, Table } from 'lucide-react';
+import { 
+  ArrowLeft, Save, Trash2, Paperclip, X, Download, FileText, Image as ImageIcon, Plus, Tag, Check, 
+  Bold, Italic, List, ListOrdered, Link, Heading1, Heading2, Heading3, Quote, Undo, Redo, UploadCloud, 
+  ChevronDown, ChevronUp, Underline, Strikethrough, Eraser, Type, AlignLeft, AlignCenter, AlignRight, 
+  CheckSquare, Table, Search, Replace, GripVertical, Info, Clock, Highlighter
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useToast } from '../contexts/ToastContext';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 
 interface NoteEditorProps {
   user: FirebaseUser;
@@ -24,17 +29,27 @@ const COLORS = [
   { name: 'Slate', value: '#64748b' },
 ];
 
-const ToolbarButton = ({ icon, onClick, title, isActive }: { icon: React.ReactNode, onClick: () => void, title: string, isActive?: boolean }) => (
-  <button 
-    type="button"
-    onClick={onClick} 
-    title={title}
-    className={`p-2 rounded-lg transition-colors cursor-pointer ${isActive ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-400' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800'}`}
-  >
-    {icon}
-  </button>
-);
+// Helper to save selection
+function saveSelection(): Range | null {
+  const sel = window.getSelection();
+  if (sel && sel.rangeCount > 0) {
+    return sel.getRangeAt(0).cloneRange();
+  }
+  return null;
+}
 
+// Helper to restore selection
+function restoreSelection(range: Range | null): void {
+  if (range) {
+    const sel = window.getSelection();
+    if (sel) {
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+  }
+}
+
+// Helper to translate color RGB values to Hex
 const rgbToHex = (color: string) => {
   if (!color) return '';
   if (color.startsWith('#')) return color.toLowerCase();
@@ -44,6 +59,23 @@ const rgbToHex = (color: string) => {
 };
 
 export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
+  const { showToast } = useToast();
+
+  // --- REFS ---
+  const contentRef = useRef<HTMLDivElement>(null);
+  const fontMenuRef = useRef<HTMLDivElement>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
+  
+  // Custom Undo/Redo Refs
+  const undoStack = useRef<string[]>([note?.body || '']);
+  const redoStack = useRef<string[]>([]);
+  const historyTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  // Auto-Save Refs
+  const latestContent = useRef(note?.body || '');
+  const prevNoteIdRef = useRef<string | null>(note?.id || null);
+
+  // --- STATE ---
   const [currentNoteId, setCurrentNoteId] = useState<string | null>(note?.id || null);
   const [title, setTitle] = useState(note?.title || '');
   const [body, setBody] = useState(note?.body || '');
@@ -51,31 +83,65 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
   const [color, setColor] = useState(note?.color || COLORS[0].value);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [saving, setSaving] = useState(false);
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const { showToast } = useToast();
-  const contentRef = useRef<HTMLDivElement>(null);
-  const fontMenuRef = useRef<HTMLDivElement>(null);
-  const [activeFormats, setActiveFormats] = useState({ bold: false, italic: false, underline: false, strikeThrough: false, unorderedList: false, orderedList: false, pre: false, h1: false, blockquote: false, highlight: false, justifyLeft: false, justifyCenter: false, justifyRight: false, fontSize: '16', fontColor: '', isInsideTable: false });
-  const [isDragging, setIsDragging] = useState(false);
-  const [viewingAttachment, setViewingAttachment] = useState<Attachment | null>(null);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [activeFont, setActiveFont] = useState<'sans' | 'serif' | 'mono'>('sans');
+  const [lastSaved, setLastSaved] = useState<Date | null>(note ? new Date() : null);
+
+  // Snapshot for calculating changes
+  const [lastSavedSnapshot, setLastSavedSnapshot] = useState({
+    title: note?.title || '',
+    body: note?.body || '',
+    tags: note?.tags.join(', ') || '',
+    color: note?.color || COLORS[0].value
+  });
+
+  const [activeFormats, setActiveFormats] = useState({
+    bold: false,
+    italic: false,
+    underline: false,
+    strikeThrough: false,
+    unorderedList: false,
+    orderedList: false,
+    pre: false,
+    h1: false,
+    h2: false,
+    h3: false,
+    blockquote: false,
+    highlight: false,
+    justifyLeft: false,
+    justifyCenter: false,
+    justifyRight: false,
+    fontSize: '16',
+    fontColor: '',
+    isInsideTable: false
+  });
+
+  const [activePopup, setActivePopup] = useState<'text' | 'paragraph' | 'table' | 'tableActions' | 'link' | null>(null);
+  const [showFindReplace, setShowFindReplace] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(320);
+  const [isResizing, setIsResizing] = useState(false);
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [viewingAttachment, setViewingAttachment] = useState<Attachment | null>(null);
+  const [activeFont, setActiveFont] = useState<'sans' | 'serif' | 'mono'>('sans');
   const [showFontMenu, setShowFontMenu] = useState(false);
-  const [activePopup, setActivePopup] = useState<'text' | 'paragraph' | 'table' | 'tableActions' | null>(null);
   const [hoveredTable, setHoveredTable] = useState({ row: -1, col: -1 });
   const [customRows, setCustomRows] = useState('3');
   const [customCols, setCustomCols] = useState('3');
   const [localFontSize, setLocalFontSize] = useState('16');
-  const popupRef = useRef<HTMLDivElement>(null);
-  // Always-fresh ref to the editor's live HTML — used by save to avoid stale closure
-  const liveBodyRef = useRef(note?.body || '');
+  const [linkUrl, setLinkUrl] = useState('');
+  const [selectedLinkUrl, setSelectedLinkUrl] = useState('');
 
+  // Find & Replace state
+  const [findText, setFindText] = useState('');
+  const [replaceText, setReplaceText] = useState('');
+  const [matchCount, setMatchCount] = useState(0);
+
+  // Auto-sync Font Stepper
   useEffect(() => {
     setLocalFontSize(Math.round(parseFloat(activeFormats.fontSize) || 16).toString());
   }, [activeFormats.fontSize]);
 
-  // Click-Outside Listener — always active, closes both font menu and active popups
+  // Click-Outside Listener for menus/popups
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (fontMenuRef.current && !fontMenuRef.current.contains(event.target as Node)) {
@@ -91,10 +157,89 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     };
   }, []);
 
+  // Drag-to-Resize Sidebar Event Handlers
+  const startResizing = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+  }, []);
+
+  const stopResizing = useCallback(() => {
+    setIsResizing(false);
+  }, []);
+
+  const resize = useCallback((e: MouseEvent) => {
+    if (isResizing) {
+      const newWidth = e.clientX;
+      if (newWidth >= 240 && newWidth <= 480) {
+        setSidebarWidth(newWidth);
+      }
+    }
+  }, [isResizing]);
+
+  useEffect(() => {
+    window.addEventListener('mousemove', resize);
+    window.addEventListener('mouseup', stopResizing);
+    return () => {
+      window.removeEventListener('mousemove', resize);
+      window.removeEventListener('mouseup', stopResizing);
+    };
+  }, [resize, stopResizing]);
+
+  // Custom Undo/Redo Management
+  const pushToHistory = useCallback((content: string) => {
+    if (historyTimer.current) clearTimeout(historyTimer.current);
+    historyTimer.current = setTimeout(() => {
+      const lastState = undoStack.current[undoStack.current.length - 1];
+      if (lastState === content) return;
+      undoStack.current.push(content);
+      if (undoStack.current.length > 50) {
+        undoStack.current.shift();
+      }
+      redoStack.current = [];
+    }, 500);
+  }, []);
+
+  const pushToHistoryImmediate = (content: string) => {
+    const lastState = undoStack.current[undoStack.current.length - 1];
+    if (lastState === content) return;
+    undoStack.current.push(content);
+    if (undoStack.current.length > 50) {
+      undoStack.current.shift();
+    }
+    redoStack.current = [];
+  };
+
+  const handleUndo = useCallback(() => {
+    if (undoStack.current.length <= 1) return;
+    const current = undoStack.current.pop()!;
+    redoStack.current.push(current);
+    const prev = undoStack.current[undoStack.current.length - 1];
+    if (contentRef.current) {
+      contentRef.current.innerHTML = prev;
+      latestContent.current = prev;
+      setBody(prev);
+    }
+  }, []);
+
+  const handleRedo = useCallback(() => {
+    if (redoStack.current.length === 0) return;
+    const next = redoStack.current.pop()!;
+    undoStack.current.push(next);
+    if (contentRef.current) {
+      contentRef.current.innerHTML = next;
+      latestContent.current = next;
+      setBody(next);
+    }
+  }, []);
+
+  // Update Format State for Toolbar indicators
   const updateFormatState = () => {
     let isPre = false;
     let isBlockquote = false;
     let isH1 = false;
+    let isH2 = false;
+    let isH3 = false;
+    let linkUrlDetected = '';
     
     const selection = window.getSelection();
     if (selection && selection.rangeCount > 0) {
@@ -103,11 +248,16 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
         if (node.nodeName === 'PRE') isPre = true;
         if (node.nodeName === 'BLOCKQUOTE') isBlockquote = true;
         if (node.nodeName === 'H1') isH1 = true;
-        if (isPre || isBlockquote || isH1) break;
+        if (node.nodeName === 'H2') isH2 = true;
+        if (node.nodeName === 'H3') isH3 = true;
+        if (node.nodeName === 'A') {
+          linkUrlDetected = (node as HTMLAnchorElement).href;
+        }
         node = node.parentNode;
       }
     }
     
+    setSelectedLinkUrl(linkUrlDetected);
 
     // Check highlight (background color)
     const bgColor = document.queryCommandValue('backColor');
@@ -160,6 +310,8 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
       pre: isPre,
       blockquote: isBlockquote,
       h1: isH1,
+      h2: isH2,
+      h3: isH3,
       highlight: !!isHighlighted,
       justifyLeft: document.queryCommandState('justifyLeft'),
       justifyCenter: document.queryCommandState('justifyCenter'),
@@ -170,24 +322,19 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     });
   };
 
-  // Keep a ref that always reflects the latest body so the sync effect can read it fresh
+  // Sync Body from Firebase once note loads
   const bodyRef = React.useRef(body);
   useEffect(() => { bodyRef.current = body; }, [body]);
 
-  // isPrevNewNote tracks if we were in new-note state before currentNoteId was assigned
-  const prevNoteIdRef = useRef<string | null>(note?.id || null);
-
   useEffect(() => {
     if (!contentRef.current) return;
-    // If switching TO a different existing note, load its content
-    // If currentNoteId just got set because a new note was saved, do NOT clobber
-    // (the editor already has the user's typed content)
     const isNewlySaved = prevNoteIdRef.current === null && currentNoteId !== null;
     prevNoteIdRef.current = currentNoteId;
-    if (isNewlySaved) return; // user just created a note — editor content is already correct
+    if (isNewlySaved) return;
 
     contentRef.current.innerHTML = bodyRef.current;
-    liveBodyRef.current = bodyRef.current;
+    latestContent.current = bodyRef.current;
+    
     // Move caret to end
     contentRef.current.focus();
     try {
@@ -200,22 +347,36 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     } catch (e) { /* ignore */ }
   }, [currentNoteId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Handle Input Changes inside editor
   const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
     const html = e.currentTarget.innerHTML;
-    liveBodyRef.current = html;
+    latestContent.current = html;
     setBody(html);
+    pushToHistory(html);
+    updateMatchCount();
   };
 
+  // Core Formatting Engine
   const handleFormat = (command: string, value?: string) => {
+    if (contentRef.current) {
+      pushToHistoryImmediate(contentRef.current.innerHTML);
+    }
     document.execCommand(command, false, value);
     if (contentRef.current) {
-      setBody(contentRef.current.innerHTML);
+      const html = contentRef.current.innerHTML;
+      latestContent.current = html;
+      setBody(html);
+      pushToHistory(html);
       contentRef.current.focus();
     }
     updateFormatState();
     setActivePopup(null);
   };
+
   const handleHighlight = () => {
+    if (contentRef.current) {
+      pushToHistoryImmediate(contentRef.current.innerHTML);
+    }
     if (activeFormats.highlight) {
       document.execCommand('hiliteColor', false, 'transparent');
       document.execCommand('backColor', false, 'transparent');
@@ -224,7 +385,10 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
       document.execCommand('backColor', false, '#fcd34d');
     }
     if (contentRef.current) {
-      setBody(contentRef.current.innerHTML);
+      const html = contentRef.current.innerHTML;
+      latestContent.current = html;
+      setBody(html);
+      pushToHistory(html);
       contentRef.current.focus();
     }
     updateFormatState();
@@ -232,24 +396,47 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
   };
 
   const handleClearFormatting = () => {
+    if (contentRef.current) {
+      pushToHistoryImmediate(contentRef.current.innerHTML);
+    }
     document.execCommand('removeFormat', false, '');
     document.execCommand('hiliteColor', false, 'transparent');
     document.execCommand('backColor', false, 'transparent');
     if (contentRef.current) {
-      setBody(contentRef.current.innerHTML);
+      const html = contentRef.current.innerHTML;
+      latestContent.current = html;
+      setBody(html);
+      pushToHistory(html);
       contentRef.current.focus();
     }
     updateFormatState();
     setActivePopup(null);
   };
 
+  const handleHeading = (level: 'h1' | 'h2' | 'h3') => {
+    if (contentRef.current) {
+      pushToHistoryImmediate(contentRef.current.innerHTML);
+    }
+    document.execCommand('formatBlock', false, level.toUpperCase());
+    if (contentRef.current) {
+      const html = contentRef.current.innerHTML;
+      latestContent.current = html;
+      setBody(html);
+      pushToHistory(html);
+      contentRef.current.focus();
+    }
+    updateFormatState();
+  };
+
   const handleFontSize = (px: number) => {
     const selection = window.getSelection();
     if (!selection || !selection.rangeCount) return;
 
+    const savedRange = saveSelection();
     const range = selection.getRangeAt(0);
+
     if (range.collapsed) {
-      // Check if already inside a size-only span (caret span)
+      // Inline styling placeholder anchor (Zero Width Space)
       const parent = range.startContainer.parentElement;
       if (
         parent &&
@@ -262,7 +449,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
       } else {
         const span = document.createElement('span');
         span.style.fontSize = px + 'px';
-        span.innerHTML = '&#8203;'; // Zero Width Space caret anchor
+        span.innerHTML = '&#8203;';
         range.insertNode(span);
         const newRange = document.createRange();
         newRange.setStart(span.firstChild!, 1);
@@ -271,20 +458,17 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
         selection.addRange(newRange);
       }
     } else {
-      // Use extractContents + clone to safely handle cross-element selections
       try {
         const fragment = range.extractContents();
         const span = document.createElement('span');
         span.style.fontSize = px + 'px';
         span.appendChild(fragment);
         range.insertNode(span);
-        // Restore selection over newly inserted span
         const newRange = document.createRange();
         newRange.selectNodeContents(span);
         selection.removeAllRanges();
         selection.addRange(newRange);
       } catch (e) {
-        // Last resort fallback
         document.execCommand('fontSize', false, '7');
         if (contentRef.current) {
           contentRef.current.querySelectorAll('font[size="7"]').forEach(f => {
@@ -295,28 +479,94 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
       }
     }
 
+    restoreSelection(savedRange);
     if (contentRef.current) {
       const html = contentRef.current.innerHTML;
-      liveBodyRef.current = html;
+      latestContent.current = html;
       setBody(html);
+      contentRef.current.focus();
     }
     updateFormatState();
   };
 
   const handleFontColor = (color: string) => {
+    if (contentRef.current) {
+      pushToHistoryImmediate(contentRef.current.innerHTML);
+    }
     document.execCommand('foreColor', false, color);
     if (contentRef.current) {
-      setBody(contentRef.current.innerHTML);
+      const html = contentRef.current.innerHTML;
+      latestContent.current = html;
+      setBody(html);
+      pushToHistory(html);
       contentRef.current.focus();
     }
     updateFormatState();
     setActivePopup(null);
   };
 
-  const handleChecklist = () => {
-    document.execCommand('insertHTML', false, '<input type="checkbox" style="margin-right: 8px; transform: scale(1.2); cursor: pointer;">&nbsp;');
+  const handleLinkInsert = (url: string) => {
+    if (!url) return;
+    const selection = window.getSelection();
+    if (!selection || !selection.rangeCount) return;
+
     if (contentRef.current) {
-      setBody(contentRef.current.innerHTML);
+      pushToHistoryImmediate(contentRef.current.innerHTML);
+    }
+
+    let formattedUrl = url;
+    if (!/^https?:\/\//i.test(formattedUrl)) {
+      formattedUrl = 'https://' + formattedUrl;
+    }
+
+    document.execCommand('createLink', false, formattedUrl);
+
+    if (contentRef.current) {
+      const links = contentRef.current.querySelectorAll('a');
+      links.forEach(link => {
+        if (link.getAttribute('href') === formattedUrl) {
+          link.setAttribute('target', '_blank');
+          link.setAttribute('rel', 'noopener noreferrer');
+          link.style.color = '#6366f1';
+          link.style.textDecoration = 'underline';
+        }
+      });
+
+      const html = contentRef.current.innerHTML;
+      latestContent.current = html;
+      setBody(html);
+      pushToHistory(html);
+      contentRef.current.focus();
+    }
+    setActivePopup(null);
+    setLinkUrl('');
+  };
+
+  const handleLinkRemove = () => {
+    if (contentRef.current) {
+      pushToHistoryImmediate(contentRef.current.innerHTML);
+    }
+    document.execCommand('unlink', false);
+    if (contentRef.current) {
+      const html = contentRef.current.innerHTML;
+      latestContent.current = html;
+      setBody(html);
+      pushToHistory(html);
+      contentRef.current.focus();
+    }
+    setActivePopup(null);
+  };
+
+  const handleChecklist = () => {
+    if (contentRef.current) {
+      pushToHistoryImmediate(contentRef.current.innerHTML);
+    }
+    document.execCommand('insertHTML', false, '<div style="display: flex; align-items: flex-start; gap: 8px; margin: 4px 0;"><input type="checkbox" style="margin-top: 6px; transform: scale(1.2); cursor: pointer;" />&nbsp;</div>');
+    if (contentRef.current) {
+      const html = contentRef.current.innerHTML;
+      latestContent.current = html;
+      setBody(html);
+      pushToHistory(html);
       contentRef.current.focus();
     }
   };
@@ -327,32 +577,6 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     } else {
       setActivePopup(p => p === 'table' ? null : 'table');
     }
-  };
-
-  const handleGridClick = (r: number, c: number) => {
-    const rows = r + 1;
-    const cols = c + 1;
-    let html = '<table style="border-collapse: collapse; width: 100%; border: 1px solid rgba(148, 163, 184, 0.35); margin: 16px 0; border-radius: 8px; overflow: hidden;">';
-    for (let i = 0; i < rows; i++) {
-      html += '<tr>';
-      for (let j = 0; j < cols; j++) {
-        if (i === 0) {
-          html += `<th style="padding: 12px 16px; border: 1px solid rgba(148, 163, 184, 0.35); background: rgba(99, 102, 241, 0.15); color: inherit; font-weight: 600; text-align: left; font-size: 14px;">Col ${j + 1}</th>`;
-        } else {
-          html += '<td style="padding: 12px 16px; border: 1px solid rgba(148, 163, 184, 0.2); color: inherit; font-size: 14px;"><br></td>';
-        }
-      }
-      html += '</tr>';
-    }
-    html += '</table><p><br></p>';
-    
-    document.execCommand('insertHTML', false, html);
-    if (contentRef.current) {
-      setBody(contentRef.current.innerHTML);
-      contentRef.current.focus();
-    }
-    setActivePopup(null);
-    setHoveredTable({ row: -1, col: -1 });
   };
 
   // Helper to find the active table element and cell
@@ -376,9 +600,59 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     return { cell, table };
   };
 
+  const handleGridClick = (r: number, c: number) => {
+    const rows = r + 1;
+    const cols = c + 1;
+    let html = '<table>';
+    for (let i = 0; i < rows; i++) {
+      html += '<tr>';
+      for (let j = 0; j < cols; j++) {
+        if (i === 0) {
+          html += `<th>Col ${j + 1}</th>`;
+        } else {
+          html += '<td><br></td>';
+        }
+      }
+      html += '</tr>';
+    }
+    html += '</table><p><br></p>';
+    
+    document.execCommand('insertHTML', false, html);
+    if (contentRef.current) {
+      const htmlContent = contentRef.current.innerHTML;
+      latestContent.current = htmlContent;
+      setBody(htmlContent);
+      pushToHistory(htmlContent);
+      
+      // Select the first th/td cell of the inserted table automatically
+      const tables = contentRef.current.querySelectorAll('table');
+      const newlyInsertedTable = tables[tables.length - 1];
+      if (newlyInsertedTable) {
+        const firstCell = newlyInsertedTable.querySelector('th, td');
+        if (firstCell) {
+          const range = document.createRange();
+          range.selectNodeContents(firstCell);
+          range.collapse(true);
+          const sel = window.getSelection();
+          if (sel) {
+            sel.removeAllRanges();
+            sel.addRange(range);
+          }
+          (firstCell as HTMLElement).focus();
+        }
+      }
+    }
+    setActivePopup(null);
+    setHoveredTable({ row: -1, col: -1 });
+  };
+
   const handleAddRow = () => {
     const { cell, table } = getActiveTableCell() || {};
     if (!table || !cell) return;
+
+    if (contentRef.current) {
+      pushToHistoryImmediate(contentRef.current.innerHTML);
+    }
 
     const row = cell.parentElement as HTMLTableRowElement;
     const rowIndex = row.rowIndex;
@@ -395,7 +669,10 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     }
 
     if (contentRef.current) {
-      setBody(contentRef.current.innerHTML);
+      const html = contentRef.current.innerHTML;
+      latestContent.current = html;
+      setBody(html);
+      pushToHistory(html);
     }
     setActivePopup(null);
   };
@@ -404,16 +681,26 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     const { cell, table } = getActiveTableCell() || {};
     if (!table || !cell) return;
 
-    const row = cell.parentElement as HTMLTableRowElement;
-    table.deleteRow(row.rowIndex);
+    if (contentRef.current) {
+      pushToHistoryImmediate(contentRef.current.innerHTML);
+    }
 
-    // If table is now empty, delete the whole table
-    if (table.rows.length === 0) {
-      table.remove();
+    try {
+      const row = cell.parentElement as HTMLTableRowElement;
+      table.deleteRow(row.rowIndex);
+
+      if (table.rows.length === 0) {
+        table.remove();
+      }
+    } catch (e) {
+      console.error(e);
     }
 
     if (contentRef.current) {
-      setBody(contentRef.current.innerHTML);
+      const html = contentRef.current.innerHTML;
+      latestContent.current = html;
+      setBody(html);
+      pushToHistory(html);
     }
     setActivePopup(null);
   };
@@ -422,12 +709,15 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     const { cell, table } = getActiveTableCell() || {};
     if (!table || !cell) return;
 
+    if (contentRef.current) {
+      pushToHistoryImmediate(contentRef.current.innerHTML);
+    }
+
     const colIndex = cell.cellIndex;
     const rows = table.rows;
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
-      // Correctly detect header row: check if THIS row's cell at colIndex is a TH
       const existingCell = row.cells[colIndex];
       const isHeaderRow = existingCell?.tagName === 'TH';
       const newCell = isHeaderRow ? document.createElement('th') : document.createElement('td');
@@ -447,7 +737,6 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
         newCell.innerHTML = '<br>';
       }
 
-      // Insert after the current colIndex
       if (colIndex + 1 < row.cells.length) {
         row.insertBefore(newCell, row.cells[colIndex + 1]);
       } else {
@@ -456,7 +745,10 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     }
 
     if (contentRef.current) {
-      setBody(contentRef.current.innerHTML);
+      const html = contentRef.current.innerHTML;
+      latestContent.current = html;
+      setBody(html);
+      pushToHistory(html);
     }
     setActivePopup(null);
   };
@@ -465,23 +757,33 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     const { cell, table } = getActiveTableCell() || {};
     if (!table || !cell) return;
 
-    const colIndex = cell.cellIndex;
-    const rows = table.rows;
-
-    for (let i = 0; i < rows.length; i++) {
-      const row = rows[i];
-      if (row.cells.length > colIndex) {
-        row.deleteCell(colIndex);
-      }
+    if (contentRef.current) {
+      pushToHistoryImmediate(contentRef.current.innerHTML);
     }
 
-    // If table now has 0 columns, remove it
-    if (rows.length > 0 && rows[0].cells.length === 0) {
-      table.remove();
+    try {
+      const colIndex = cell.cellIndex;
+      const rows = table.rows;
+
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        if (row.cells.length > colIndex) {
+          row.deleteCell(colIndex);
+        }
+      }
+
+      if (rows.length > 0 && rows[0].cells.length === 0) {
+        table.remove();
+      }
+    } catch (e) {
+      console.error(e);
     }
 
     if (contentRef.current) {
-      setBody(contentRef.current.innerHTML);
+      const html = contentRef.current.innerHTML;
+      latestContent.current = html;
+      setBody(html);
+      pushToHistory(html);
     }
     setActivePopup(null);
   };
@@ -490,10 +792,17 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     const { table } = getActiveTableCell() || {};
     if (!table) return;
 
+    if (contentRef.current) {
+      pushToHistoryImmediate(contentRef.current.innerHTML);
+    }
+
     table.remove();
 
     if (contentRef.current) {
-      setBody(contentRef.current.innerHTML);
+      const html = contentRef.current.innerHTML;
+      latestContent.current = html;
+      setBody(html);
+      pushToHistory(html);
     }
     setActivePopup(null);
   };
@@ -505,11 +814,16 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     handleGridClick(r - 1, c - 1);
   };
 
-
   const handleListToggle = (command: string) => {
+    if (contentRef.current) {
+      pushToHistoryImmediate(contentRef.current.innerHTML);
+    }
     document.execCommand(command, false);
     if (contentRef.current) {
-      setBody(contentRef.current.innerHTML);
+      const html = contentRef.current.innerHTML;
+      latestContent.current = html;
+      setBody(html);
+      pushToHistory(html);
       contentRef.current.focus();
     }
     updateFormatState();
@@ -522,7 +836,6 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     
     if (selection && selection.rangeCount > 0) {
       let node: Node | null = selection.getRangeAt(0).commonAncestorContainer;
-      // Walk up to contentRef.current (not just any DIV) to correctly detect block tags
       while (node && node !== contentRef.current) {
         if (node.nodeName === tagName.toUpperCase()) {
           isBlock = true;
@@ -532,6 +845,10 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
       }
     }
 
+    if (contentRef.current) {
+      pushToHistoryImmediate(contentRef.current.innerHTML);
+    }
+
     if (isBlock) {
       document.execCommand('formatBlock', false, 'P');
     } else {
@@ -539,13 +856,59 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     }
 
     if (contentRef.current) {
-      setBody(contentRef.current.innerHTML);
+      const html = contentRef.current.innerHTML;
+      latestContent.current = html;
+      setBody(html);
+      pushToHistory(html);
       contentRef.current.focus();
     }
   };
 
-
+  // Main KeyDown events + Shortcuts interceptor
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const isMac = navigator.userAgent.toUpperCase().indexOf('MAC') >= 0;
+    const modifier = isMac ? e.metaKey : e.ctrlKey;
+
+    if (modifier) {
+      if (e.key.toLowerCase() === 'b') {
+        e.preventDefault();
+        handleFormat('bold');
+      } else if (e.key.toLowerCase() === 'i') {
+        e.preventDefault();
+        handleFormat('italic');
+      } else if (e.key.toLowerCase() === 'u') {
+        e.preventDefault();
+        handleFormat('underline');
+      } else if (e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setActivePopup(activePopup === 'link' ? null : 'link');
+      } else if (e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          handleRedo();
+        } else {
+          handleUndo();
+        }
+      } else if (e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        handleRedo();
+      } else if (e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        setShowFindReplace(prev => !prev);
+      } else if (e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        handleSave();
+      } else if (e.key === '\\') {
+        e.preventDefault();
+        handleClearFormatting();
+      }
+    }
+
+    if (e.key === 'Escape') {
+      setActivePopup(null);
+      setShowFindReplace(false);
+    }
+
     if (e.key === 'Enter') {
       const selection = window.getSelection();
       if (!selection || selection.rangeCount === 0) return;
@@ -566,21 +929,25 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
         document.execCommand('insertParagraph', false);
         document.execCommand('formatBlock', false, 'P');
         if (contentRef.current) {
-          liveBodyRef.current = contentRef.current.innerHTML;
-          setBody(contentRef.current.innerHTML);
+          const html = contentRef.current.innerHTML;
+          latestContent.current = html;
+          setBody(html);
+          pushToHistory(html);
         }
       } else if (isPre && !e.shiftKey) {
         e.preventDefault();
         document.execCommand('insertText', false, '\n');
         if (contentRef.current) {
-          liveBodyRef.current = contentRef.current.innerHTML;
-          setBody(contentRef.current.innerHTML);
+          const html = contentRef.current.innerHTML;
+          latestContent.current = html;
+          setBody(html);
+          pushToHistory(html);
         }
       }
     }
   };
 
-  // Load attachments
+  // Load Attachments Subcollection
   useEffect(() => {
     if (!currentNoteId) return;
 
@@ -598,14 +965,12 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     return () => unsubscribe();
   }, [currentNoteId]);
 
-  const [lastSavedData, setLastSavedData] = useState({ title, body, tags, color });
-
+  // Save Note Callback
   const handleSave = useCallback(async () => {
     if (!user || !title.trim()) return;
 
-    // Always read the freshest content from the live ref, not stale closure
-    const currentBody = liveBodyRef.current;
-
+    const currentBody = contentRef.current ? contentRef.current.innerHTML : latestContent.current;
+    
     setSaving(true);
     const noteId = currentNoteId || doc(collection(db, 'notes')).id;
     const isNewNote = !currentNoteId;
@@ -622,8 +987,9 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
 
     try {
       await setDoc(doc(db, 'notes', noteId), noteData, { merge: true });
-      setLastSaved(new Date());
-      setLastSavedData({ title, body: currentBody, tags, color });
+      const now = new Date();
+      setLastSaved(now);
+      setLastSavedSnapshot({ title, body: currentBody, tags, color });
       if (isNewNote) {
         setCurrentNoteId(noteId);
         showToast('Note created successfully', 'success');
@@ -634,25 +1000,31 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     } finally {
       setSaving(false);
     }
-  }, [currentNoteId, title, tags, color, showToast]); // body removed — we use liveBodyRef instead
+  }, [currentNoteId, title, tags, color, user, showToast]);
 
-  // Auto-save throttling
+  // Unsaved Changes check
+  const hasUnsavedChanges = useMemo(() => {
+    const currentBody = contentRef.current ? contentRef.current.innerHTML : latestContent.current;
+    return (
+      title !== lastSavedSnapshot.title ||
+      currentBody !== lastSavedSnapshot.body ||
+      tags !== lastSavedSnapshot.tags ||
+      color !== lastSavedSnapshot.color
+    );
+  }, [title, body, tags, color, lastSavedSnapshot]);
+
+  // Auto-save debounced effect
   useEffect(() => {
-    const hasChanges = 
-      title !== lastSavedData.title || 
-      liveBodyRef.current !== lastSavedData.body || 
-      tags !== lastSavedData.tags || 
-      color !== lastSavedData.color;
-
-    if (!title.trim() || !hasChanges) return;
+    if (!title.trim() || !hasUnsavedChanges) return;
 
     const timer = setTimeout(() => {
       handleSave();
-    }, 1500);
+    }, 2000);
     
     return () => clearTimeout(timer);
-  }, [handleSave, title, body, tags, color, lastSavedData]);
+  }, [handleSave, title, hasUnsavedChanges]);
 
+  // Delete flow
   const handleDeleteClick = () => {
     setShowDeleteConfirm(true);
   };
@@ -671,6 +1043,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     }
   };
 
+  // Base64 Attachments Management
   const handleFiles = async (files: FileList | File[]) => {
     if (!files || files.length === 0) return;
 
@@ -690,7 +1063,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
       const noteData = {
         userId: user?.uid,
         title: finalTitle,
-        body,
+        body: contentRef.current ? contentRef.current.innerHTML : latestContent.current,
         tags: tags.split(',').map(t => t.trim()).filter(t => t),
         color,
         createdAt: serverTimestamp(),
@@ -701,7 +1074,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
         await setDoc(newDocRef, noteData);
         setCurrentNoteId(targetNoteId);
         setLastSaved(new Date());
-        setLastSavedData({ title, body, tags, color });
+        setLastSavedSnapshot({ title: finalTitle, body: noteData.body, tags, color });
       } catch (error) {
         handleFirestoreError(error, OperationType.WRITE, `notes/${targetNoteId}`);
         showToast('Failed to create note for attachment', 'error');
@@ -751,17 +1124,17 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    setIsDragging(true);
+    setIsDraggingFile(true);
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
-    setIsDragging(false);
+    setIsDraggingFile(false);
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    setIsDragging(false);
+    setIsDraggingFile(false);
     if (e.dataTransfer.files) handleFiles(e.dataTransfer.files);
   };
 
@@ -783,20 +1156,90 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     link.click();
   };
 
+  // Find & Replace match counter helper
+  const updateMatchCount = () => {
+    if (!findText || !contentRef.current) {
+      setMatchCount(0);
+      return;
+    }
+    const text = contentRef.current.textContent || '';
+    const regex = new RegExp(findText.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'gi');
+    const matches = text.match(regex);
+    setMatchCount(matches ? matches.length : 0);
+  };
+
+  const handleFind = (forward = true) => {
+    if (!findText) return;
+    try {
+      const found = (window as any).find(findText, false, !forward, true, false, true, false);
+      if (!found) {
+        // Search wrap around
+        (window as any).find(findText, false, !forward, true, true, true, false);
+      }
+      updateMatchCount();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleReplace = () => {
+    if (!findText) return;
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      if (range.toString().toLowerCase() === findText.toLowerCase()) {
+        if (contentRef.current) {
+          pushToHistoryImmediate(contentRef.current.innerHTML);
+        }
+        range.deleteContents();
+        const node = document.createTextNode(replaceText);
+        range.insertNode(node);
+        
+        if (contentRef.current) {
+          const html = contentRef.current.innerHTML;
+          latestContent.current = html;
+          setBody(html);
+          pushToHistory(html);
+        }
+        
+        handleFind(true);
+      }
+    }
+  };
+
+  const handleReplaceAll = () => {
+    if (!findText || !contentRef.current) return;
+    pushToHistoryImmediate(contentRef.current.innerHTML);
+    
+    const text = contentRef.current.innerHTML;
+    const regex = new RegExp(findText.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'gi');
+    const newHtml = text.replace(regex, replaceText);
+    contentRef.current.innerHTML = newHtml;
+    
+    latestContent.current = newHtml;
+    setBody(newHtml);
+    pushToHistory(newHtml);
+    updateMatchCount();
+    showToast('All matches replaced', 'success');
+  };
+
+  // Info helpers
   const textContent = body.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim();
   const wordCount = textContent ? textContent.split(/\s+/).filter(w => w).length : 0;
   const charCount = textContent.length;
+  const readingTime = Math.ceil(wordCount / 200);
 
   return (
     <div 
-      className="min-h-screen bg-white dark:bg-slate-900 flex flex-col relative"
+      className="min-h-screen bg-white dark:bg-slate-900 flex flex-col relative text-slate-800 dark:text-slate-200 font-sans"
       onDragOver={handleDragOver}
       onDragEnter={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
+      {/* File dragging Overlay */}
       <AnimatePresence>
-        {isDragging && (
+        {isDraggingFile && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -804,18 +1247,19 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
             className="absolute inset-0 z-50 bg-indigo-600/10 dark:bg-indigo-400/10 backdrop-blur-[2px] flex items-center justify-center p-8 pointer-events-none"
           >
             <div className="w-full h-full border-4 border-dashed border-indigo-500 rounded-3xl flex flex-col items-center justify-center gap-4 bg-white/40 dark:bg-slate-900/40">
-              <div className="p-6 bg-indigo-600 text-white rounded-full shadow-2xl shadow-indigo-200 dark:shadow-none animate-bounce">
+              <div className="p-6 bg-indigo-600 text-white rounded-full shadow-2xl animate-bounce">
                 <UploadCloud className="w-12 h-12" />
               </div>
               <div className="text-center">
                 <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">Release to Upload</p>
-                <p className="text-slate-500 dark:text-slate-400 font-medium">Drop your files here to attach them to this note</p>
+                <p className="text-slate-500 dark:text-slate-400 font-medium">Drop files here to attach to this note</p>
               </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
+      {/* Attachment viewer Modal */}
       <AnimatePresence>
         {viewingAttachment && (
           <motion.div
@@ -830,7 +1274,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative max-w-4xl w-full max-h-full bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden flex flex-col"
+              className="relative max-w-4xl w-full max-h-full bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden flex flex-col border border-slate-100 dark:border-slate-800"
             >
               <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -838,7 +1282,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
                     {viewingAttachment.type.startsWith('image/') ? <ImageIcon className="w-5 h-5 text-indigo-600" /> : <FileText className="w-5 h-5 text-indigo-600" />}
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">{viewingAttachment.name}</h3>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate max-w-xs">{viewingAttachment.name}</h3>
                     <p className="text-[10px] text-slate-400 uppercase tracking-widest">{(viewingAttachment.size / 1024).toFixed(1)} KB • {viewingAttachment.type}</p>
                   </div>
                 </div>
@@ -873,11 +1317,11 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
                     <div className="space-y-2">
                       <p className="text-lg font-bold text-slate-900 dark:text-white">Preview not available</p>
                       <p className="text-sm text-slate-500 dark:text-slate-400 max-w-xs">
-                        This file type doesn't support in-app viewing. Use the download button to view it on your device.
+                        Use the download button to view this attachment on your device.
                       </p>
                       <button 
                         onClick={() => downloadAttachment(viewingAttachment)}
-                        className="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-indigo-200 dark:shadow-none cursor-pointer"
+                        className="mt-4 bg-indigo-600 hover:bg-indigo-750 text-white px-6 py-2.5 rounded-xl font-bold transition-all shadow-lg cursor-pointer"
                       >
                         Download File
                       </button>
@@ -890,514 +1334,673 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
         )}
       </AnimatePresence>
 
-      {/* Toolbar */}
-      <div className="sticky top-0 z-30 bg-slate-950/80 backdrop-blur-md border-b border-slate-900 px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button onClick={onBack} className="p-2 hover:bg-slate-900 rounded-lg transition-all cursor-pointer text-slate-400 hover:text-white">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          
-          {/* Breathing Auto-Save Pulse Indicator */}
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-900/60 border border-slate-850 rounded-full select-none shrink-0 shadow-md">
-            {saving ? (
-              <div className="flex items-center gap-1.5 text-[9px] font-bold text-indigo-400 uppercase tracking-widest">
-                <span className="w-2 h-2 bg-indigo-500 rounded-full animate-ping" />
-                Saving...
-              </div>
-            ) : lastSaved ? (
-              <div className="flex items-center gap-1.5 text-[9px] font-bold text-emerald-400 uppercase tracking-widest">
-                <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                Cloud Synced
-              </div>
-            ) : (
-              <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-500 uppercase tracking-widest">
-                <span className="w-2 h-2 bg-slate-600 rounded-full" />
-                Draft Offline
-              </div>
-            )}
+      {/* 2-Row Adaptive Toolbar */}
+      <div className="sticky top-0 z-35 flex flex-col border-b border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md">
+        
+        {/* ROW 1: Navigation and status controls */}
+        <div className="flex items-center justify-between px-4 py-2 border-b border-slate-100/60 dark:border-slate-800/60">
+          <div className="flex items-center gap-3">
+            <button onClick={onBack} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all cursor-pointer text-slate-500 dark:text-slate-400">
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            
+            {/* Auto-save status bubble */}
+            <div className="flex items-center gap-2 px-3 py-1 bg-slate-50 dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/50 rounded-full select-none text-[10px] font-bold tracking-wider uppercase">
+              {saving ? (
+                <span className="flex items-center gap-1 text-indigo-500">
+                  <span className="w-2 h-2 bg-indigo-500 rounded-full animate-ping" /> Saving...
+                </span>
+              ) : hasUnsavedChanges ? (
+                <span className="flex items-center gap-1 text-amber-500">
+                  <span className="w-2 h-2 bg-amber-500 rounded-full" /> Unsaved changes
+                </span>
+              ) : lastSaved ? (
+                <span className="flex items-center gap-1 text-emerald-500">
+                  <span className="w-2 h-2 bg-emerald-500 rounded-full" /> Synced
+                </span>
+              ) : (
+                <span className="flex items-center gap-1 text-slate-400">
+                  Draft
+                </span>
+              )}
+            </div>
           </div>
-        </div>
 
-        <div className="flex items-center gap-3">
-          {/* Custom Premium Font Switcher */}
-          <div className="relative" ref={fontMenuRef}>
+          <div className="flex items-center gap-2">
+            {/* Custom font family picker */}
+            <div className="relative" ref={fontMenuRef}>
+              <button
+                type="button"
+                onClick={() => setShowFontMenu(prev => !prev)}
+                className="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 rounded-xl px-3 py-1.5 text-xs font-semibold outline-none hover:bg-slate-200 dark:hover:bg-slate-800 cursor-pointer transition-all duration-150 flex items-center gap-1.5 justify-between min-w-[120px]"
+              >
+                <span>{activeFont === 'sans' ? 'Outfit Sans' : activeFont === 'serif' ? 'Playfair Serif' : 'Fira Mono'}</span>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+              </button>
+              <AnimatePresence>
+                {showFontMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 5, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 5, scale: 0.95 }}
+                    className="absolute right-0 mt-1.5 w-44 z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-1.5 shadow-2xl space-y-0.5"
+                  >
+                    {[
+                      { value: 'sans', label: 'Outfit Sans', desc: 'Modern Clean' },
+                      { value: 'serif', label: 'Playfair Serif', desc: 'Editorial Serif' },
+                      { value: 'mono', label: 'Fira Mono', desc: 'Developer Mono' }
+                    ].map(item => (
+                      <button
+                        key={item.value}
+                        type="button"
+                        onClick={() => {
+                          setActiveFont(item.value as any);
+                          setShowFontMenu(false);
+                        }}
+                        className={`w-full text-left px-3 py-1.5 rounded-lg transition-all cursor-pointer flex flex-col justify-start ${activeFont === item.value ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                      >
+                        <span className="text-xs font-bold">{item.label}</span>
+                        <span className={`text-[9px] ${activeFont === item.value ? 'text-indigo-200' : 'text-slate-400 dark:text-slate-500'}`}>{item.desc}</span>
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Distraction-free Focus Toggle */}
             <button
               type="button"
-              onClick={() => setShowFontMenu(prev => !prev)}
-              className="bg-slate-900 border border-slate-800 text-slate-300 hover:text-white rounded-xl px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider outline-none focus:ring-1 focus:ring-indigo-500/40 cursor-pointer transition-all duration-200 flex items-center gap-1.5 min-w-[125px] justify-between shadow-md"
+              onClick={() => setFocusMode(prev => !prev)}
+              className={`px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${focusMode ? 'bg-indigo-600 border-indigo-500 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-900 border-slate-250 dark:border-slate-800 text-slate-600 dark:text-slate-350 hover:bg-slate-200 dark:hover:bg-slate-800'}`}
+              title={focusMode ? "Exit Focus Mode" : "Enter Focus Mode"}
             >
-              <span>{activeFont === 'sans' ? 'Outfit Sans' : activeFont === 'serif' ? 'Playfair Serif' : 'Fira Mono'}</span>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
+              {focusMode ? "Focused" : "Focus"}
             </button>
-            <AnimatePresence>
-              {showFontMenu && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                  className="absolute right-0 mt-2 w-44 z-50 bg-slate-950/95 border border-slate-850 rounded-xl p-1.5 shadow-2xl backdrop-blur-md space-y-0.5"
-                >
-                  {[
-                    { value: 'sans', label: 'Outfit Sans', desc: 'Modern Tech' },
-                    { value: 'serif', label: 'Playfair Serif', desc: 'Elegant Editorial' },
-                    { value: 'mono', label: 'Fira Mono', desc: 'Developer Code' }
-                  ].map(item => (
-                    <button
-                      key={item.value}
-                      type="button"
-                      onClick={() => {
-                        setActiveFont(item.value as any);
-                        setShowFontMenu(false);
-                      }}
-                      className={`w-full text-left px-3 py-2 rounded-lg transition-all cursor-pointer flex flex-col justify-start gap-0.5 ${activeFont === item.value ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'}`}
-                    >
-                      <span className="text-[10px] font-bold uppercase tracking-wider">{item.label}</span>
-                      <span className={`text-[8px] font-semibold tracking-wide ${activeFont === item.value ? 'text-indigo-200' : 'text-slate-500'}`}>{item.desc}</span>
-                    </button>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
+
+            {currentNoteId && (
+              <button onClick={handleDeleteClick} className="p-2 text-red-500 hover:bg-red-500/10 rounded-xl transition-all cursor-pointer" title="Delete Note">
+                <Trash2 className="w-5 h-5" />
+              </button>
+            )}
+
+            <button onClick={handleSave} className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-xl font-bold flex items-center gap-1.5 transition-all cursor-pointer text-xs uppercase tracking-wider shadow-sm">
+              <Save className="w-4 h-4" />
+              Save
+            </button>
           </div>
-
-          {/* Full-Screen Focus Mode Switcher */}
-          <button
-            type="button"
-            onClick={() => setFocusMode(prev => !prev)}
-            className={`px-3 py-1.5 rounded-xl border transition-all cursor-pointer text-[10px] font-bold uppercase tracking-wider ${focusMode ? 'bg-indigo-600 border-indigo-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.25)]' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'}`}
-            title={focusMode ? "Exit Focus Mode" : "Enter Focus Mode"}
-          >
-            {focusMode ? "Focused" : "Focus"}
-          </button>
-
-          {currentNoteId && (
-            <button onClick={handleDeleteClick} className="p-2 text-red-400 hover:bg-red-950/20 rounded-xl transition-all cursor-pointer">
-              <Trash2 className="w-5 h-5" />
-            </button>
-          )}
-
-          <button onClick={handleSave} className="bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-all cursor-pointer text-xs uppercase tracking-wider">
-            <Save className="w-4 h-4" />
-            Save
-          </button>
         </div>
-      </div>
 
-      <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
-        {/* Left Pane: Metadata */}
-        {!focusMode && (
-          <div className="w-full lg:w-80 lg:border-r border-slate-100 dark:border-slate-800 overflow-y-auto p-6 space-y-8 bg-slate-50/50 dark:bg-slate-900/50">
-            {/* Title */}
-            <div className="space-y-4">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Title</label>
-              <input
-                type="text"
-                placeholder="Note Title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="w-full text-2xl font-bold bg-transparent border-none outline-none text-slate-900 dark:text-white placeholder:text-slate-200 dark:placeholder:text-slate-700"
-              />
-            </div>
+        {/* ROW 2: Styling and formatting controls (scrollable on mobile) */}
+        <div ref={popupRef} className="flex flex-nowrap items-center gap-1.5 p-2 overflow-x-auto no-scrollbar bg-slate-50/50 dark:bg-slate-900/50">
+          
+          <button onClick={() => setActivePopup(p => p === 'text' ? null : 'text')} className={`p-2 w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all ${activePopup === 'text' ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Text Styles">
+            <Type className="w-5 h-5" />
+          </button>
+          
+          <button onClick={() => setActivePopup(p => p === 'paragraph' ? null : 'paragraph')} className={`p-2 w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all ${activePopup === 'paragraph' ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Paragraph styles">
+            <AlignLeft className="w-5 h-5" />
+          </button>
 
-            {/* Color Picker */}
-            <div className="space-y-4">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Theme Color</label>
-              <div className="flex flex-wrap gap-2">
-                {COLORS.map(c => (
-                  <button
-                    key={c.value}
-                    onClick={() => setColor(c.value)}
-                    className={`w-7 h-7 rounded-full border-2 transition-all cursor-pointer flex items-center justify-center ${color === c.value ? 'border-slate-900 dark:border-white scale-110' : 'border-transparent opacity-50 hover:opacity-100'}`}
-                    style={{ backgroundColor: c.value }}
-                  >
-                    {color === c.value && <Check className="w-3 h-3 text-white" />}
-                  </button>
-                ))}
-              </div>
-            </div>
+          <div className="w-px h-5 bg-slate-250 dark:bg-slate-800 mx-1 shrink-0" />
 
-            {/* Tags */}
-            <div className="space-y-4">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tags</label>
-              <div className="flex items-center gap-3 text-slate-400 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-3 rounded-xl">
-                <Tag className="w-4 h-4" />
-                <input
-                  type="text"
-                  placeholder="Add tags..."
-                  value={tags}
-                  onChange={(e) => setTags(e.target.value)}
-                  className="flex-1 bg-transparent border-none outline-none text-xs text-slate-700 dark:text-slate-300"
-                />
-              </div>
-            </div>
+          {/* Heading Blocks */}
+          <button onClick={() => handleHeading('h1')} className={`px-2.5 py-1 text-xs font-black rounded-lg shrink-0 transition-colors ${activeFormats.h1 ? 'bg-indigo-150 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`}>H1</button>
+          <button onClick={() => handleHeading('h2')} className={`px-2.5 py-1 text-xs font-black rounded-lg shrink-0 transition-colors ${activeFormats.h2 ? 'bg-indigo-150 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`}>H2</button>
+          <button onClick={() => handleHeading('h3')} className={`px-2.5 py-1 text-xs font-black rounded-lg shrink-0 transition-colors ${activeFormats.h3 ? 'bg-indigo-150 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`}>H3</button>
 
-            {/* Attachments Section */}
-            <div className="space-y-4 pt-8 border-t border-slate-100 dark:border-slate-800">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Paperclip className="w-4 h-4" />
-                  Files
-                </h3>
-                <label className="bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 p-2 rounded-lg text-slate-600 dark:text-slate-400 transition-all cursor-pointer border border-slate-100 dark:border-slate-700">
-                  <Plus className="w-4 h-4" />
-                  <input type="file" multiple className="hidden" onChange={handleFileUpload} />
-                </label>
-              </div>
+          <div className="w-px h-5 bg-slate-250 dark:bg-slate-800 mx-1 shrink-0" />
 
-              {!currentNoteId && (
-                <p className="text-[10px] text-slate-400 italic">Adding a file will auto-save the note.</p>
-              )}
-
-              <div className="space-y-2">
-                <AnimatePresence>
-                  {attachments.map(file => (
-                    <motion.div
-                      key={file.id}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -10 }}
-                      onClick={() => setViewingAttachment(file)}
-                      className="group relative bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl p-3 flex items-center gap-3 cursor-pointer hover:border-indigo-200 dark:hover:border-indigo-900 transition-all"
-                    >
-                      <div className="w-8 h-8 bg-slate-50 dark:bg-slate-900 rounded-lg flex items-center justify-center border border-slate-100 dark:border-slate-800 overflow-hidden flex-shrink-0">
-                        {file.type.startsWith('image/') ? (
-                          <img src={file.data} alt={file.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <FileText className="w-4 h-4 text-slate-400" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[11px] font-bold text-slate-900 dark:text-white truncate">{file.name}</p>
-                        <p className="text-[9px] text-slate-400 uppercase tracking-widest">{(file.size / 1024).toFixed(1)} KB</p>
-                      </div>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                        <button onClick={(e) => { e.stopPropagation(); downloadAttachment(file); }} className="p-1.5 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-400 cursor-pointer">
-                          <Download className="w-3.5 h-3.5" />
-                        </button>
-                        <button onClick={(e) => { e.stopPropagation(); deleteAttachment(file.id); }} className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-red-500 cursor-pointer">
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              </div>
+          {/* Stepper block */}
+          <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1.5 rounded-xl border border-slate-200/50 dark:border-slate-700/50 shadow-inner shrink-0">
+            <input
+              type="number"
+              min={1}
+              max={120}
+              value={localFontSize}
+              onChange={(e) => setLocalFontSize(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const val = parseInt(localFontSize, 10);
+                  if (!isNaN(val) && val >= 1 && val <= 120) {
+                    handleFontSize(val);
+                  }
+                  contentRef.current?.focus();
+                }
+              }}
+              onBlur={() => {
+                const val = parseInt(localFontSize, 10);
+                if (!isNaN(val) && val >= 1 && val <= 120) {
+                  handleFontSize(val);
+                } else {
+                  setLocalFontSize(Math.round(parseFloat(activeFormats.fontSize) || 16).toString());
+                }
+              }}
+              className="w-8 bg-transparent text-slate-800 dark:text-slate-100 text-xs font-bold text-center outline-none border-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            />
+            <div className="flex flex-col gap-0.5 border-l border-slate-300 dark:border-slate-700 pl-1.5 ml-1.5">
+              <button 
+                type="button"
+                onClick={() => {
+                  const current = Math.round(parseFloat(activeFormats.fontSize)) || 16;
+                  handleFontSize(Math.min(120, current + 1));
+                }}
+                className="text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-white transition-colors"
+              >
+                <ChevronUp className="w-3 h-3" />
+              </button>
+              <button 
+                type="button"
+                onClick={() => {
+                  const current = Math.round(parseFloat(activeFormats.fontSize)) || 16;
+                  handleFontSize(Math.max(1, current - 1));
+                }}
+                className="text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-white transition-colors"
+              >
+                <ChevronDown className="w-3 h-3" />
+              </button>
             </div>
           </div>
-        )}
 
-        {/* Right Pane: Content */}
-        <div className="flex-1 flex flex-col bg-white dark:bg-slate-900 border-l border-transparent overflow-hidden relative">
+          <div className="w-px h-5 bg-slate-250 dark:bg-slate-800 mx-1 shrink-0" />
+
+          {/* Quick list togglers & blockquote */}
+          <button onClick={() => handleListToggle('insertUnorderedList')} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-colors ${activeFormats.unorderedList ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Bullet List">
+            <List className="w-5 h-5" />
+          </button>
           
-          {/* Top Formatting Toolbar */}
-          {/* popupRef wraps the ENTIRE toolbar container so popup clicks don't trigger click-outside */}
-          <div ref={popupRef} className="w-full z-20 flex flex-col border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md">
-            {/* Main Bar */}
-            <div className="flex flex-nowrap items-center gap-1.5 p-2 overflow-x-auto no-scrollbar">
-              <button onClick={() => setActivePopup(p => p === 'text' ? null : 'text')} className={`p-2 rounded-xl transition-all ${activePopup === 'text' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'}`}>
-                <Type className="w-5 h-5" />
-              </button>
-              <button onClick={() => setActivePopup(p => p === 'paragraph' ? null : 'paragraph')} className={`p-2 rounded-xl transition-all ${activePopup === 'paragraph' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'}`}>
-                <AlignLeft className="w-5 h-5" />
-              </button>
+          <button onClick={() => handleListToggle('insertOrderedList')} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-colors ${activeFormats.orderedList ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Ordered List">
+            <ListOrdered className="w-5 h-5" />
+          </button>
 
-              <div className="w-px h-5 bg-slate-300 dark:bg-slate-700 mx-1" />
+          <button onClick={() => toggleBlock('blockquote', 'blockquote')} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-colors ${activeFormats.blockquote ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Blockquote">
+            <Quote className="w-5 h-5" />
+          </button>
 
-              {/* Font Size Stepper Box (Moved Outside) */}
-              <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1.5 rounded-xl border border-slate-200/50 dark:border-slate-700/50 shadow-inner">
-                <input
-                  type="number"
-                  min={1}
-                  max={120}
-                  value={localFontSize}
-                  onChange={(e) => setLocalFontSize(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      const val = parseInt(localFontSize, 10);
-                      if (!isNaN(val) && val >= 1 && val <= 120) {
-                        handleFontSize(val);
-                      }
-                      contentRef.current?.focus();
-                    }
-                  }}
-                  onBlur={() => {
-                    const val = parseInt(localFontSize, 10);
-                    if (!isNaN(val) && val >= 1 && val <= 120) {
-                      handleFontSize(val);
-                    } else {
-                      setLocalFontSize(Math.round(parseFloat(activeFormats.fontSize) || 16).toString());
-                    }
-                  }}
-                  className="w-10 bg-transparent text-slate-800 dark:text-slate-100 text-xs font-bold text-center outline-none border-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                />
-                <div className="flex flex-col gap-0.5 border-l border-slate-300 dark:border-slate-600 pl-1.5 ml-1.5">
-                  <button 
-                    type="button"
-                    onClick={() => {
-                      const current = Math.round(parseFloat(activeFormats.fontSize)) || 16;
-                      handleFontSize(Math.min(120, current + 1));
-                    }}
-                    className="text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-white transition-colors"
-                  >
-                    <ChevronUp className="w-3 h-3" />
+          <div className="w-px h-5 bg-slate-250 dark:bg-slate-800 mx-1 shrink-0" />
+
+          {/* Action Popups toggler links */}
+          <button onClick={() => setActivePopup(p => p === 'link' ? null : 'link')} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-colors ${activePopup === 'link' || selectedLinkUrl ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Insert link">
+            <Link className="w-5 h-5" />
+          </button>
+
+          <button onClick={handleChecklist} className="p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all" title="Insert checklist">
+            <CheckSquare className="w-5 h-5" />
+          </button>
+          
+          <button onClick={() => document.getElementById('image-upload')?.click()} className="p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all" title="Attach file">
+            <ImageIcon className="w-5 h-5" />
+          </button>
+          
+          <button onClick={handleTable} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-colors ${activeFormats.isInsideTable ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Table commands">
+            <Table className="w-5 h-5" />
+          </button>
+
+          <div className="w-px h-5 bg-slate-250 dark:bg-slate-800 mx-1 shrink-0" />
+
+          {/* Search tool */}
+          <button onClick={() => setShowFindReplace(prev => !prev)} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-colors ${showFindReplace ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Find and Replace">
+            <Search className="w-5 h-5" />
+          </button>
+
+          <input type="file" id="image-upload" className="hidden" accept="image/*" onChange={handleImageUpload} />
+        </div>
+
+        {/* Toolbar Popups */}
+        <AnimatePresence>
+          {activePopup === 'text' && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 absolute top-full left-0 w-full z-30 shadow-xl">
+              <div className="p-4 space-y-4">
+                <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl max-w-sm">
+                  <button onClick={() => handleFormat('bold')} className={`p-2 rounded-lg transition-all ${activeFormats.bold ? 'bg-white dark:bg-slate-700 text-indigo-600 font-bold' : 'text-slate-500'}`} title="Bold"><Bold className="w-4 h-4" /></button>
+                  <button onClick={() => handleFormat('italic')} className={`p-2 rounded-lg transition-all ${activeFormats.italic ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Italic"><Italic className="w-4 h-4" /></button>
+                  <button onClick={() => handleFormat('underline')} className={`p-2 rounded-lg transition-all ${activeFormats.underline ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Underline"><Underline className="w-4 h-4" /></button>
+                  <button onClick={() => handleFormat('strikeThrough')} className={`p-2 rounded-lg transition-all ${activeFormats.strikeThrough ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Strikethrough"><Strikethrough className="w-4 h-4" /></button>
+                  <div className="w-px h-6 bg-slate-350 dark:bg-slate-750 mx-1" />
+                  <button onClick={handleHighlight} className={`p-2 rounded-lg transition-all ${activeFormats.highlight ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Text Highlight"><Highlighter className="w-4 h-4" /></button>
+                  <button onClick={handleClearFormatting} className="p-2 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-white" title="Clear styling"><Eraser className="w-4 h-4" /></button>
+                </div>
+                
+                <div>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2 px-1">Font Color</p>
+                  <div className="flex items-center gap-3 overflow-x-auto no-scrollbar pb-2 px-1">
+                    {['#ffffff', '#0f172a', '#64748b', '#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#6366f1'].map(color => {
+                      const isActive = rgbToHex(activeFormats.fontColor) === color.toLowerCase();
+                      return (
+                        <button 
+                          key={color} 
+                          type="button" 
+                          onClick={() => handleFontColor(color)} 
+                          className={`w-7 h-7 rounded-lg shrink-0 shadow-sm transition-transform hover:scale-105 flex items-center justify-center ${isActive ? 'ring-2 ring-indigo-500 border-none' : 'border border-slate-200 dark:border-slate-850'}`} 
+                          style={{ backgroundColor: color }} 
+                        >
+                          {isActive && <Check className={`w-3.5 h-3.5 ${color === '#ffffff' ? 'text-slate-800' : 'text-white'}`} />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+          {activePopup === 'paragraph' && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 absolute top-full left-0 w-full z-30 shadow-xl">
+              <div className="p-4 space-y-4">
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Text Alignment</p>
+                <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl max-w-xs">
+                  <button onClick={() => handleFormat('justifyLeft')} className={`flex-1 p-2 rounded-lg flex justify-center transition-all ${activeFormats.justifyLeft ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Align Left"><AlignLeft className="w-4 h-4" /></button>
+                  <button onClick={() => handleFormat('justifyCenter')} className={`flex-1 p-2 rounded-lg flex justify-center transition-all ${activeFormats.justifyCenter ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Align Center"><AlignCenter className="w-4 h-4" /></button>
+                  <button onClick={() => handleFormat('justifyRight')} className={`flex-1 p-2 rounded-lg flex justify-center transition-all ${activeFormats.justifyRight ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Align Right"><AlignRight className="w-4 h-4" /></button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+          {activePopup === 'table' && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 absolute top-full left-0 w-full z-30 shadow-xl">
+              <div className="p-4 space-y-2 max-w-sm mx-auto flex flex-col items-center">
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-center mb-1">
+                  Insert Table {hoveredTable.row >= 0 ? `${hoveredTable.row + 1} x ${hoveredTable.col + 1}` : ''}
+                </p>
+                <div className="flex flex-col gap-1 bg-slate-50 dark:bg-slate-800/40 p-2 rounded-xl border border-slate-200/50 dark:border-slate-800">
+                  {Array.from({ length: 6 }, (_, r) => (
+                    <div key={r} className="flex gap-1">
+                      {Array.from({ length: 6 }, (_, c) => (
+                        <div
+                          key={c}
+                          onMouseEnter={() => setHoveredTable({ row: r, col: c })}
+                          onClick={() => handleGridClick(r, c)}
+                          className={`w-7 h-7 border rounded-md cursor-pointer transition-colors ${r <= hoveredTable.row && c <= hoveredTable.col ? 'bg-indigo-500 border-indigo-600 shadow-[0_0_8px_rgba(99,102,241,0.4)]' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-750'}`}
+                        />
+                      ))}
+                    </div>
+                  ))}
+                </div>
+                
+                <div className="w-full border-t border-slate-150 dark:border-slate-800 pt-3 mt-3 flex flex-col items-center">
+                  <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mb-2">Or Custom Size</p>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      placeholder="Rows"
+                      min={1}
+                      max={50}
+                      value={customRows}
+                      onChange={(e) => setCustomRows(e.target.value)}
+                      className="w-14 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-850 dark:text-slate-100 text-xs text-center outline-none focus:border-indigo-500"
+                    />
+                    <span className="text-slate-400 text-xs">x</span>
+                    <input
+                      type="number"
+                      placeholder="Cols"
+                      min={1}
+                      max={50}
+                      value={customCols}
+                      onChange={(e) => setCustomCols(e.target.value)}
+                      className="w-14 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-850 dark:text-slate-100 text-xs text-center outline-none focus:border-indigo-500"
+                    />
+                    <button
+                      onClick={handleCustomTableInsert}
+                      className="px-3 py-1 bg-indigo-600 hover:bg-indigo-550 text-white rounded-lg text-xs font-bold transition-all"
+                    >
+                      Insert
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+          {activePopup === 'tableActions' && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 absolute top-full left-0 w-full z-30 shadow-xl">
+              <div className="p-4 max-w-xs mx-auto space-y-3">
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-center">Table Commands</p>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <button onClick={handleAddRow} className="flex items-center justify-center gap-1.5 p-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-100 rounded-lg text-xs font-semibold border border-slate-200 dark:border-slate-750 transition-colors">
+                    <Plus className="w-3.5 h-3.5 text-emerald-500" /> Row
                   </button>
-                  <button 
-                    type="button"
-                    onClick={() => {
-                      const current = Math.round(parseFloat(activeFormats.fontSize)) || 16;
-                      handleFontSize(Math.max(1, current - 1));
-                    }}
-                    className="text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-white transition-colors"
-                  >
-                    <ChevronDown className="w-3 h-3" />
+                  
+                  <button onClick={handleDeleteRow} className="flex items-center justify-center gap-1.5 p-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-100 rounded-lg text-xs font-semibold border border-slate-200 dark:border-slate-750 transition-colors">
+                    <Trash2 className="w-3.5 h-3.5 text-rose-500" /> Row
+                  </button>
+
+                  <button onClick={handleAddColumn} className="flex items-center justify-center gap-1.5 p-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-100 rounded-lg text-xs font-semibold border border-slate-200 dark:border-slate-750 transition-colors">
+                    <Plus className="w-3.5 h-3.5 text-emerald-500" /> Col
+                  </button>
+
+                  <button onClick={handleDeleteColumn} className="flex items-center justify-center gap-1.5 p-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-100 rounded-lg text-xs font-semibold border border-slate-200 dark:border-slate-750 transition-colors">
+                    <Trash2 className="w-3.5 h-3.5 text-rose-500" /> Col
+                  </button>
+                </div>
+
+                <div className="border-t border-slate-100 dark:border-slate-800 pt-2 mt-2">
+                  <button onClick={handleDeleteTable} className="w-full flex items-center justify-center gap-1.5 p-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 dark:hover:bg-rose-950/30 text-rose-600 dark:text-rose-400 rounded-lg text-xs font-bold transition-colors border border-rose-100 dark:border-rose-900/20">
+                    <Trash2 className="w-3.5 h-3.5" /> Delete Table
                   </button>
                 </div>
               </div>
+            </motion.div>
+          )}
+          {activePopup === 'link' && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 absolute top-full left-0 w-full z-30 shadow-xl">
+              <div className="p-4 max-w-sm mx-auto space-y-3">
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">
+                  {selectedLinkUrl ? 'Edit Link' : 'Insert Link'}
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Enter URL..."
+                    value={linkUrl || selectedLinkUrl}
+                    onChange={(e) => setLinkUrl(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleLinkInsert(linkUrl || selectedLinkUrl);
+                    }}
+                    className="flex-1 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs outline-none focus:border-indigo-500"
+                  />
+                  <button
+                    onClick={() => handleLinkInsert(linkUrl || selectedLinkUrl)}
+                    className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-550 text-white rounded-lg text-xs font-bold transition-all"
+                  >
+                    Apply
+                  </button>
+                </div>
+                {selectedLinkUrl && (
+                  <button onClick={handleLinkRemove} className="w-full py-1 text-center text-xs font-bold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-lg transition-all">
+                    Remove Link
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
 
-              <div className="w-px h-5 bg-slate-300 dark:bg-slate-700 mx-1" />
-              
-              <button onClick={handleChecklist} className="p-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-all">
-                <CheckSquare className="w-5 h-5" />
+      {/* Floating Find & Replace Panel (Ctrl+F) */}
+      <AnimatePresence>
+        {showFindReplace && (
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            exit={{ opacity: 0, y: -10 }} 
+            className="absolute top-24 right-4 z-40 bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-4 w-76 backdrop-blur-md"
+          >
+            <div className="flex justify-between items-center mb-3">
+              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
+                <Search className="w-4 h-4" /> Find & Replace
+              </h4>
+              <button onClick={() => setShowFindReplace(false)} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-600">
+                <X className="w-4 h-4" />
               </button>
-              <button onClick={() => document.getElementById('image-upload')?.click()} className="p-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-all">
-                <ImageIcon className="w-5 h-5" />
-              </button>
-              <button onClick={handleTable} className="p-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-all">
-                <Table className="w-5 h-5" />
-              </button>
-              <input type="file" id="image-upload" className="hidden" accept="image/*" onChange={handleImageUpload} />
             </div>
+            
+            <div className="space-y-3">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Find text..."
+                  value={findText}
+                  onChange={(e) => { setFindText(e.target.value); updateMatchCount(); }}
+                  className="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-850 text-xs focus:border-indigo-500 outline-none"
+                />
+                {findText && (
+                  <span className="absolute right-2.5 top-1.5 text-[9px] font-bold text-slate-400 bg-slate-200 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                    {matchCount} matches
+                  </span>
+                )}
+              </div>
 
-            {/* Popups */}
-            <AnimatePresence>
-              {activePopup === 'text' && (
-                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 absolute top-full left-0 w-full z-30 shadow-xl">
-                  <div className="p-4 space-y-4">
-                    <div className="flex items-center justify-between bg-slate-100 dark:bg-slate-800 p-1.5 rounded-xl max-w-sm">
-                      <ToolbarButton icon={<Bold className="w-5 h-5" />} onClick={() => handleFormat('bold')} title="Bold" isActive={activeFormats.bold} />
-                      <ToolbarButton icon={<Italic className="w-5 h-5" />} onClick={() => handleFormat('italic')} title="Italic" isActive={activeFormats.italic} />
-                      <ToolbarButton icon={<Underline className="w-5 h-5" />} onClick={() => handleFormat('underline')} title="Underline" isActive={activeFormats.underline} />
-                      <ToolbarButton icon={<Strikethrough className="w-5 h-5" />} onClick={() => handleFormat('strikeThrough')} title="Strikethrough" isActive={activeFormats.strikeThrough} />
-                      <div className="w-px h-6 bg-slate-300 dark:bg-slate-700 mx-1" />
-                      <ToolbarButton icon={<Highlighter className="w-5 h-5" />} onClick={handleHighlight} title="Highlight" isActive={activeFormats.highlight} />
-                      <ToolbarButton icon={<Eraser className="w-5 h-5" />} onClick={handleClearFormatting} title="Clear Format" />
-                    </div>
-                    
-                    <div>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-2 px-1 font-semibold uppercase tracking-wider">Font color</p>
-                      <div className="flex items-center gap-4 px-2 overflow-x-auto no-scrollbar pb-2">
-                        {['#ffffff', '#0f172a', '#64748b', '#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6'].map(color => {
-                          const isActive = rgbToHex(activeFormats.fontColor) === color.toLowerCase();
-                          return (
-                            <button 
-                              key={color} 
-                              type="button" 
-                              onClick={() => handleFontColor(color)} 
-                              className={`w-8 h-8 rounded-md shrink-0 shadow-sm transition-transform hover:scale-110 flex items-center justify-center ${isActive ? 'ring-2 ring-offset-2 ring-indigo-500 dark:ring-offset-slate-900 border-none' : 'border border-slate-200 dark:border-slate-800'}`} 
-                              style={{ backgroundColor: color }} 
-                            >
-                              {isActive && <Check className={`w-4 h-4 drop-shadow-sm ${color === '#ffffff' ? 'text-slate-800' : 'text-white'}`} />}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
+              <input
+                type="text"
+                placeholder="Replace with..."
+                value={replaceText}
+                onChange={(e) => setReplaceText(e.target.value)}
+                className="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-850 text-xs focus:border-indigo-500 outline-none"
+              />
+
+              <div className="flex gap-2">
+                <button onClick={() => handleFind(false)} className="flex-1 py-1 px-2 text-xs bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 rounded-lg font-semibold border border-slate-205 dark:border-slate-750">← Prev</button>
+                <button onClick={() => handleFind(true)} className="flex-1 py-1 px-2 text-xs bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 rounded-lg font-semibold border border-slate-205 dark:border-slate-750">Next →</button>
+              </div>
+
+              <div className="flex gap-2 pt-1 border-t border-slate-100 dark:border-slate-800">
+                <button onClick={handleReplace} className="flex-1 py-1.5 text-[11px] bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 rounded-lg font-bold border border-indigo-100 dark:border-indigo-900/20">Replace</button>
+                <button onClick={handleReplaceAll} className="flex-1 py-1.5 text-[11px] bg-indigo-600 hover:bg-indigo-550 text-white rounded-lg font-bold">Replace All</button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="flex-1 flex flex-row overflow-hidden relative">
+        
+        {/* REDESIGNED LEFT SIDEBAR (with drag-to-resize support) */}
+        {!focusMode && (
+          <div 
+            className="hidden md:flex flex-col border-r border-slate-150 dark:border-slate-800 overflow-y-auto select-none bg-slate-50/60 dark:bg-slate-900/40 relative group/sidebar"
+            style={{ width: `${sidebarWidth}px` }}
+          >
+            {/* Note details card */}
+            <div className="p-5 space-y-6">
+              <div>
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                  <FileText className="w-4 h-4" /> Note Details
+                </h3>
+                <div className="space-y-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Title</label>
+                    <input
+                      type="text"
+                      placeholder="Note Title"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      className="w-full text-base font-bold bg-transparent border-none outline-none text-slate-850 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-750"
+                    />
                   </div>
-                </motion.div>
-              )}
-              {activePopup === 'paragraph' && (
-                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 absolute top-full left-0 w-full z-30 shadow-xl">
-                  <div className="p-4 space-y-4">
-                    <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-xl max-w-xs">
-                      <ToolbarButton icon={<AlignLeft className="w-5 h-5" />} onClick={() => handleFormat('justifyLeft')} title="Align Left" isActive={activeFormats.justifyLeft} />
-                      <ToolbarButton icon={<AlignCenter className="w-5 h-5" />} onClick={() => handleFormat('justifyCenter')} title="Align Center" isActive={activeFormats.justifyCenter} />
-                      <ToolbarButton icon={<AlignRight className="w-5 h-5" />} onClick={() => handleFormat('justifyRight')} title="Align Right" isActive={activeFormats.justifyRight} />
-                    </div>
-                    <div className="flex items-center gap-2 max-w-sm">
-                      <button onClick={() => handleListToggle('insertUnorderedList')} className={`flex-1 flex flex-col items-center justify-center p-3 rounded-xl gap-2 transition-colors ${activeFormats.unorderedList ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}`}>
-                        <List className="w-6 h-6" />
-                        <span className="text-xs font-medium">Bullet List</span>
-                      </button>
-                      <button onClick={() => handleListToggle('insertOrderedList')} className={`flex-1 flex flex-col items-center justify-center p-3 rounded-xl gap-2 transition-colors ${activeFormats.orderedList ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}`}>
-                        <ListOrdered className="w-6 h-6" />
-                        <span className="text-xs font-medium">Numbered List</span>
-                      </button>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-              {activePopup === 'table' && (
-                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 absolute top-full left-0 w-full z-30 shadow-xl">
-                  <div className="p-4 space-y-2 max-w-sm mx-auto flex flex-col items-center">
-                    <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider text-center mb-1">
-                      Insert Table {hoveredTable.row >= 0 ? `${hoveredTable.row + 1} x ${hoveredTable.col + 1}` : ''}
-                    </p>
-                    <div className="flex flex-col gap-1 w-fit bg-slate-50 dark:bg-slate-800/50 p-2 rounded-xl border border-slate-100 dark:border-slate-800">
-                      {Array.from({ length: 6 }, (_, r) => (
-                        <div key={r} className="flex gap-1">
-                          {Array.from({ length: 6 }, (_, c) => (
-                            <div
-                              key={c}
-                              onMouseEnter={() => setHoveredTable({ row: r, col: c })}
-                              onClick={() => handleGridClick(r, c)}
-                              className={`w-8 h-8 border rounded-md cursor-pointer transition-colors ${r <= hoveredTable.row && c <= hoveredTable.col ? 'bg-indigo-500 border-indigo-600 shadow-[0_0_10px_rgba(99,102,241,0.5)]' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-400'}`}
-                            />
-                          ))}
-                        </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Theme Color</label>
+                    <div className="flex flex-wrap gap-2">
+                      {COLORS.map(c => (
+                        <button
+                          key={c.value}
+                          onClick={() => setColor(c.value)}
+                          className={`w-6.5 h-6.5 rounded-full border-2 transition-all cursor-pointer flex items-center justify-center ${color === c.value ? 'border-slate-800 dark:border-white scale-110' : 'border-transparent opacity-50 hover:opacity-100'}`}
+                          style={{ backgroundColor: c.value }}
+                        >
+                          {color === c.value && <Check className="w-3 h-3 text-white" />}
+                        </button>
                       ))}
                     </div>
-                    
-                    <div className="w-full border-t border-slate-100 dark:border-slate-800 pt-3 mt-3 flex flex-col items-center">
-                      <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider mb-2">Or Custom Size</p>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          placeholder="Rows"
-                          min={1}
-                          max={50}
-                          value={customRows}
-                          onChange={(e) => setCustomRows(e.target.value)}
-                          className="w-16 px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 text-xs text-center outline-none focus:border-indigo-500"
-                        />
-                        <span className="text-slate-400 text-xs">x</span>
-                        <input
-                          type="number"
-                          placeholder="Cols"
-                          min={1}
-                          max={50}
-                          value={customCols}
-                          onChange={(e) => setCustomCols(e.target.value)}
-                          className="w-16 px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 text-xs text-center outline-none focus:border-indigo-500"
-                        />
-                        <button
-                          onClick={handleCustomTableInsert}
-                          className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition-all"
-                        >
-                          Insert
-                        </button>
-                      </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Tags</label>
+                    <div className="flex items-center gap-2 text-slate-400 bg-slate-50 dark:bg-slate-850 border border-slate-200/50 dark:border-slate-750 p-2 py-1.5 rounded-xl">
+                      <Tag className="w-3.5 h-3.5" />
+                      <input
+                        type="text"
+                        placeholder="work, life, ideas..."
+                        value={tags}
+                        onChange={(e) => setTags(e.target.value)}
+                        className="flex-1 bg-transparent border-none outline-none text-xs text-slate-750 dark:text-slate-200"
+                      />
                     </div>
                   </div>
-                </motion.div>
-              )}
-              {activePopup === 'tableActions' && (
-                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 absolute top-full left-0 w-full z-30 shadow-xl">
-                  <div className="p-4 max-w-sm mx-auto space-y-3">
-                    <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider text-center">
-                      Table Options
-                    </p>
-                    
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        onClick={handleAddRow}
-                        className="flex items-center justify-center gap-2 p-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-xl text-xs font-semibold transition-colors"
-                      >
-                        <Plus className="w-4 h-4 text-emerald-500" />
-                        Add Row
-                      </button>
-                      
-                      <button
-                        onClick={handleDeleteRow}
-                        className="flex items-center justify-center gap-2 p-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-xl text-xs font-semibold transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4 text-rose-500" />
-                        Delete Row
-                      </button>
+                </div>
+              </div>
 
-                      <button
-                        onClick={handleAddColumn}
-                        className="flex items-center justify-center gap-2 p-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-xl text-xs font-semibold transition-colors"
-                      >
-                        <Plus className="w-4 h-4 text-emerald-500" />
-                        Add Column
-                      </button>
+              {/* Attachments panel */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                    <Paperclip className="w-4 h-4" /> Attachments ({attachments.length})
+                  </h3>
+                  <label className="bg-indigo-50 dark:bg-indigo-950/20 hover:bg-indigo-100 text-indigo-600 dark:text-indigo-400 p-1.5 rounded-lg transition-all cursor-pointer border border-indigo-100/30">
+                    <Plus className="w-3.5 h-3.5" />
+                    <input type="file" multiple className="hidden" onChange={handleFileUpload} />
+                  </label>
+                </div>
 
-                      <button
-                        onClick={handleDeleteColumn}
-                        className="flex items-center justify-center gap-2 p-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-xl text-xs font-semibold transition-colors"
+                <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                  <AnimatePresence>
+                    {attachments.map(file => (
+                      <motion.div
+                        key={file.id}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -10 }}
+                        onClick={() => setViewingAttachment(file)}
+                        className="group relative bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl p-2 flex items-center gap-2.5 cursor-pointer hover:border-indigo-200 dark:hover:border-indigo-900 transition-all shadow-sm"
                       >
-                        <Trash2 className="w-4 h-4 text-rose-500" />
-                        Delete Column
-                      </button>
-                    </div>
+                        <div className="w-8 h-8 bg-slate-50 dark:bg-slate-950 rounded-lg flex items-center justify-center border border-slate-150/40 dark:border-slate-800 overflow-hidden shrink-0">
+                          {file.type.startsWith('image/') ? (
+                            <img src={file.data} alt={file.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <FileText className="w-4 h-4 text-slate-400" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[11px] font-bold text-slate-800 dark:text-slate-100 truncate">{file.name}</p>
+                          <p className="text-[9px] text-slate-400 uppercase tracking-widest">{(file.size / 1024).toFixed(1)} KB</p>
+                        </div>
+                        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all">
+                          <button onClick={(e) => { e.stopPropagation(); downloadAttachment(file); }} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md text-slate-600 dark:text-slate-400 cursor-pointer">
+                            <Download className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); deleteAttachment(file.id); }} className="p-1 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-md text-red-500 cursor-pointer">
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </div>
+              </div>
 
-                    <div className="border-t border-slate-100 dark:border-slate-800 pt-2 mt-2">
-                      <button
-                        onClick={handleDeleteTable}
-                        className="w-full flex items-center justify-center gap-2 p-2.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-950/50 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-bold transition-colors border border-rose-100 dark:border-rose-900/30"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                        Delete Entire Table
-                      </button>
-                    </div>
+              {/* Info panel */}
+              <div className="border-t border-slate-200/60 dark:border-slate-800 pt-5">
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                  <Info className="w-4 h-4" /> Info
+                </h3>
+                <div className="space-y-2 bg-slate-100/40 dark:bg-slate-900/30 p-4 rounded-2xl text-[11px] text-slate-500 dark:text-slate-400 border border-slate-200/40 dark:border-slate-800">
+                  <div className="flex justify-between">
+                    <span className="font-semibold uppercase tracking-wider text-[9px] flex items-center gap-1"><Clock className="w-3 h-3 text-slate-400" /> Created</span>
+                    <span className="text-slate-700 dark:text-slate-300 font-bold">{note ? format(note.createdAt.toDate(), 'MMM dd, yyyy') : 'Just now'}</span>
                   </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+                  <div className="flex justify-between">
+                    <span className="font-semibold uppercase tracking-wider text-[9px] flex items-center gap-1"><Clock className="w-3 h-3 text-slate-400" /> Updated</span>
+                    <span className="text-slate-700 dark:text-slate-300 font-bold">{lastSaved ? formatDistanceToNow(lastSaved, { addSuffix: true }) : 'Not saved yet'}</span>
+                  </div>
+                  <div className="flex justify-between border-t border-slate-200/50 dark:border-slate-800 pt-1.5 mt-1.5">
+                    <span className="font-semibold uppercase tracking-wider text-[9px]">Words</span>
+                    <span className="text-slate-700 dark:text-slate-300 font-bold">{wordCount}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-semibold uppercase tracking-wider text-[9px]">Reading Time</span>
+                    <span className="text-slate-700 dark:text-slate-300 font-bold">~{readingTime} min read</span>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-          <div className="flex-1 flex flex-col overflow-y-auto relative no-scrollbar">
-
-          {focusMode && (
-            <input
-              type="text"
-              placeholder="Untitled Node..."
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="px-12 pt-12 text-3.5xl font-black bg-transparent border-none outline-none text-slate-900 dark:text-white placeholder:text-slate-700"
+            {/* Resize handle bar */}
+            <div 
+              onMouseDown={startResizing}
+              className="absolute top-0 right-0 w-1.5 h-full cursor-col-resize group-hover/sidebar:bg-indigo-500/20 active:bg-indigo-600 transition-colors"
             />
-          )}
+          </div>
+        )}
 
-          <div
-            ref={contentRef}
-            contentEditable
-            onInput={handleInput}
-            onKeyDown={handleKeyDown}
-            onKeyUp={updateFormatState}
-            onMouseUp={updateFormatState}
-            className={`editor-content w-full p-6 md:p-12 pb-4 bg-transparent border-none outline-none text-lg text-slate-700 dark:text-slate-350 leading-relaxed ${
-              activeFont === 'sans' ? 'font-sans' : activeFont === 'serif' ? 'font-serif font-medium tracking-wide' : 'font-mono text-base'
-            }`}
-          />
-          {/* Clickable padding at the bottom to append new line */}
-          <div 
-            className="flex-1 w-full cursor-text min-h-[50px]" 
-            onClick={() => {
-              if (contentRef.current) {
-                const lastChild = contentRef.current.lastElementChild;
-                let targetNode = lastChild;
-                
-                if (!lastChild || (lastChild.nodeName !== 'DIV' && lastChild.nodeName !== 'P') || (lastChild.textContent?.trim() !== '' && lastChild.innerHTML !== '<br>')) {
-                  const p = document.createElement('div');
-                  p.innerHTML = '<br>';
-                  contentRef.current.appendChild(p);
-                  targetNode = p;
-                  setBody(contentRef.current.innerHTML);
-                }
-                
-                const range = document.createRange();
-                if (targetNode) {
-                  range.setStart(targetNode, 0);
-                } else {
-                  range.setStart(contentRef.current, 0);
-                }
-                range.collapse(true);
-                const sel = window.getSelection();
-                sel?.removeAllRanges();
-                sel?.addRange(range);
-                contentRef.current.focus();
-              }
-            }}
-          />
+        {/* Content Pane */}
+        <div className="flex-1 flex flex-col bg-white dark:bg-slate-900 overflow-hidden relative">
+          
+          <div className="flex-1 flex flex-col overflow-y-auto no-scrollbar relative p-4">
+            
+            {/* Inline Title input (Visible only in focusMode or on narrow screens) */}
+            {(focusMode || window.innerWidth < 768) && (
+              <div className="max-w-[720px] w-full mx-auto pt-6 px-6 md:px-12">
+                <input
+                  type="text"
+                  placeholder="Untitled Note..."
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full text-3.5xl font-black bg-transparent border-none outline-none text-slate-900 dark:text-white placeholder:text-slate-200 dark:placeholder:text-slate-800"
+                />
+                <div className="w-full h-px bg-slate-100 dark:bg-slate-800 mt-4 mb-2" />
+              </div>
+            )}
 
+            {/* Center Content Editor container */}
+            <div className="max-w-[720px] w-full mx-auto flex-1 flex flex-col">
+              
+              <div
+                ref={contentRef}
+                contentEditable
+                onInput={handleInput}
+                onKeyDown={handleKeyDown}
+                onKeyUp={updateFormatState}
+                onMouseUp={updateFormatState}
+                data-placeholder="Start writing your note..."
+                className={`editor-content flex-1 w-full px-6 md:px-12 py-6 bg-transparent border-none outline-none text-[17px] text-slate-700 dark:text-slate-300 leading-relaxed outline-transparent focus:ring-0 ${
+                  activeFont === 'sans' ? 'font-sans' : activeFont === 'serif' ? 'font-serif font-medium tracking-wide' : 'font-mono text-base'
+                }`}
+                style={{ minHeight: '400px' }}
+              />
+
+              {/* Clickable padding at the bottom to append new line */}
+              <div 
+                className="w-full cursor-text min-h-[100px]" 
+                onClick={() => {
+                  if (contentRef.current) {
+                    const lastChild = contentRef.current.lastElementChild;
+                    let targetNode = lastChild;
+                    
+                    if (!lastChild || (lastChild.nodeName !== 'DIV' && lastChild.nodeName !== 'P') || (lastChild.textContent?.trim() !== '' && lastChild.innerHTML !== '<br>')) {
+                      const p = document.createElement('div');
+                      p.innerHTML = '<br>';
+                      contentRef.current.appendChild(p);
+                      targetNode = p;
+                      
+                      const html = contentRef.current.innerHTML;
+                      latestContent.current = html;
+                      setBody(html);
+                      pushToHistory(html);
+                    }
+                    
+                    const range = document.createRange();
+                    if (targetNode) {
+                      range.setStart(targetNode, 0);
+                    } else {
+                      range.setStart(contentRef.current, 0);
+                    }
+                    range.collapse(true);
+                    const sel = window.getSelection();
+                    sel?.removeAllRanges();
+                    sel?.addRange(range);
+                    contentRef.current.focus();
+                  }
+                }}
+              />
+            </div>
           </div>
 
-          {/* New Mobile-Style Bottom Toolbar */}
-
+          {/* Premium Bottom status bar */}
+          <div className="w-full border-t border-slate-100 dark:border-slate-800/80 px-5 py-2.5 bg-slate-50/50 dark:bg-slate-900/60 backdrop-blur flex justify-between items-center text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest select-none">
+            <div className="flex items-center gap-4">
+              <span>Words: {wordCount}</span>
+              <span className="w-1.5 h-1.5 bg-slate-300 dark:bg-slate-750 rounded-full" />
+              <span>Chars: {charCount}</span>
+              <span className="w-1.5 h-1.5 bg-slate-300 dark:bg-slate-750 rounded-full" />
+              <span>~{readingTime} min read</span>
+            </div>
+            <div>
+              <span>Saved: {getRelativeTime(lastSaved)}</span>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Reusable Premium Delete Confirmation Modal */}
+      {/* Relative saved helper wrapper */}
       <AnimatePresence>
         {showDeleteConfirm && (
           <motion.div
@@ -1412,31 +2015,31 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 15 }}
               onClick={(e) => e.stopPropagation()}
-              className="max-w-md w-full bg-slate-900 border border-slate-800 backdrop-blur-2xl rounded-3xl p-6 shadow-2xl space-y-6 text-center"
+              className="max-w-md w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-2xl space-y-6 text-center"
             >
               <div className="flex justify-center">
-                <div className="p-4 bg-red-950/40 border border-red-900/30 text-red-500 rounded-full animate-pulse">
+                <div className="p-4 bg-red-50 dark:bg-red-950/40 text-red-500 rounded-full animate-pulse">
                   <Trash2 className="w-8 h-8" />
                 </div>
               </div>
               
               <div className="space-y-2">
-                <h3 className="text-xl font-bold text-white">Delete Note</h3>
-                <p className="text-slate-400 text-sm font-medium leading-relaxed">
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white">Delete Note</h3>
+                <p className="text-slate-500 dark:text-slate-400 text-sm font-medium leading-relaxed">
                   Are you sure you want to delete this note? This action cannot be undone.
                 </p>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <div className="flex gap-3 pt-2">
                 <button
                   onClick={() => setShowDeleteConfirm(false)}
-                  className="flex-1 bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 font-bold py-3 rounded-xl transition-all cursor-pointer text-sm"
+                  className="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 font-bold py-3 rounded-xl transition-all cursor-pointer text-sm"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleDeleteConfirm}
-                  className="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-xl shadow-lg shadow-red-600/10 hover:shadow-red-600/20 active:translate-y-0 transition-all cursor-pointer text-sm"
+                  className="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-xl shadow-lg transition-all cursor-pointer text-sm"
                 >
                   Delete
                 </button>
@@ -1447,4 +2050,13 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
       </AnimatePresence>
     </div>
   );
+}
+
+function getRelativeTime(date: Date | null): string {
+  if (!date) return 'Not saved';
+  try {
+    return formatDistanceToNow(date, { addSuffix: true });
+  } catch (e) {
+    return 'Just now';
+  }
 }
