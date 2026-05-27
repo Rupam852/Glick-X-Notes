@@ -2010,11 +2010,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
           {/* Premium Bottom status bar */}
           <div className="w-full border-t border-slate-100 dark:border-slate-800/80 px-5 py-2.5 bg-slate-50/50 dark:bg-slate-900/60 backdrop-blur flex justify-between items-center text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest select-none">
             <div className="flex items-center gap-4">
-              <span>Words: {wordCount}</span>
-              <span className="w-1.5 h-1.5 bg-slate-300 dark:bg-slate-750 rounded-full" />
               <span>Chars: {charCount}</span>
-              <span className="w-1.5 h-1.5 bg-slate-300 dark:bg-slate-750 rounded-full" />
-              <span>~{readingTime} min read</span>
             </div>
             <div>
               <span>Saved: {getRelativeTime(lastSaved)}</span>
