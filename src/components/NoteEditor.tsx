@@ -1044,14 +1044,57 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
           {/* Top Formatting Toolbar */}
           <div className="w-full z-20 flex flex-col border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md">
             {/* Main Bar */}
-            <div ref={popupRef} className="flex flex-wrap items-center gap-1 p-2">
+            <div ref={popupRef} className="flex flex-wrap items-center gap-1.5 p-2">
               <button onClick={() => setActivePopup(p => p === 'text' ? null : 'text')} className={`p-2 rounded-xl transition-all ${activePopup === 'text' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'}`}>
                 <Type className="w-5 h-5" />
               </button>
               <button onClick={() => setActivePopup(p => p === 'paragraph' ? null : 'paragraph')} className={`p-2 rounded-xl transition-all ${activePopup === 'paragraph' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'}`}>
                 <AlignLeft className="w-5 h-5" />
               </button>
-              <div className="w-px h-5 bg-slate-300 dark:bg-slate-700 mx-2" />
+
+              <div className="w-px h-5 bg-slate-300 dark:bg-slate-700 mx-1" />
+
+              {/* Font Size Stepper Box (Moved Outside) */}
+              <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1.5 rounded-xl border border-slate-200/50 dark:border-slate-700/50 shadow-inner">
+                <input
+                  type="number"
+                  min={1}
+                  max={120}
+                  value={Math.round(parseFloat(activeFormats.fontSize)) || 16}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    if (!isNaN(val)) {
+                      handleFontSize(val);
+                    }
+                  }}
+                  className="w-10 bg-transparent text-slate-800 dark:text-slate-100 text-xs font-bold text-center outline-none border-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+                <div className="flex flex-col gap-0.5 border-l border-slate-300 dark:border-slate-600 pl-1.5 ml-1.5">
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      const current = Math.round(parseFloat(activeFormats.fontSize)) || 16;
+                      handleFontSize(Math.min(120, current + 1));
+                    }}
+                    className="text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-white transition-colors"
+                  >
+                    <ChevronUp className="w-3 h-3" />
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      const current = Math.round(parseFloat(activeFormats.fontSize)) || 16;
+                      handleFontSize(Math.max(1, current - 1));
+                    }}
+                    className="text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-white transition-colors"
+                  >
+                    <ChevronDown className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="w-px h-5 bg-slate-300 dark:bg-slate-700 mx-1" />
+              
               <button onClick={handleChecklist} className="p-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-all">
                 <CheckSquare className="w-5 h-5" />
               </button>
@@ -1068,7 +1111,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
             <AnimatePresence>
               {activePopup === 'text' && (
                 <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 absolute top-full left-0 w-full z-30 shadow-xl">
-                  <div className="p-4 space-y-5">
+                  <div className="p-4 space-y-4">
                     <div className="flex items-center justify-between bg-slate-100 dark:bg-slate-800 p-1.5 rounded-xl max-w-sm">
                       <ToolbarButton icon={<Bold className="w-5 h-5" />} onClick={() => handleFormat('bold')} title="Bold" isActive={activeFormats.bold} />
                       <ToolbarButton icon={<Italic className="w-5 h-5" />} onClick={() => handleFormat('italic')} title="Italic" isActive={activeFormats.italic} />
@@ -1077,50 +1120,6 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
                       <div className="w-px h-6 bg-slate-300 dark:bg-slate-700 mx-1" />
                       <ToolbarButton icon={<Highlighter className="w-5 h-5" />} onClick={handleHighlight} title="Highlight" isActive={activeFormats.highlight} />
                       <ToolbarButton icon={<Eraser className="w-5 h-5" />} onClick={handleClearFormatting} title="Clear Format" />
-                    </div>
-
-                    <div>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-2 px-1 font-semibold uppercase tracking-wider">Font size</p>
-                      <div className="flex items-center gap-2 px-1">
-                        <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1.5 rounded-xl border border-slate-200/50 dark:border-slate-700/50 shadow-inner">
-                          <input
-                            type="number"
-                            min={1}
-                            max={120}
-                            value={Math.round(parseFloat(activeFormats.fontSize)) || 16}
-                            onChange={(e) => {
-                              const val = parseInt(e.target.value, 10);
-                              if (!isNaN(val)) {
-                                handleFontSize(val);
-                              }
-                            }}
-                            className="w-14 bg-transparent text-slate-800 dark:text-slate-100 text-sm font-bold text-center outline-none border-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                          />
-                          <div className="flex flex-col gap-0.5 border-l border-slate-300 dark:border-slate-600 pl-1.5 ml-1.5">
-                            <button 
-                              type="button"
-                              onClick={() => {
-                                const current = Math.round(parseFloat(activeFormats.fontSize)) || 16;
-                                handleFontSize(Math.min(120, current + 1));
-                              }}
-                              className="text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-white transition-colors"
-                            >
-                              <ChevronUp className="w-3.5 h-3.5" />
-                            </button>
-                            <button 
-                              type="button"
-                              onClick={() => {
-                                const current = Math.round(parseFloat(activeFormats.fontSize)) || 16;
-                                handleFontSize(Math.max(1, current - 1));
-                              }}
-                              className="text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-white transition-colors"
-                            >
-                              <ChevronDown className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </div>
-                        <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">px</span>
-                      </div>
                     </div>
                     
                     <div>
