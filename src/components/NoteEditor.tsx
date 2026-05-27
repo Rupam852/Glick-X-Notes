@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { collection, doc, setDoc, deleteDoc, serverTimestamp, addDoc, query, onSnapshot } from 'firebase/firestore';
+import { collection, doc, setDoc, deleteDoc, serverTimestamp, addDoc, query, onSnapshot, Timestamp } from 'firebase/firestore';
 import { User as FirebaseUser } from 'firebase/auth';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { Note, Attachment } from '../types';
@@ -17,6 +17,7 @@ interface NoteEditorProps {
   user: FirebaseUser;
   note: Note | null;
   onBack: () => void;
+  onSave?: (note: Note) => void;
 }
 
 const COLORS = [
@@ -64,7 +65,7 @@ const rgbToHex = (color: string) => {
   return '#' + match.slice(1).map(n => parseInt(n, 10).toString(16).padStart(2, '0')).join('').toLowerCase();
 };
 
-export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
+export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorProps) {
   const { showToast } = useToast();
 
   // --- REFS ---
@@ -1088,6 +1089,20 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
       const now = new Date();
       setLastSaved(now);
       setLastSavedSnapshot({ title: finalTitle, body: currentBody, tags, color });
+      
+      if (onSave) {
+        onSave({
+          id: noteId,
+          userId: user.uid,
+          title: finalTitle,
+          body: currentBody,
+          tags: tags.split(',').map(t => t.trim()).filter(t => t),
+          color,
+          createdAt: note?.createdAt || Timestamp.fromDate(now),
+          updatedAt: Timestamp.fromDate(now)
+        });
+      }
+
       if (isNewNote) {
         setCurrentNoteId(noteId);
         showToast('Note created successfully', 'success');
@@ -1098,7 +1113,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     } finally {
       setSaving(false);
     }
-  }, [currentNoteId, title, tags, color, user, showToast]);
+  }, [currentNoteId, title, tags, color, user, showToast, onSave, note]);
 
   // Unsaved Changes check
   const hasUnsavedChanges = useMemo(() => {
@@ -1122,7 +1137,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     }, 2000);
     
     return () => clearTimeout(timer);
-  }, [handleSave, title, hasUnsavedChanges]);
+  }, [handleSave, title, body, hasUnsavedChanges]);
 
   // Delete flow
   const handleDeleteClick = () => {

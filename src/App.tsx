@@ -241,6 +241,11 @@ function AppContent() {
           // or just navigate to dashboard and push state
           window.history.back();
         }} 
+        onSave={(updatedNote) => {
+          setEditingNote(updatedNote);
+          sessionStorage.setItem('glick_notes_editing_note', JSON.stringify(updatedNote));
+          window.history.replaceState({ view: 'editor', editingNote: updatedNote }, '');
+        }}
       />
     );
   }
