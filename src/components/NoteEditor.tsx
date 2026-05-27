@@ -484,6 +484,218 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     }
   }, [note?.id]);
 
+  // Table resizing logic (supports mouse drag and touch gestures)
+  useEffect(() => {
+    const editor = contentRef.current;
+    if (!editor) return;
+
+    let activeCell: HTMLTableCellElement | null = null;
+    let activeRow: HTMLTableRowElement | null = null;
+    let activeTable: HTMLTableElement | null = null;
+    let startX = 0;
+    let startY = 0;
+    let startWidth = 0;
+    let startHeight = 0;
+    let isResizing = false;
+    let resizeDirection: 'col' | 'row' | null = null;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isResizing) {
+        if (resizeDirection === 'col' && activeCell) {
+          const deltaX = e.clientX - startX;
+          const newWidth = Math.max(40, startWidth + deltaX);
+          activeCell.style.width = `${newWidth}px`;
+          if (activeTable) {
+            activeTable.style.tableLayout = 'fixed';
+            activeTable.style.width = 'auto';
+          }
+        } else if (resizeDirection === 'row' && activeRow) {
+          const deltaY = e.clientY - startY;
+          const newHeight = Math.max(24, startHeight + deltaY);
+          activeRow.style.height = `${newHeight}px`;
+          for (let i = 0; i < activeRow.cells.length; i++) {
+            activeRow.cells[i].style.height = `${newHeight}px`;
+          }
+        }
+        return;
+      }
+
+      let target = e.target as HTMLElement;
+      let cell: HTMLTableCellElement | null = null;
+      while (target && target !== editor) {
+        if (target.nodeName === 'TD' || target.nodeName === 'TH') {
+          cell = target as HTMLTableCellElement;
+          break;
+        }
+        target = target.parentElement as HTMLElement;
+      }
+
+      if (cell) {
+        const rect = cell.getBoundingClientRect();
+        const mouseX = e.clientX;
+        const mouseY = e.clientY;
+        const rightDist = rect.right - mouseX;
+        const bottomDist = rect.bottom - mouseY;
+
+        if (rightDist >= 0 && rightDist <= 8) {
+          editor.style.cursor = 'col-resize';
+          activeCell = cell;
+          activeRow = null;
+          resizeDirection = 'col';
+          
+          let parent: HTMLElement | null = cell;
+          while (parent && parent !== editor) {
+            if (parent.nodeName === 'TABLE') {
+              activeTable = parent as HTMLTableElement;
+              break;
+            }
+            parent = parent.parentElement;
+          }
+        } else if (bottomDist >= 0 && bottomDist <= 8) {
+          editor.style.cursor = 'row-resize';
+          activeRow = cell.parentElement as HTMLTableRowElement;
+          activeCell = null;
+          resizeDirection = 'row';
+        } else if (!isResizing) {
+          editor.style.cursor = 'inherit';
+          activeCell = null;
+          activeRow = null;
+          activeTable = null;
+          resizeDirection = null;
+        }
+      } else if (!isResizing) {
+        editor.style.cursor = 'inherit';
+        activeCell = null;
+        activeRow = null;
+        activeTable = null;
+        resizeDirection = null;
+      }
+    };
+
+    const handleMouseDown = (e: MouseEvent) => {
+      if ((editor.style.cursor === 'col-resize' || editor.style.cursor === 'row-resize') && (activeCell || activeRow)) {
+        isResizing = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        if (activeCell) {
+          startWidth = activeCell.offsetWidth;
+        }
+        if (activeRow) {
+          startHeight = activeRow.offsetHeight;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (isResizing) {
+        isResizing = false;
+        editor.style.cursor = 'inherit';
+        
+        const html = editor.innerHTML;
+        latestContent.current = html;
+        setBody(html);
+        pushToHistory(html);
+      }
+    };
+
+    // Mobile touch handlers
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return;
+      const touch = e.touches[0];
+      
+      let target = touch.target as HTMLElement;
+      let cell: HTMLTableCellElement | null = null;
+      while (target && target !== editor) {
+        if (target.nodeName === 'TD' || target.nodeName === 'TH') {
+          cell = target as HTMLTableCellElement;
+          break;
+        }
+        target = target.parentElement as HTMLElement;
+      }
+
+      if (cell) {
+        const rect = cell.getBoundingClientRect();
+        const touchX = touch.clientX;
+        const touchY = touch.clientY;
+        const rightDist = rect.right - touchX;
+        const bottomDist = rect.bottom - touchY;
+
+        if (rightDist >= -5 && rightDist <= 15) {
+          activeCell = cell;
+          activeRow = null;
+          resizeDirection = 'col';
+          isResizing = true;
+          startX = touch.clientX;
+          startWidth = cell.offsetWidth;
+          
+          let parent: HTMLElement | null = cell;
+          while (parent && parent !== editor) {
+            if (parent.nodeName === 'TABLE') {
+              activeTable = parent as HTMLTableElement;
+              break;
+            }
+            parent = parent.parentElement;
+          }
+          e.preventDefault();
+          e.stopPropagation();
+        } else if (bottomDist >= -5 && bottomDist <= 15) {
+          activeRow = cell.parentElement as HTMLTableRowElement;
+          activeCell = null;
+          resizeDirection = 'row';
+          isResizing = true;
+          startY = touch.clientY;
+          startHeight = activeRow.offsetHeight;
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (isResizing && e.touches.length === 1) {
+        const touch = e.touches[0];
+        if (resizeDirection === 'col' && activeCell) {
+          const deltaX = touch.clientX - startX;
+          const newWidth = Math.max(40, startWidth + deltaX);
+          activeCell.style.width = `${newWidth}px`;
+          if (activeTable) {
+            activeTable.style.tableLayout = 'fixed';
+            activeTable.style.width = 'auto';
+          }
+        } else if (resizeDirection === 'row' && activeRow) {
+          const deltaY = touch.clientY - startY;
+          const newHeight = Math.max(24, startHeight + deltaY);
+          activeRow.style.height = `${newHeight}px`;
+          for (let i = 0; i < activeRow.cells.length; i++) {
+            activeRow.cells[i].style.height = `${newHeight}px`;
+          }
+        }
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
+    editor.addEventListener('mousemove', handleMouseMove);
+    editor.addEventListener('mousedown', handleMouseDown);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    editor.addEventListener('touchstart', handleTouchStart, { passive: false });
+    editor.addEventListener('touchmove', handleTouchMove, { passive: false });
+    editor.addEventListener('touchend', handleMouseUp);
+
+    return () => {
+      editor.removeEventListener('mousemove', handleMouseMove);
+      editor.removeEventListener('mousedown', handleMouseDown);
+      window.removeEventListener('mouseup', handleMouseUp);
+      
+      editor.removeEventListener('touchstart', handleTouchStart);
+      editor.removeEventListener('touchmove', handleTouchMove);
+      editor.removeEventListener('touchend', handleMouseUp);
+    };
+  }, [currentNoteId]);
+
   // Handle Input Changes inside editor
   const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
     const html = e.currentTarget.innerHTML;
