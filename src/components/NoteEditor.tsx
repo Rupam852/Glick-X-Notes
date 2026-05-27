@@ -947,14 +947,8 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     const target = e.target as HTMLElement;
     const anchor = target.closest('a');
     if (anchor) {
-      const isMac = navigator.userAgent.toUpperCase().indexOf('MAC') >= 0;
-      const modifier = isMac ? e.metaKey : e.ctrlKey;
-      if (modifier) {
-        e.preventDefault();
-        window.open(anchor.href, '_blank', 'noopener,noreferrer');
-      } else {
-        updateFormatState();
-      }
+      e.preventDefault();
+      window.open(anchor.href, '_blank', 'noopener,noreferrer');
     }
   };
 
