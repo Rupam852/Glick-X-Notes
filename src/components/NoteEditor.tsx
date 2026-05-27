@@ -35,6 +35,14 @@ const ToolbarButton = ({ icon, onClick, title, isActive }: { icon: React.ReactNo
   </button>
 );
 
+const rgbToHex = (color: string) => {
+  if (!color) return '';
+  if (color.startsWith('#')) return color.toLowerCase();
+  const match = color.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+  if (!match) return '';
+  return '#' + match.slice(1).map(n => parseInt(n, 10).toString(16).padStart(2, '0')).join('').toLowerCase();
+};
+
 export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
   const [currentNoteId, setCurrentNoteId] = useState<string | null>(note?.id || null);
   const [title, setTitle] = useState(note?.title || '');
@@ -47,7 +55,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
   const { showToast } = useToast();
   const contentRef = useRef<HTMLDivElement>(null);
   const fontMenuRef = useRef<HTMLDivElement>(null);
-  const [activeFormats, setActiveFormats] = useState({ bold: false, italic: false, underline: false, strikeThrough: false, unorderedList: false, orderedList: false, pre: false, h1: false, blockquote: false, highlight: false, justifyLeft: false, justifyCenter: false, justifyRight: false });
+  const [activeFormats, setActiveFormats] = useState({ bold: false, italic: false, underline: false, strikeThrough: false, unorderedList: false, orderedList: false, pre: false, h1: false, blockquote: false, highlight: false, justifyLeft: false, justifyCenter: false, justifyRight: false, fontSize: '3', fontColor: '' });
   const [isDragging, setIsDragging] = useState(false);
   const [viewingAttachment, setViewingAttachment] = useState<Attachment | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -110,7 +118,9 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
       highlight: !!isHighlighted,
       justifyLeft: document.queryCommandState('justifyLeft'),
       justifyCenter: document.queryCommandState('justifyCenter'),
-      justifyRight: document.queryCommandState('justifyRight')
+      justifyRight: document.queryCommandState('justifyRight'),
+      fontSize: document.queryCommandValue('fontSize') || '3',
+      fontColor: document.queryCommandValue('foreColor') || ''
     });
   };
 
@@ -146,9 +156,6 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
       contentRef.current.focus();
     }
     updateFormatState();
-    if (['justifyLeft', 'justifyCenter', 'justifyRight'].includes(command)) {
-      setActivePopup(null);
-    }
   };
   const handleHighlight = () => {
     if (activeFormats.highlight) {
@@ -192,7 +199,6 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
       contentRef.current.focus();
     }
     updateFormatState();
-    setActivePopup(null);
   };
 
   const handleFontColor = (color: string) => {
@@ -202,7 +208,6 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
       contentRef.current.focus();
     }
     updateFormatState();
-    setActivePopup(null);
   };
 
   const handleChecklist = () => {
@@ -241,7 +246,6 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
       contentRef.current.focus();
     }
     updateFormatState();
-    setActivePopup(null);
   };
 
   const toggleBlock = (blockType: string, tagName: string) => {
@@ -848,20 +852,48 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
                     <div>
                       <p className="text-xs text-slate-500 dark:text-slate-400 mb-2 px-1 font-semibold uppercase tracking-wider">Font size</p>
                       <div className="flex items-center gap-6 px-2 overflow-x-auto no-scrollbar">
-                        {[10, 12, 14, 16, 18, 20, 24, 36].map(size => (
-                          <button key={size} type="button" onClick={() => handleFontSize(size)} className="text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-white font-medium text-lg transition-colors whitespace-nowrap">
-                            {size}
-                          </button>
-                        ))}
+                        {[10, 12, 14, 16, 18, 20, 24, 36].map(size => {
+                          let sizeIndex = 3;
+                          if (size <= 10) sizeIndex = 1;
+                          else if (size <= 12) sizeIndex = 2;
+                          else if (size <= 16) sizeIndex = 3;
+                          else if (size <= 18) sizeIndex = 4;
+                          else if (size <= 24) sizeIndex = 5;
+                          else if (size <= 32) sizeIndex = 6;
+                          else sizeIndex = 7;
+                          const isActive = activeFormats.fontSize === sizeIndex.toString();
+                          
+                          return (
+                            <button 
+                              key={size} 
+                              type="button" 
+                              onClick={() => handleFontSize(size)} 
+                              className={`font-medium text-lg transition-colors whitespace-nowrap ${isActive ? 'text-indigo-600 dark:text-indigo-400 font-bold scale-110' : 'text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-white'}`}
+                            >
+                              {size}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                     
                     <div>
                       <p className="text-xs text-slate-500 dark:text-slate-400 mb-2 px-1 font-semibold uppercase tracking-wider">Font color</p>
                       <div className="flex items-center gap-4 px-2 overflow-x-auto no-scrollbar pb-2">
-                        {['#0f172a', '#64748b', '#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6'].map(color => (
-                          <button key={color} type="button" onClick={() => handleFontColor(color)} className="w-8 h-8 rounded-md shrink-0 shadow-sm border border-slate-200 dark:border-slate-800 transition-transform hover:scale-110" style={{ backgroundColor: color }} />
-                        ))}
+                        {['#0f172a', '#64748b', '#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6'].map(color => {
+                          const isActive = rgbToHex(activeFormats.fontColor) === color.toLowerCase();
+                          return (
+                            <button 
+                              key={color} 
+                              type="button" 
+                              onClick={() => handleFontColor(color)} 
+                              className={`w-8 h-8 rounded-md shrink-0 shadow-sm transition-transform hover:scale-110 flex items-center justify-center ${isActive ? 'ring-2 ring-offset-2 ring-indigo-500 dark:ring-offset-slate-900 border-none' : 'border border-slate-200 dark:border-slate-800'}`} 
+                              style={{ backgroundColor: color }} 
+                            >
+                              {isActive && <Check className="w-4 h-4 text-white drop-shadow-md" />}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
