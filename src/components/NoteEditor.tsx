@@ -3,7 +3,7 @@ import { collection, doc, setDoc, deleteDoc, serverTimestamp, Timestamp, getDocs
 import { User as FirebaseUser } from 'firebase/auth';
 import { db, auth, handleFirestoreError, OperationType } from '../firebase';
 import { Note, Attachment } from '../types';
-import { ArrowLeft, Save, Trash2, Paperclip, X, Download, FileText, Image as ImageIcon, Plus, Tag, Palette, Check, Loader2, Bold, Italic, List, ListOrdered, Link, Heading1, Quote, Undo, Redo, UploadCloud, Sparkles, ChevronDown, Underline, Strikethrough, Code, Highlighter, Eraser, CornerDownLeft } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, Paperclip, X, Download, FileText, Image as ImageIcon, Plus, Tag, Palette, Check, Loader2, Bold, Italic, List, ListOrdered, Link, Heading1, Quote, Undo, Redo, UploadCloud, Sparkles, ChevronDown, Underline, Strikethrough, Code, Highlighter, Eraser, CornerDownLeft, Type, AlignLeft, AlignCenter, AlignRight, CheckSquare, Table } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useToast } from '../contexts/ToastContext';
 import { format } from 'date-fns';
@@ -47,19 +47,24 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
   const { showToast } = useToast();
   const contentRef = useRef<HTMLDivElement>(null);
   const fontMenuRef = useRef<HTMLDivElement>(null);
-  const [activeFormats, setActiveFormats] = useState({ bold: false, italic: false, underline: false, strikeThrough: false, unorderedList: false, orderedList: false, pre: false, h1: false, blockquote: false, highlight: false });
+  const [activeFormats, setActiveFormats] = useState({ bold: false, italic: false, underline: false, strikeThrough: false, unorderedList: false, orderedList: false, pre: false, h1: false, blockquote: false, highlight: false, justifyLeft: false, justifyCenter: false, justifyRight: false });
   const [isDragging, setIsDragging] = useState(false);
   const [viewingAttachment, setViewingAttachment] = useState<Attachment | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [activeFont, setActiveFont] = useState<'sans' | 'serif' | 'mono'>('sans');
   const [focusMode, setFocusMode] = useState(false);
   const [showFontMenu, setShowFontMenu] = useState(false);
+  const [activePopup, setActivePopup] = useState<'text' | 'paragraph' | null>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
 
-  // Click-Outside Listener for Custom Font Dropdown Menu
+  // Click-Outside Listener for Custom Font Dropdown Menu and Popups
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (fontMenuRef.current && !fontMenuRef.current.contains(event.target as Node)) {
         setShowFontMenu(false);
+      }
+      if (popupRef.current && !popupRef.current.contains(event.target as Node)) {
+        setActivePopup(null);
       }
     }
     if (showFontMenu) {
@@ -102,7 +107,10 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
       pre: isPre,
       blockquote: isBlockquote,
       h1: isH1,
-      highlight: !!isHighlighted
+      highlight: !!isHighlighted,
+      justifyLeft: document.queryCommandState('justifyLeft'),
+      justifyCenter: document.queryCommandState('justifyCenter'),
+      justifyRight: document.queryCommandState('justifyRight')
     });
   };
 
@@ -139,7 +147,75 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     }
     updateFormatState();
   };
+  const handleHighlight = () => {
+    if (activeFormats.highlight) {
+      document.execCommand('hiliteColor', false, 'transparent');
+      document.execCommand('backColor', false, 'transparent');
+    } else {
+      document.execCommand('hiliteColor', false, '#fcd34d');
+      document.execCommand('backColor', false, '#fcd34d');
+    }
+    if (contentRef.current) {
+      setBody(contentRef.current.innerHTML);
+      contentRef.current.focus();
+    }
+    updateFormatState();
+  };
 
+  const handleClearFormatting = () => {
+    document.execCommand('removeFormat', false, '');
+    document.execCommand('hiliteColor', false, 'transparent');
+    document.execCommand('backColor', false, 'transparent');
+    if (contentRef.current) {
+      setBody(contentRef.current.innerHTML);
+      contentRef.current.focus();
+    }
+    updateFormatState();
+  };
+
+  const handleFontSize = (size: number) => {
+    let sizeIndex = 3;
+    if (size <= 10) sizeIndex = 1;
+    else if (size <= 12) sizeIndex = 2;
+    else if (size <= 16) sizeIndex = 3;
+    else if (size <= 18) sizeIndex = 4;
+    else if (size <= 24) sizeIndex = 5;
+    else if (size <= 32) sizeIndex = 6;
+    else sizeIndex = 7;
+    
+    document.execCommand('fontSize', false, sizeIndex.toString());
+    if (contentRef.current) {
+      setBody(contentRef.current.innerHTML);
+      contentRef.current.focus();
+    }
+    updateFormatState();
+  };
+
+  const handleFontColor = (color: string) => {
+    document.execCommand('foreColor', false, color);
+    if (contentRef.current) {
+      setBody(contentRef.current.innerHTML);
+      contentRef.current.focus();
+    }
+    updateFormatState();
+  };
+
+  const handleChecklist = () => {
+    document.execCommand('insertHTML', false, '<input type="checkbox" style="margin-right: 8px; transform: scale(1.2); cursor: pointer;">&nbsp;');
+    if (contentRef.current) {
+      setBody(contentRef.current.innerHTML);
+      contentRef.current.focus();
+    }
+  };
+
+  const handleTable = () => {
+    const tableHTML = '<br><table style="width: 100%; border-collapse: collapse; border: 1px solid #cbd5e1; margin: 10px 0;"><tbody><tr><td style="border: 1px solid #cbd5e1; padding: 8px;"><br></td><td style="border: 1px solid #cbd5e1; padding: 8px;"><br></td></tr><tr><td style="border: 1px solid #cbd5e1; padding: 8px;"><br></td><td style="border: 1px solid #cbd5e1; padding: 8px;"><br></td></tr></tbody></table><br>';
+    document.execCommand('insertHTML', false, tableHTML);
+    if (contentRef.current) {
+      setBody(contentRef.current.innerHTML);
+      contentRef.current.focus();
+    }
+  };
 
 
   const handleListToggle = (command: string) => {
@@ -372,6 +448,13 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      handleFiles(e.target.files);
+    }
+    e.target.value = '';
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -716,31 +799,8 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
         )}
 
         {/* Right Pane: Content */}
-        <div className="flex-1 flex flex-col overflow-y-auto bg-white dark:bg-slate-900 border-l border-transparent">
-          {/* Formatting Toolbar */}
-          <div className="flex flex-wrap items-center gap-1 p-2 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 sticky top-0 z-10 transition-all w-full">
-            <ToolbarButton icon={<Undo className="w-4 h-4" />} onClick={() => handleFormat('undo')} title="Undo" />
-            <ToolbarButton icon={<Redo className="w-4 h-4" />} onClick={() => handleFormat('redo')} title="Redo" />
-            <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1" />
-            <ToolbarButton icon={<Bold className="w-4 h-4" />} onClick={() => handleFormat('bold')} title="Bold" isActive={activeFormats.bold} />
-            <ToolbarButton icon={<Italic className="w-4 h-4" />} onClick={() => handleFormat('italic')} title="Italic" isActive={activeFormats.italic} />
-            <ToolbarButton icon={<Underline className="w-4 h-4" />} onClick={() => handleFormat('underline')} title="Underline" isActive={activeFormats.underline} />
-            <ToolbarButton icon={<Strikethrough className="w-4 h-4" />} onClick={() => handleFormat('strikeThrough')} title="Strikethrough" isActive={activeFormats.strikeThrough} />
-            <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1" />
-            <ToolbarButton icon={<Code className="w-4 h-4" />} onClick={() => toggleBlock('PRE', 'PRE')} title="Code Block" isActive={activeFormats.pre} />
-
-            <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1" />
-            <ToolbarButton icon={<Heading1 className="w-4 h-4" />} onClick={() => toggleBlock('H1', 'H1')} title="Heading" isActive={activeFormats.h1} />
-            <ToolbarButton icon={<Quote className="w-4 h-4" />} onClick={() => toggleBlock('BLOCKQUOTE', 'BLOCKQUOTE')} title="Quote" isActive={activeFormats.blockquote} />
-            <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1" />
-            <ToolbarButton icon={<List className="w-4 h-4" />} onClick={() => handleListToggle('insertUnorderedList')} title="Bullet List" isActive={activeFormats.unorderedList} />
-            <ToolbarButton icon={<ListOrdered className="w-4 h-4" />} onClick={() => handleListToggle('insertOrderedList')} title="Numbered List" isActive={activeFormats.orderedList} />
-            <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1" />
-            <ToolbarButton icon={<Link className="w-4 h-4" />} onClick={() => {
-              const url = prompt('Enter link URL:');
-              if (url) handleFormat('createLink', url);
-            }} title="Link" />
-          </div>
+        <div className="flex-1 flex flex-col bg-white dark:bg-slate-900 border-l border-transparent overflow-hidden">
+          <div className="flex-1 flex flex-col overflow-y-auto relative no-scrollbar">
 
           {focusMode && (
             <input
@@ -794,15 +854,88 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
             }}
           />
 
-          {/* Word and Character Counter Footer */}
-          <div className="bg-slate-950/40 border-t border-slate-900 px-6 py-2.5 flex items-center justify-between text-[9px] font-bold text-slate-500 uppercase tracking-widest select-none shrink-0">
-            <div className="flex items-center gap-4">
-              <span>Words: <span className="text-indigo-400 font-black">{wordCount}</span></span>
-              <span>Characters: <span className="text-indigo-400 font-black">{charCount}</span></span>
+          </div>
+
+          {/* New Mobile-Style Bottom Toolbar */}
+          <div className="w-full z-20 flex flex-col bg-[#111111] text-white border-t border-slate-800 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.5)]">
+            <AnimatePresence>
+              {activePopup === 'text' && (
+                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-b border-slate-800">
+                  <div className="p-4 space-y-5 bg-[#1c1c1c]">
+                    <div className="flex items-center justify-between bg-[#2a2a2a] p-1.5 rounded-xl max-w-sm">
+                      <ToolbarButton icon={<Bold className="w-5 h-5" />} onClick={() => handleFormat('bold')} title="Bold" isActive={activeFormats.bold} />
+                      <ToolbarButton icon={<Italic className="w-5 h-5" />} onClick={() => handleFormat('italic')} title="Italic" isActive={activeFormats.italic} />
+                      <ToolbarButton icon={<Underline className="w-5 h-5" />} onClick={() => handleFormat('underline')} title="Underline" isActive={activeFormats.underline} />
+                      <ToolbarButton icon={<Strikethrough className="w-5 h-5" />} onClick={() => handleFormat('strikeThrough')} title="Strikethrough" isActive={activeFormats.strikeThrough} />
+                      <div className="w-px h-6 bg-slate-700 mx-1" />
+                      <ToolbarButton icon={<Highlighter className="w-5 h-5" />} onClick={handleHighlight} title="Highlight" isActive={activeFormats.highlight} />
+                      <ToolbarButton icon={<Eraser className="w-5 h-5" />} onClick={handleClearFormatting} title="Clear Format" />
+                    </div>
+                    
+                    <div>
+                      <p className="text-xs text-slate-400 mb-2 px-1">Font size</p>
+                      <div className="flex items-center gap-6 px-2 overflow-x-auto no-scrollbar">
+                        {[10, 12, 14, 16, 18, 20, 24, 36].map(size => (
+                          <button key={size} type="button" onClick={() => handleFontSize(size)} className="text-slate-300 hover:text-white font-medium text-lg transition-colors whitespace-nowrap">
+                            {size}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <p className="text-xs text-slate-400 mb-2 px-1">Font color</p>
+                      <div className="flex items-center gap-4 px-2 overflow-x-auto no-scrollbar pb-2">
+                        {['#ffffff', '#e2e8f0', '#94a3b8', '#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6'].map(color => (
+                          <button key={color} type="button" onClick={() => handleFontColor(color)} className="w-8 h-8 rounded-md shrink-0 shadow-sm transition-transform hover:scale-110" style={{ backgroundColor: color }} />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+              {activePopup === 'paragraph' && (
+                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-b border-slate-800">
+                  <div className="p-4 space-y-4 bg-[#1c1c1c]">
+                    <div className="flex items-center gap-2 bg-[#2a2a2a] p-1.5 rounded-xl max-w-xs">
+                      <ToolbarButton icon={<AlignLeft className="w-5 h-5" />} onClick={() => handleFormat('justifyLeft')} title="Align Left" isActive={activeFormats.justifyLeft} />
+                      <ToolbarButton icon={<AlignCenter className="w-5 h-5" />} onClick={() => handleFormat('justifyCenter')} title="Align Center" isActive={activeFormats.justifyCenter} />
+                      <ToolbarButton icon={<AlignRight className="w-5 h-5" />} onClick={() => handleFormat('justifyRight')} title="Align Right" isActive={activeFormats.justifyRight} />
+                    </div>
+                    <div className="flex items-center gap-2 max-w-sm">
+                      <button onClick={() => handleListToggle('insertUnorderedList')} className={`flex-1 flex flex-col items-center justify-center p-3 rounded-xl gap-2 transition-colors ${activeFormats.unorderedList ? 'bg-indigo-600 text-white' : 'bg-[#2a2a2a] text-slate-300 hover:text-white'}`}>
+                        <List className="w-6 h-6" />
+                        <span className="text-xs font-medium">Dot number</span>
+                      </button>
+                      <button onClick={() => handleListToggle('insertOrderedList')} className={`flex-1 flex flex-col items-center justify-center p-3 rounded-xl gap-2 transition-colors ${activeFormats.orderedList ? 'bg-indigo-600 text-white' : 'bg-[#2a2a2a] text-slate-300 hover:text-white'}`}>
+                        <ListOrdered className="w-6 h-6" />
+                        <span className="text-xs font-medium">Digit number</span>
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+            
+            {/* Main Bar */}
+            <div ref={popupRef} className="flex items-center justify-around px-2 py-3 bg-[#0a0a0a]">
+              <button onClick={() => setActivePopup(p => p === 'text' ? null : 'text')} className={`p-3 rounded-xl transition-all ${activePopup === 'text' ? 'bg-white/10 text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white'}`}>
+                <Type className="w-6 h-6" />
+              </button>
+              <button onClick={() => setActivePopup(p => p === 'paragraph' ? null : 'paragraph')} className={`p-3 rounded-xl transition-all ${activePopup === 'paragraph' ? 'bg-white/10 text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white'}`}>
+                <AlignLeft className="w-6 h-6" />
+              </button>
+              <button onClick={handleChecklist} className="p-3 rounded-xl text-slate-300 hover:bg-white/5 hover:text-white transition-all">
+                <CheckSquare className="w-6 h-6" />
+              </button>
+              <button onClick={() => document.getElementById('image-upload')?.click()} className="p-3 rounded-xl text-slate-300 hover:bg-white/5 hover:text-white transition-all">
+                <ImageIcon className="w-6 h-6" />
+              </button>
+              <button onClick={handleTable} className="p-3 rounded-xl text-slate-300 hover:bg-white/5 hover:text-white transition-all">
+                <Table className="w-6 h-6" />
+              </button>
+              <input type="file" id="image-upload" className="hidden" accept="image/*" onChange={handleImageUpload} />
             </div>
-            {lastSaved && (
-              <span>Synced at {format(lastSaved, 'HH:mm:ss')}</span>
-            )}
           </div>
         </div>
       </div>
