@@ -135,6 +135,12 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         // On mobile/touch screens, blur active element to dismiss soft keyboard and prevent layout jumps
         if (window.innerWidth < 768) {
           (document.activeElement as HTMLElement)?.blur();
+          
+          // Reset window scroll position to top to override browser keyboard-scroll bugs
+          setTimeout(() => {
+            window.scrollTo({ top: 0, left: 0, behavior: 'instant' as any });
+            document.body.scrollTop = 0;
+          }, 50);
         }
       } else {
         // When closing the popup, restore selection if available
@@ -1178,6 +1184,19 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
 
     if (button) {
       e.preventDefault();
+      
+      // Directly execute React's internal click handler to bypass browser native .click() blocks on mobile touchstart
+      const reactPropKey = Object.keys(button).find(
+        key => key.startsWith('__reactProps') || key.startsWith('__reactEventHandlers')
+      );
+      if (reactPropKey) {
+        const reactProps = (button as any)[reactPropKey];
+        if (reactProps && typeof reactProps.onClick === 'function') {
+          reactProps.onClick(e);
+          return;
+        }
+      }
+      
       button.click();
     }
   };
