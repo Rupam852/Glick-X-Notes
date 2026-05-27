@@ -208,7 +208,6 @@ export default function Settings({ user }: { user: FirebaseUser }) {
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-8 select-none">
       <div className="flex items-center gap-2">
-        <Sparkles className="w-6 h-6 text-indigo-400 animate-pulse" />
         <h1 className="text-3xl font-black bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
           Workspace Settings
         </h1>
