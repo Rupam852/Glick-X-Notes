@@ -1123,6 +1123,14 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
     setShowDeleteConfirm(true);
   };
 
+  // Safe back navigation with instant auto-save if unsaved changes exist
+  const handleBackClick = useCallback(async () => {
+    if (hasUnsavedChanges) {
+      await handleSave();
+    }
+    onBack();
+  }, [hasUnsavedChanges, handleSave, onBack]);
+
   const handleDeleteConfirm = async () => {
     setShowDeleteConfirm(false);
     if (!currentNoteId) return;
@@ -1434,7 +1442,7 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
         {/* ROW 1: Navigation and status controls */}
         <div className="flex items-center justify-between px-4 py-2 border-b border-slate-100/60 dark:border-slate-800/60">
           <div className="flex items-center gap-3">
-            <button onClick={onBack} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all cursor-pointer text-slate-500 dark:text-slate-400">
+            <button onClick={handleBackClick} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all cursor-pointer text-slate-500 dark:text-slate-400">
               <ArrowLeft className="w-5 h-5" />
             </button>
             
@@ -1517,11 +1525,6 @@ export default function NoteEditor({ user, note, onBack }: NoteEditorProps) {
                 <Trash2 className="w-5 h-5" />
               </button>
             )}
-
-            <button onClick={handleSave} className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-xl font-bold flex items-center gap-1.5 transition-all cursor-pointer text-xs uppercase tracking-wider shadow-sm">
-              <Save className="w-4 h-4" />
-              Save
-            </button>
           </div>
         </div>
 
