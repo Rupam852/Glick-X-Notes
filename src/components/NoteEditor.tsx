@@ -187,6 +187,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   const [linkUrl, setLinkUrl] = useState('');
   const [selectedLinkUrl, setSelectedLinkUrl] = useState('');
   const [selectedHighlightColor, setSelectedHighlightColor] = useState('#fcd34d');
+  const [selectedFontColor, setSelectedFontColor] = useState('#6366f1');
 
   // Find & Replace state
   const [findText, setFindText] = useState('');
@@ -406,6 +407,14 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
           break;
         }
         node = node.parentNode;
+      }
+    }
+
+    const fontColorVal = document.queryCommandValue('foreColor');
+    if (fontColorVal) {
+      const hex = rgbToHex(fontColorVal.toString());
+      if (hex) {
+        setSelectedFontColor(hex);
       }
     }
 
@@ -791,6 +800,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     try {
       document.execCommand('styleWithCSS', false, 'true');
     } catch (e) {}
+    setSelectedFontColor(color);
     document.execCommand('foreColor', false, color);
     if (contentRef.current) {
       const html = contentRef.current.innerHTML;
@@ -2106,12 +2116,39 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                         </button>
                       );
                     })}
+
+                    {(() => {
+                      const presets = [
+                        '#0f172a', '#64748b', '#ef4444', '#f97316', '#eab308', 
+                        '#22c55e', '#06b6d4', '#3b82f6', '#6366f1', '#a855f7', 
+                        '#ec4899', '#ffffff'
+                      ];
+                      const isCustom = selectedFontColor && !presets.includes(selectedFontColor.toLowerCase());
+                      if (!isCustom) return null;
+                      const isActive = rgbToHex(activeFormats.fontColor) === selectedFontColor.toLowerCase();
+                      return (
+                        <button
+                          type="button"
+                          onMouseDown={handleButtonMouseDown}
+                          onClick={() => handleFontColor(selectedFontColor)}
+                          className={`w-7 h-7 rounded-lg shrink-0 shadow-sm transition-transform hover:scale-105 flex items-center justify-center ${isActive ? 'ring-2 ring-indigo-500 border-none' : 'border border-slate-200 dark:border-slate-850'}`}
+                          style={{ backgroundColor: selectedFontColor }}
+                          title={`Custom Color: ${selectedFontColor}`}
+                        >
+                          {isActive && <Check className={`w-3.5 h-3.5 ${selectedFontColor === '#ffffff' ? 'text-slate-800' : 'text-white'}`} />}
+                        </button>
+                      );
+                    })()}
                     
-                    <label className="w-7 h-7 rounded-lg shrink-0 shadow-sm border border-slate-200 dark:border-slate-850 hover:scale-105 transition-transform flex items-center justify-center cursor-pointer bg-gradient-to-tr from-rose-500 via-yellow-500 to-blue-500 relative" title="Custom color">
+                    <label 
+                      onMouseDown={handleButtonMouseDown}
+                      className="w-7 h-7 rounded-lg shrink-0 shadow-sm border border-slate-200 dark:border-slate-850 hover:scale-105 transition-transform flex items-center justify-center cursor-pointer bg-gradient-to-tr from-rose-500 via-yellow-500 to-blue-500 relative" 
+                      title="Custom color"
+                    >
                       <input 
                         type="color" 
                         className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                        value={rgbToHex(activeFormats.fontColor) || '#000000'}
+                        value={selectedFontColor}
                         onChange={(e) => handleFontColor(e.target.value)}
                       />
                       <Plus className="w-3.5 h-3.5 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]" />
@@ -2158,12 +2195,38 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                         </button>
                       );
                     })}
+
+                    {(() => {
+                      const presets = [
+                        '#fde047', '#86efac', '#93c5fd', '#fca5a5', '#fed7aa', 
+                        '#c084fc', '#fbcfe8', '#a5f3fc', '#e2e8f0'
+                      ];
+                      const isCustom = selectedHighlightColor && selectedHighlightColor !== 'transparent' && !presets.includes(selectedHighlightColor.toLowerCase());
+                      if (!isCustom) return null;
+                      const isActive = activeFormats.highlight && selectedHighlightColor.toLowerCase() === selectedHighlightColor.toLowerCase();
+                      return (
+                        <button
+                          type="button"
+                          onMouseDown={handleButtonMouseDown}
+                          onClick={() => handleHighlightColor(selectedHighlightColor)}
+                          className={`w-7 h-7 rounded-lg shrink-0 shadow-sm transition-transform hover:scale-105 flex items-center justify-center ${isActive ? 'ring-2 ring-indigo-500 border-none' : 'border border-slate-200 dark:border-slate-850'}`}
+                          style={{ backgroundColor: selectedHighlightColor }}
+                          title={`Custom Highlight Color: ${selectedHighlightColor}`}
+                        >
+                          {isActive && <Check className="w-3.5 h-3.5 text-slate-800" />}
+                        </button>
+                      );
+                    })()}
                     
-                    <label className="w-7 h-7 rounded-lg shrink-0 shadow-sm border border-slate-200 dark:border-slate-850 hover:scale-105 transition-transform flex items-center justify-center cursor-pointer bg-gradient-to-tr from-rose-400 via-yellow-300 to-blue-400 relative" title="Custom highlight color">
+                    <label 
+                      onMouseDown={handleButtonMouseDown}
+                      className="w-7 h-7 rounded-lg shrink-0 shadow-sm border border-slate-200 dark:border-slate-850 hover:scale-105 transition-transform flex items-center justify-center cursor-pointer bg-gradient-to-tr from-rose-400 via-yellow-300 to-blue-400 relative" 
+                      title="Custom highlight color"
+                    >
                       <input 
                         type="color" 
                         className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                        value={selectedHighlightColor}
+                        value={selectedHighlightColor === 'transparent' ? '#fcd34d' : selectedHighlightColor}
                         onChange={(e) => handleHighlightColor(e.target.value)}
                       />
                       <Plus className="w-3.5 h-3.5 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]" />
