@@ -2767,12 +2767,16 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                 </h3>
                 <div className="space-y-4 bg-[#fafbfc] dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/70 dark:border-slate-800 shadow-xs">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Title</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex justify-between">
+                      <span>Title</span>
+                      <span className="text-slate-400 font-normal">{title.length}/60</span>
+                    </label>
                     <input
                       type="text"
                       placeholder="Note Title"
+                      maxLength={60}
                       value={title}
-                      onChange={(e) => setTitle(e.target.value)}
+                      onChange={(e) => setTitle(e.target.value.slice(0, 60))}
                       className="w-full text-base font-bold bg-transparent border-none outline-none text-slate-850 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-750"
                     />
                   </div>
@@ -2912,15 +2916,23 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
             {/* Eye-Care Warm Paper Document Sheet */}
             <div className="max-w-4xl mx-auto bg-[#fafbfc] dark:bg-[#111726] rounded-2xl md:rounded-3xl border border-slate-200/70 dark:border-slate-800/80 shadow-[0_2px_16px_rgba(15,23,42,0.03)] p-5 sm:p-8 md:p-12 min-h-[calc(100vh-140px)] transition-colors">
               
-              {/* Inline Title input (Prominent on document sheet) */}
+              {/* Inline Title input (Prominent on document sheet with max length limit) */}
               <div className="w-full pb-3 mb-4 border-b border-slate-200/60 dark:border-slate-800/80">
-                <input
-                  type="text"
-                  placeholder="Note title (auto-generated if empty)..."
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="w-full text-2.5xl md:text-3.5xl font-black bg-transparent border-none outline-none text-slate-850 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-700 tracking-tight"
-                />
+                <div className="flex items-center justify-between gap-3">
+                  <input
+                    type="text"
+                    placeholder="Note title (auto-generated if empty)..."
+                    maxLength={60}
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value.slice(0, 60))}
+                    className="w-full text-2xl md:text-3.5xl font-black bg-transparent border-none outline-none text-slate-850 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-700 tracking-tight"
+                  />
+                  {title.length > 35 && (
+                    <span className="text-xs font-bold text-slate-400 dark:text-slate-500 shrink-0 select-none">
+                      {title.length}/60
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Center Content Editor container */}

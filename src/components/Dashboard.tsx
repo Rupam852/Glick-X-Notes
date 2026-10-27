@@ -367,17 +367,17 @@ export default function Dashboard({
 
         <div className="space-y-3 pl-2 relative z-10">
           {/* Header Row: Title & Actions */}
-          <div className="flex justify-between items-start gap-3">
-            <h3 className="font-bold text-base md:text-lg text-slate-800 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors duration-150 line-clamp-1 leading-snug">
+          <div className="flex justify-between items-start gap-2.5">
+            <h3 className="font-bold text-sm md:text-[15px] text-slate-800 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors duration-150 line-clamp-2 break-words leading-snug flex-1 min-w-0 pr-1">
               {highlightText(getSmartNoteTitle(note, notes), search)}
             </h3>
 
-            <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex items-center gap-1 shrink-0">
               {/* Quick folder select dropdown */}
               <FolderDropdown
                 value={note.folder || 'all'}
                 onChange={(newFolder) => handleUpdateNoteFolder(newFolder, note)}
-                size="sm"
+                size="xs"
                 align="right"
                 onOpenStateChange={(isOpen) => setActiveDropdownNoteId(isOpen ? note.id : null)}
               />
@@ -385,23 +385,23 @@ export default function Dashboard({
               {/* Pin button */}
               <button
                 onClick={(e) => handleTogglePin(e, note)}
-                className={`p-2 rounded-xl transition-all duration-150 cursor-pointer ${
+                className={`p-1.5 rounded-lg transition-all duration-150 cursor-pointer ${
                   note.pinned 
                     ? 'text-amber-500 hover:text-amber-600 bg-amber-500/10' 
                     : 'text-slate-400 dark:text-slate-500 hover:text-amber-500 hover:bg-amber-500/10 opacity-70 group-hover:opacity-100'
                 }`}
                 title={note.pinned ? "Unpin note" : "Pin note"}
               >
-                <Pin className={`w-4 h-4 ${note.pinned ? 'fill-amber-500 rotate-45' : ''}`} />
+                <Pin className={`w-3.5 h-3.5 ${note.pinned ? 'fill-amber-500 rotate-45' : ''}`} />
               </button>
 
               {/* 🗑️ Delete dustbin button right beside Pin */}
               <button
                 onClick={(e) => handleDeleteClick(e, note)}
-                className="p-2 rounded-xl text-slate-400 dark:text-slate-500 hover:text-rose-500 hover:bg-rose-500/10 opacity-70 group-hover:opacity-100 transition-all duration-150 cursor-pointer"
+                className="p-1.5 rounded-lg text-slate-400 dark:text-slate-500 hover:text-rose-500 hover:bg-rose-500/10 opacity-70 group-hover:opacity-100 transition-all duration-150 cursor-pointer"
                 title="Delete note"
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-3.5 h-3.5" />
               </button>
 
               {/* Attachment count badge */}
@@ -731,7 +731,7 @@ export default function Dashboard({
                       </div>
 
                       <div className="space-y-1 min-w-0">
-                        <h3 className="font-bold text-sm md:text-base text-slate-800 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors truncate">
+                        <h3 className="font-bold text-sm md:text-base text-slate-800 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors line-clamp-2 break-words leading-snug">
                           {highlightText(getSmartNoteTitle(note, notes), search)}
                         </h3>
                         <p className="text-slate-400 dark:text-slate-500 text-xs md:text-sm line-clamp-1 truncate">
