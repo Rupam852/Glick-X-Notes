@@ -66,6 +66,50 @@ const getTagDotColor = (tag: string) => {
   return 'bg-indigo-500';
 };
 
+// 🧠 Smart Note Title Resolver: Extracts title from body if empty/untitled and resolves duplicates
+const getSmartNoteTitle = (note: Note, allNotes: Note[] = []): string => {
+  const rawTitle = (note.title || '').trim();
+  const isGeneric = !rawTitle || /^untitled note(\s*\d*)?$/i.test(rawTitle);
+
+  // 1. If it's a generic "Untitled Note" or empty, extract from the first non-empty line of body
+  if (isGeneric) {
+    const bodyText = stripHtmlForPreview(note.body);
+    const firstLine = bodyText.split('\n').map(l => l.trim()).filter(Boolean)[0];
+    if (firstLine) {
+      return firstLine.length > 40 ? firstLine.slice(0, 40).trim() + '...' : firstLine;
+    }
+  }
+
+  // 2. Base title: either raw title or 'Untitled Note' if body was also empty
+  const baseTitle = isGeneric ? 'Untitled Note' : rawTitle;
+
+  // 3. Duplicate handling: if multiple notes share the exact same title, add index (e.g. Title (2))
+  const duplicates = allNotes.filter(n => {
+    const otherRaw = (n.title || '').trim();
+    const otherIsGeneric = !otherRaw || /^untitled note(\s*\d*)?$/i.test(otherRaw);
+
+    if (isGeneric) {
+      const otherBody = stripHtmlForPreview(n.body).trim();
+      return otherIsGeneric && !otherBody;
+    }
+    return otherRaw.toLowerCase() === baseTitle.toLowerCase();
+  });
+
+  if (duplicates.length > 1) {
+    const sorted = [...duplicates].sort((a, b) => {
+      const timeA = safeToDate(a.createdAt).getTime();
+      const timeB = safeToDate(b.createdAt).getTime();
+      return timeA !== timeB ? timeA - timeB : a.id.localeCompare(b.id);
+    });
+    const idx = sorted.findIndex(n => n.id === note.id);
+    if (idx > 0) {
+      return `${baseTitle} (${idx + 1})`;
+    }
+  }
+
+  return baseTitle;
+};
+
 interface DashboardProps {
   user: User;
   onEditNote: (note: Note) => void;
@@ -240,8 +284,10 @@ export default function Dashboard({
   });
 
   const filteredNotes = folderFilteredNotes.filter(note => {
+    const smartTitle = getSmartNoteTitle(note, notes);
     const matchesSearch = 
-      note.title.toLowerCase().includes(search.toLowerCase()) ||
+      (note.title && note.title.toLowerCase().includes(search.toLowerCase())) ||
+      smartTitle.toLowerCase().includes(search.toLowerCase()) ||
       stripHtmlForPreview(note.body).toLowerCase().includes(search.toLowerCase()) ||
       note.tags.some(tag => tag.toLowerCase().includes(search.toLowerCase()));
     
@@ -323,7 +369,7 @@ export default function Dashboard({
           {/* Header Row: Title & Actions */}
           <div className="flex justify-between items-start gap-3">
             <h3 className="font-bold text-base md:text-lg text-slate-800 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors duration-150 line-clamp-1 leading-snug">
-              {highlightText(note.title || 'Untitled Note', search)}
+              {highlightText(getSmartNoteTitle(note, notes), search)}
             </h3>
 
             <div className="flex items-center gap-1.5 shrink-0">
@@ -686,7 +732,7 @@ export default function Dashboard({
 
                       <div className="space-y-1 min-w-0">
                         <h3 className="font-bold text-sm md:text-base text-slate-800 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors truncate">
-                          {highlightText(note.title || 'Untitled Note', search)}
+                          {highlightText(getSmartNoteTitle(note, notes), search)}
                         </h3>
                         <p className="text-slate-400 dark:text-slate-500 text-xs md:text-sm line-clamp-1 truncate">
                           {stripHtmlForPreview(note.body) || 'No preview available'}
@@ -784,7 +830,7 @@ export default function Dashboard({
                 <div className="min-w-0 flex-1">
                   <h3 className="text-lg font-black text-slate-900 dark:text-white truncate">Delete Note?</h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-                    "{noteToDelete.title || 'Untitled Note'}" will be permanently removed.
+                    "{getSmartNoteTitle(noteToDelete, notes)}" will be permanently removed.
                   </p>
                 </div>
               </div>
