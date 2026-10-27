@@ -9,7 +9,6 @@ import {
   ChevronDown, 
   Zap, 
   Cloud, 
-  Database, 
   Smartphone, 
   Sun, 
   Moon, 
@@ -18,18 +17,16 @@ import {
   Folder, 
   Search, 
   Tag, 
-  Eye, 
-  Layers, 
   Palette, 
-  Terminal, 
   Paperclip,
   CheckCircle2,
   Clock,
-  Pin,
-  Code2,
-  Table,
-  FileCode,
-  Highlighter
+  Highlighter,
+  Heart,
+  Smile,
+  ListTodo,
+  Quote,
+  Lightbulb
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { sound } from '../utils/sound';
@@ -42,7 +39,6 @@ interface LandingPageProps {
 export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
   const { theme, toggleTheme } = useTheme();
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
-  const [activeBentoTab, setActiveBentoTab] = useState<'editor' | 'organization' | 'security'>('editor');
 
   // Guarantee that Landing Page always loads at top (hero section)
   useEffect(() => {
@@ -53,41 +49,47 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
 
   const faqs = [
     {
-      question: "Is my data secure in Glick X Notes?",
-      answer: "Absolutely. Glick X Notes enforces robust, granular Firebase security rules, keeping your data entirely isolated. Your credentials and digital files (saved securely as base64 binaries) are inaccessible to anyone else, not even platform administrators."
+      question: "Is my personal data completely private?",
+      answer: "Yes, 100%. Glick X Notes uses zero-knowledge account security. Your notes, images, and files belong strictly to your personal account and cannot be seen, tracked, or scanned by anyone else."
     },
     {
-      question: "Can I use Glick X Notes offline?",
-      answer: "Yes! Powered by Firestore's local cache sync capabilities, Glick X Notes supports fully offline read/write. When you lose connection, your notes are safely stored in your local browser storage and seamlessly sync as soon as you are back online."
+      question: "Can I use Glick X Notes when I am offline?",
+      answer: "Yes! You can read, write, edit, and organize all your notes even without an internet connection. Everything saves securely in your browser and automatically syncs to the cloud the moment you reconnect."
     },
     {
-      question: "Does Glick X Notes support attachments?",
-      answer: "Yes, you can attach any file, image, or document directly to your notes. Attachments are encoded as optimized Base64 data chunks within your secure database collection, ensuring high-speed access without needing external cloud storage buckets."
+      question: "Can I add photos and documents to my notes?",
+      answer: "Yes! You can attach photos, images, PDFs, and documents directly to any note with instant drag-and-drop and one-click previews."
     },
     {
-      question: "How do color codes and tags work?",
-      answer: "Each note can be assigned custom vibrant colors (Indigo, Pink, Rose, Emerald, and Gold) and dynamic tags. You can filter, search, and sort through your notes instantly, making it perfect for managing different areas of your personal and professional life."
+      question: "How do colors and tags help organize?",
+      answer: "Every note can have vibrant custom colors (Indigo, Rose, Emerald, Amber, etc.) and tags like #work, #ideas, or #urgent. You can filter and find any note in seconds."
     },
     {
-      question: "Can I host this on my own servers?",
-      answer: "Yes, Glick X Notes is fully open-source and git-powered. You can clone our GitHub repository, plug in your own Firebase config files, and deploy to Vercel, Netlify, or any other server in minutes."
+      question: "Is Glick X Notes free to use?",
+      answer: "Yes, Glick X Notes is 100% free forever with no hidden subscriptions, no paywalls, and absolutely zero advertisements."
     }
   ];
 
   return (
     <div className="min-h-screen bg-[#f8fafc] dark:bg-[#070b14] text-slate-900 dark:text-slate-100 transition-colors duration-300 font-sans overflow-x-hidden selection:bg-indigo-500 selection:text-white relative">
       
-      {/* Ambient Cyber Grid Background */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:28px_28px] pointer-events-none -z-20" />
+      {/* 📐 DESIGNER GRAPH PAPER BOX LAYOUT (Visible Notebook Grid Lines) */}
+      <div 
+        className="absolute inset-0 pointer-events-none -z-20 bg-[linear-gradient(to_right,rgba(99,102,241,0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(99,102,241,0.08)_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,rgba(255,255,255,0.07)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.07)_1px,transparent_1px)] bg-[size:32px_32px]" 
+      />
       
+      {/* 📐 Major Graph Grid Accent Lines (Every 4 Boxes) */}
+      <div 
+        className="absolute inset-0 pointer-events-none -z-20 bg-[linear-gradient(to_right,rgba(99,102,241,0.12)_1px,transparent_1px),linear-gradient(to_bottom,rgba(99,102,241,0.12)_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,rgba(99,102,241,0.14)_1px,transparent_1px),linear-gradient(to_bottom,rgba(99,102,241,0.14)_1px,transparent_1px)] bg-[size:128px_128px]" 
+      />
+
       {/* Ambient Gradient Glow Spheres */}
-      <div className="absolute top-0 left-1/3 w-[640px] h-[640px] bg-indigo-500/10 dark:bg-indigo-600/10 rounded-full blur-[160px] pointer-events-none -z-10 animate-pulse duration-[10s]" />
-      <div className="absolute top-96 right-1/4 w-[500px] h-[500px] bg-purple-500/10 dark:bg-purple-600/10 rounded-full blur-[140px] pointer-events-none -z-10" />
-      <div className="absolute bottom-1/3 left-10 w-[550px] h-[550px] bg-cyan-500/10 dark:bg-cyan-600/10 rounded-full blur-[160px] pointer-events-none -z-10" />
+      <div className="absolute top-0 left-1/3 w-[600px] h-[600px] bg-indigo-500/10 dark:bg-indigo-600/10 rounded-full blur-[160px] pointer-events-none -z-10 animate-pulse duration-[10s]" />
+      <div className="absolute top-96 right-1/4 w-[450px] h-[450px] bg-purple-500/10 dark:bg-purple-600/10 rounded-full blur-[140px] pointer-events-none -z-10" />
 
       {/* Floating Modern Header / Capsule Navbar */}
       <div className="sticky top-4 z-50 px-4 md:px-6 max-w-6xl mx-auto">
-        <header className="backdrop-blur-2xl bg-white/80 dark:bg-[#0c1220]/80 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl md:rounded-full px-5 py-3 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.3)] transition-all">
+        <header className="backdrop-blur-2xl bg-white/85 dark:bg-[#0c1220]/85 border border-slate-200/90 dark:border-slate-800/90 rounded-2xl md:rounded-full px-5 py-3 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.3)] transition-all">
           <div className="flex items-center justify-between">
             {/* Logo & Brand */}
             <div className="flex items-center gap-3">
@@ -101,9 +103,9 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
 
             {/* Desktop Navigation Links */}
             <nav className="hidden md:flex items-center gap-7 text-xs font-semibold text-slate-600 dark:text-slate-300">
-              <a href="#bento" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Workspace</a>
-              <a href="#features" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Bento Grid</a>
-              <a href="#security" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Zero-Trust</a>
+              <a href="#workspace" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Workspace</a>
+              <a href="#features" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Features</a>
+              <a href="#privacy" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Privacy</a>
               <a href="#faq" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">FAQs</a>
             </nav>
 
@@ -145,21 +147,21 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
       </div>
 
       {/* Hero Section */}
-      <section className="pt-20 pb-20 px-6 max-w-6xl mx-auto text-center relative">
+      <section className="pt-20 pb-16 px-6 max-w-6xl mx-auto text-center relative">
         <div className="space-y-6 max-w-3xl mx-auto">
           
-          {/* Subtle Modern Tagline Badge */}
+          {/* Tagline Badge */}
           <motion.div 
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-indigo-500/20 bg-indigo-500/5 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-xs font-bold tracking-wide shadow-xs"
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-indigo-500/25 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-xs font-bold tracking-wide shadow-xs"
           >
             <Sparkles className="w-3.5 h-3.5 animate-spin" style={{ animationDuration: '4s' }} />
-            <span>Next-Gen Visual Workspace Pro • Free & Open-Source</span>
+            <span>Clean, Simple & 100% Free Personal Notes</span>
           </motion.div>
 
-          {/* Impactful Minimalist Headline */}
+          {/* Impactful Headline */}
           <motion.h1 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -172,14 +174,14 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
             </span>
           </motion.h1>
 
-          {/* Subtitle */}
+          {/* Clean Subtitle */}
           <motion.p 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
             className="text-base sm:text-lg text-slate-600 dark:text-slate-400 max-w-xl mx-auto font-normal leading-relaxed"
           >
-            A distraction-free, zero-latency thinking canvas. Engineered with rich typography, real-time Firebase reactivity, and client-bound security.
+            A beautifully minimal space to write, plan, and organize ideas. Lightning fast, completely private, and effortlessly synchronized across all your devices.
           </motion.p>
 
           {/* CTAs */}
@@ -193,110 +195,135 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
               onClick={onSignup}
               className="w-full sm:w-auto px-7 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-600/25 active:scale-95 transition-all text-sm cursor-pointer flex items-center justify-center gap-2 group"
             >
-              Start Free Notes
+              Start Writing Free
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </button>
             <a
-              href="#bento"
-              className="w-full sm:w-auto px-7 py-3.5 bg-white dark:bg-slate-900/90 text-slate-800 dark:text-slate-200 border border-slate-200/90 dark:border-slate-800 font-bold rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-sm cursor-pointer flex items-center justify-center gap-2 shadow-xs"
+              href="#workspace"
+              className="w-full sm:w-auto px-7 py-3.5 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 border border-slate-200/90 dark:border-slate-800 font-bold rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-sm cursor-pointer flex items-center justify-center gap-2 shadow-xs"
             >
-              Explore Bento Grid
+              Explore Features
             </a>
           </motion.div>
 
-          {/* Minimal Metric Badges */}
+          {/* Human-Centered Badges */}
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.7, delay: 0.4 }}
             className="flex flex-wrap items-center justify-center gap-3 pt-6 text-[11px] font-bold text-slate-500 dark:text-slate-400"
           >
-            <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-100/80 dark:bg-slate-900/80 border border-slate-200/70 dark:border-slate-800/80 rounded-lg">
+            <div className="flex items-center gap-1.5 px-3 py-1 bg-white/90 dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 rounded-lg shadow-xs">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              12ms Instant Cloud Sync
+              Instant Sync Across Devices
             </div>
-            <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-100/80 dark:bg-slate-900/80 border border-slate-200/70 dark:border-slate-800/80 rounded-lg">
+            <div className="flex items-center gap-1.5 px-3 py-1 bg-white/90 dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 rounded-lg shadow-xs">
               <Lock className="w-3 h-3 text-indigo-500" />
-              Zero-Knowledge Firestore Auth
+              100% Private & Protected
             </div>
-            <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-100/80 dark:bg-slate-900/80 border border-slate-200/70 dark:border-slate-800/80 rounded-lg">
+            <div className="flex items-center gap-1.5 px-3 py-1 bg-white/90 dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 rounded-lg shadow-xs">
               <Paperclip className="w-3 h-3 text-purple-500" />
-              Base64 In-Database Attachments
+              Photos & Document Attachments
             </div>
           </motion.div>
         </div>
 
-        {/* Hero Interactive Workspace Mockup */}
+        {/* HERO WORKSPACE PREVIEW CARD (Inspiring, Human-Made, No Code Blocks!) */}
         <motion.div 
+          id="workspace"
           initial={{ opacity: 0, y: 35 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.4 }}
-          className="mt-14 max-w-5xl mx-auto relative"
+          className="mt-14 max-w-4xl mx-auto relative"
         >
           {/* Ambient card drop glow */}
           <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-pink-500/20 rounded-3xl blur-2xl opacity-60 pointer-events-none" />
 
-          {/* Mockup Frame */}
-          <div className="relative rounded-2xl md:rounded-3xl border border-slate-200/80 dark:border-slate-800/80 bg-white/95 dark:bg-[#0c1220]/95 backdrop-blur-xl shadow-2xl overflow-hidden text-left">
+          {/* Window Frame */}
+          <div className="relative rounded-2xl md:rounded-3xl border border-slate-200/90 dark:border-slate-800/90 bg-white/95 dark:bg-[#0c1220]/95 backdrop-blur-xl shadow-2xl overflow-hidden text-left">
             {/* Window title bar */}
-            <div className="h-11 px-4 border-b border-slate-200/70 dark:border-slate-800/80 flex items-center justify-between bg-slate-50/70 dark:bg-slate-900/60">
+            <div className="h-11 px-4 border-b border-slate-200/80 dark:border-slate-800/80 flex items-center justify-between bg-slate-50/80 dark:bg-slate-900/60">
               <div className="flex items-center gap-2">
                 <span className="w-3 h-3 rounded-full bg-rose-500/80" />
                 <span className="w-3 h-3 rounded-full bg-amber-500/80" />
                 <span className="w-3 h-3 rounded-full bg-emerald-500/80" />
-                <span className="ml-3 text-[11px] font-semibold text-slate-400 dark:text-slate-500 hidden sm:inline">
-                  workspace / Q4 Project Architecture
+                <span className="ml-3 text-[11px] font-semibold text-slate-500 dark:text-slate-400 hidden sm:inline">
+                  workspace / Creative Strategy & Goals
                 </span>
               </div>
               <div className="flex items-center gap-3 text-[11px] font-semibold text-slate-400">
-                <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold">
+                <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-500/10 dark:bg-emerald-500/20 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
                   <CheckCircle2 className="w-3.5 h-3.5" /> Synchronized
                 </span>
               </div>
             </div>
 
-            {/* Inner Workspace Canvas */}
+            {/* Note Content Area */}
             <div className="p-6 md:p-8 space-y-6">
+              {/* Header inside note */}
               <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800/80 pb-4">
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold">#architecture</span>
-                    <span className="px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 text-[10px] font-bold">#q4-goals</span>
+                    <span className="px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold">#ideas</span>
+                    <span className="px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 text-[10px] font-bold">#strategy</span>
+                    <span className="px-2 py-0.5 rounded-md bg-pink-500/10 text-pink-600 dark:text-pink-400 text-[10px] font-bold">#launch</span>
                     <span className="text-[11px] text-slate-400 font-medium ml-2 flex items-center gap-1">
                       <Clock className="w-3 h-3" /> Updated 2m ago
                     </span>
                   </div>
                   <h2 className="text-xl md:text-2xl font-black text-slate-900 dark:text-white">
-                    Distributed Real-Time Notes Engine Architecture
+                    ✨ Product Launch Roadmap & Creative Strategy
                   </h2>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="px-3 py-1 rounded-lg border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-600 dark:text-slate-300">
-                    Folder: Work
+                <div>
+                  <span className="px-3 py-1 rounded-lg border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-900">
+                    Folder: Ideas
                   </span>
                 </div>
               </div>
 
-              {/* Sample Document Body with Markdown formatting & Code */}
-              <div className="space-y-4 text-xs md:text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-normal">
+              {/* Note Body Text */}
+              <div className="space-y-5 text-xs md:text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-normal">
                 <p>
-                  Glick X Notes is designed around a <strong>zero-friction document model</strong>. Data is synchronized reactively using Firestore snapshot listeners and automatically encrypted per user credential UID.
+                  Every breakthrough begins with a clean slate. Glick X Notes lets you brainstorm ideas freely, organize your personal goals, and keep everyday tasks beautifully structured.
                 </p>
 
-                {/* Simulated Code Block */}
-                <div className="rounded-xl bg-slate-950 p-4 border border-slate-800 text-indigo-300 font-mono text-[11px] md:text-xs overflow-x-auto shadow-inner">
-                  <span className="text-slate-500">// Real-time Firestore document subscriber</span><br />
-                  <span className="text-pink-400">const</span> q = <span className="text-sky-300">query</span>(collection(db, <span className="text-emerald-300">'notes'</span>), <span className="text-sky-300">where</span>(<span className="text-emerald-300">'userId'</span>, <span className="text-emerald-300">'=='</span>, user.uid));<br />
-                  <span className="text-indigo-400">onSnapshot</span>(q, (snapshot) =&gt; syncNotesBuffer(snapshot.docs));
+                {/* Relatable Action Checklist (Replaced technical code snippet!) */}
+                <div className="space-y-2.5 bg-slate-50/80 dark:bg-slate-900/60 p-4 rounded-2xl border border-slate-200/70 dark:border-slate-800/80">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                    Key Milestones
+                  </span>
+                  <div className="flex items-center gap-2.5 text-xs text-slate-800 dark:text-slate-200 font-medium">
+                    <span className="w-4 h-4 rounded-md bg-indigo-600 text-white flex items-center justify-center text-[10px]"><Check className="w-3 h-3 stroke-[3]" /></span>
+                    <span className="line-through text-slate-400">Finalize brand identity and origami logo design</span>
+                  </div>
+                  <div className="flex items-center gap-2.5 text-xs text-slate-800 dark:text-slate-200 font-medium">
+                    <span className="w-4 h-4 rounded-md bg-indigo-600 text-white flex items-center justify-center text-[10px]"><Check className="w-3 h-3 stroke-[3]" /></span>
+                    <span className="line-through text-slate-400">Set up notebook folders and priority tags</span>
+                  </div>
+                  <div className="flex items-center gap-2.5 text-xs text-slate-800 dark:text-slate-200 font-medium">
+                    <span className="w-4 h-4 rounded-md border-2 border-indigo-500 bg-white dark:bg-slate-800 shrink-0" />
+                    <span>Share launch roadmap and moodboard with team</span>
+                  </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2 pt-2">
-                  <span className="px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                    384 words
-                  </span>
-                  <span className="px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                    2 attachments (PDF, Diagram)
-                  </span>
+                {/* Inspirational Quote Highlight */}
+                <div className="p-3.5 rounded-xl bg-indigo-50/60 dark:bg-indigo-950/20 border-l-4 border-indigo-500 text-xs italic text-indigo-950 dark:text-indigo-200 flex items-center gap-2">
+                  <Lightbulb className="w-4 h-4 text-amber-500 shrink-0 not-italic" />
+                  <span>"Simplicity is about subtracting the obvious and adding the meaningful."</span>
+                </div>
+
+                {/* Bottom Note Info Footer */}
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-800/80 text-[11px] text-slate-500 dark:text-slate-400">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 font-medium">
+                      340 words
+                    </span>
+                    <span className="px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 font-medium flex items-center gap-1">
+                      <Paperclip className="w-3 h-3 text-indigo-500" /> 2 attachments (Moodboard.png, Plan.pdf)
+                    </span>
+                  </div>
+                  <span className="text-slate-400">Auto-saved to cloud</span>
                 </div>
               </div>
             </div>
@@ -304,19 +331,19 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
         </motion.div>
       </section>
 
-      {/* MODERN BENTO GRID FEATURE SHOWCASE */}
-      <section id="bento" className="py-24 px-6 max-w-6xl mx-auto relative border-t border-slate-200/60 dark:border-slate-800/80">
+      {/* MODERN BENTO GRID (Clean, Asymmetric, Visual) */}
+      <section id="features" className="py-24 px-6 max-w-6xl mx-auto relative border-t border-slate-200/70 dark:border-slate-800/80">
         <div className="space-y-16">
           {/* Section Heading */}
           <div className="text-center max-w-2xl mx-auto space-y-3">
             <span className="text-[11px] uppercase font-black tracking-widest text-indigo-600 dark:text-indigo-400">
-              Modern Bento Architecture
+              Modern Bento Grid
             </span>
             <h2 className="text-3xl md:text-5xl font-black tracking-tight text-slate-900 dark:text-white">
-              Built for speed, clarity, and deep focus.
+              Everything in its right place.
             </h2>
-            <p className="text-sm md:text-base text-slate-500 dark:text-slate-400">
-              Every detail is engineered to make capturing ideas effortless, elegant, and uncompromisingly secure.
+            <p className="text-sm md:text-base text-slate-600 dark:text-slate-400">
+              A workspace thoughtfully designed around clarity, speed, and peace of mind.
             </p>
           </div>
 
@@ -324,49 +351,49 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             
             {/* Bento Cell 1: Rich Text Canvas (Spans 2 columns) */}
-            <div className="md:col-span-2 group relative rounded-3xl p-7 md:p-8 bg-white/90 dark:bg-[#0c1220]/90 border border-slate-200/80 dark:border-slate-800/80 hover:border-indigo-500/50 dark:hover:border-indigo-400/50 shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:shadow-[0_12px_36px_rgba(99,102,241,0.08)] transition-all duration-300 overflow-hidden flex flex-col justify-between">
-              <div className="space-y-3 relative z-10">
+            <div className="md:col-span-2 group relative rounded-3xl p-7 md:p-8 bg-white/90 dark:bg-[#0c1220]/90 border border-slate-200/90 dark:border-slate-800/90 hover:border-indigo-500/50 dark:hover:border-indigo-400/50 shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:shadow-[0_12px_36px_rgba(99,102,241,0.08)] transition-all duration-300 flex flex-col justify-between">
+              <div className="space-y-3">
                 <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold">
                   <Edit3 className="w-5 h-5" />
                 </div>
                 <h3 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white">
-                  Distraction-Free Rich Text Canvas
+                  Distraction-Free Rich Writing Canvas
                 </h3>
-                <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 max-w-md leading-relaxed">
-                  Compose thoughts in a paper-feel document editor with full typography controls: customizable font sizes, code blocks, tables, highlights, and instant undo/redo stacks.
+                <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400 max-w-md leading-relaxed">
+                  Compose effortlessly with paper-feel document styling, bold formatting, text highlighting, checklists, and flexible font sizes that feel natural.
                 </p>
               </div>
 
-              {/* Interactive Visual Element: Editor Toolbar Pill */}
+              {/* Formatting Toolbar Pill */}
               <div className="mt-6 pt-5 border-t border-slate-100 dark:border-slate-800/80">
                 <div className="flex flex-wrap items-center gap-1.5 p-2 bg-slate-100/70 dark:bg-slate-900/80 rounded-2xl border border-slate-200/60 dark:border-slate-800 max-w-md">
                   <span className="p-1.5 rounded-lg bg-white dark:bg-slate-800 text-xs font-bold shadow-xs">Bold</span>
                   <span className="p-1.5 rounded-lg text-slate-500 text-xs font-semibold">Italic</span>
                   <span className="p-1.5 rounded-lg text-slate-500 text-xs font-semibold flex items-center gap-1"><Highlighter className="w-3.5 h-3.5 text-amber-500" /> Highlight</span>
-                  <span className="p-1.5 rounded-lg text-slate-500 text-xs font-semibold flex items-center gap-1"><Table className="w-3.5 h-3.5 text-indigo-500" /> Table</span>
-                  <span className="p-1.5 rounded-lg text-slate-500 text-xs font-semibold flex items-center gap-1"><Code2 className="w-3.5 h-3.5 text-pink-500" /> Code</span>
+                  <span className="p-1.5 rounded-lg text-slate-500 text-xs font-semibold flex items-center gap-1"><ListTodo className="w-3.5 h-3.5 text-indigo-500" /> Tasks</span>
+                  <span className="p-1.5 rounded-lg text-slate-500 text-xs font-semibold flex items-center gap-1"><Palette className="w-3.5 h-3.5 text-pink-500" /> Color</span>
                 </div>
               </div>
             </div>
 
-            {/* Bento Cell 2: Smart Folder Organization (1 column) */}
-            <div className="group relative rounded-3xl p-7 md:p-8 bg-white/90 dark:bg-[#0c1220]/90 border border-slate-200/80 dark:border-slate-800/80 hover:border-purple-500/50 dark:hover:border-purple-400/50 shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:shadow-[0_12px_36px_rgba(168,85,247,0.08)] transition-all duration-300 flex flex-col justify-between">
+            {/* Bento Cell 2: Intelligent Filing & Folders (1 column) */}
+            <div className="group relative rounded-3xl p-7 md:p-8 bg-white/90 dark:bg-[#0c1220]/90 border border-slate-200/90 dark:border-slate-800/90 hover:border-purple-500/50 dark:hover:border-purple-400/50 shadow-[0_4px_20px_rgba(0,0,0,0.02)] transition-all flex flex-col justify-between">
               <div className="space-y-3">
                 <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold">
                   <Folder className="w-5 h-5" />
                 </div>
                 <h3 className="text-xl font-bold text-slate-900 dark:text-white">
-                  Intelligent Filing & Folders
+                  Smart Folders & Filing
                 </h3>
-                <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Glassmorphic folder selectors with live count badges. Instantly group notes by Work, Personal, Ideas, or Archive with single-click filtering.
+                <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Organize your life into clean categories like Work, Personal, Ideas, or Archive with real-time count badges.
                 </p>
               </div>
 
               {/* Folder Pills Mockup */}
               <div className="mt-6 space-y-2">
                 <div className="flex items-center justify-between p-2 rounded-xl bg-slate-100/70 dark:bg-slate-900/60 text-xs font-bold text-slate-700 dark:text-slate-300">
-                  <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-blue-500" /> Work Project</span>
+                  <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-blue-500" /> Work Projects</span>
                   <span className="text-[10px] bg-white dark:bg-slate-800 px-2 py-0.5 rounded-md">8 notes</span>
                 </div>
                 <div className="flex items-center justify-between p-2 rounded-xl bg-slate-100/70 dark:bg-slate-900/60 text-xs font-bold text-slate-700 dark:text-slate-300">
@@ -376,41 +403,41 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
               </div>
             </div>
 
-            {/* Bento Cell 3: Military-Grade Zero-Trust Isolation (1 column) */}
-            <div className="group relative rounded-3xl p-7 md:p-8 bg-white/90 dark:bg-[#0c1220]/90 border border-slate-200/80 dark:border-slate-800/80 hover:border-emerald-500/50 dark:hover:border-emerald-400/50 shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:shadow-[0_12px_36px_rgba(16,185,129,0.08)] transition-all duration-300 flex flex-col justify-between">
+            {/* Bento Cell 3: 100% Private (1 column) */}
+            <div className="group relative rounded-3xl p-7 md:p-8 bg-white/90 dark:bg-[#0c1220]/90 border border-slate-200/90 dark:border-slate-800/90 hover:border-emerald-500/50 dark:hover:border-emerald-400/50 shadow-[0_4px_20px_rgba(0,0,0,0.02)] transition-all flex flex-col justify-between">
               <div className="space-y-3">
                 <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
                   <Shield className="w-5 h-5" />
                 </div>
                 <h3 className="text-xl font-bold text-slate-900 dark:text-white">
-                  Zero-Trust User Bound
+                  100% Personal & Private
                 </h3>
-                <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Cryptographically verified Firebase rules prevent database leaks. No administrator or automated crawler can access your records.
+                <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Your notes are locked to your personal account. Zero ads, zero tracking, and absolutely no selling of your data.
                 </p>
               </div>
 
-              {/* Security Shield Indicator */}
+              {/* Clean privacy pill */}
               <div className="mt-6 p-3 rounded-2xl bg-emerald-500/5 dark:bg-emerald-950/20 border border-emerald-500/20 flex items-center gap-3">
                 <Lock className="w-5 h-5 text-emerald-500 shrink-0" />
                 <div className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-                  <span>UID-Bound Row Security</span>
-                  <p className="text-[9px] text-slate-400 font-mono">auth.uid == resource.data.userId</p>
+                  <span>Zero-Trust Privacy</span>
+                  <p className="text-[10px] text-slate-400 font-normal">Only you have the key</p>
                 </div>
               </div>
             </div>
 
             {/* Bento Cell 4: Sub-Millisecond Search & Tags (Spans 2 columns) */}
-            <div className="md:col-span-2 group relative rounded-3xl p-7 md:p-8 bg-white/90 dark:bg-[#0c1220]/90 border border-slate-200/80 dark:border-slate-800/80 hover:border-blue-500/50 dark:hover:border-blue-400/50 shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:shadow-[0_12px_36px_rgba(59,130,246,0.08)] transition-all duration-300 flex flex-col justify-between">
+            <div className="md:col-span-2 group relative rounded-3xl p-7 md:p-8 bg-white/90 dark:bg-[#0c1220]/90 border border-slate-200/90 dark:border-slate-800/90 hover:border-blue-500/50 dark:hover:border-blue-400/50 shadow-[0_4px_20px_rgba(0,0,0,0.02)] transition-all flex flex-col justify-between">
               <div className="space-y-3">
                 <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
                   <Search className="w-5 h-5" />
                 </div>
                 <h3 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white">
-                  Sub-Millisecond Search & Highlight
+                  Instant Search & Live Highlights
                 </h3>
-                <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 max-w-lg leading-relaxed">
-                  Search across note titles, full body content, and metadata instantaneously with live in-card keyword highlighting. Filter down with categorized tags in real time.
+                <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400 max-w-lg leading-relaxed">
+                  Find any thought or note in milliseconds with live keyword highlighting and categorized tags.
                 </p>
               </div>
 
@@ -418,42 +445,42 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
               <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800/80 space-y-2.5">
                 <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-750 text-xs font-semibold text-slate-400">
                   <Search className="w-4 h-4 text-slate-400" />
-                  <span className="text-slate-850 dark:text-slate-100">database migration</span>
-                  <span className="ml-auto text-[10px] font-mono bg-indigo-500/10 text-indigo-500 px-2 py-0.5 rounded">3 matches found</span>
+                  <span className="text-slate-850 dark:text-slate-100">travel packing list</span>
+                  <span className="ml-auto text-[10px] bg-indigo-500/10 text-indigo-500 px-2 py-0.5 rounded font-bold">Found instantly</span>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
-                  <span className="px-2.5 py-0.5 rounded-md bg-sky-500/10 text-sky-600 dark:text-sky-400 text-[10px] font-bold">#project</span>
+                  <span className="px-2.5 py-0.5 rounded-md bg-sky-500/10 text-sky-600 dark:text-sky-400 text-[10px] font-bold">#travel</span>
                   <span className="px-2.5 py-0.5 rounded-md bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[10px] font-bold">#urgent</span>
-                  <span className="px-2.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">#meeting</span>
+                  <span className="px-2.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">#ideas</span>
                 </div>
               </div>
             </div>
 
-            {/* Bento Cell 5: Auto-Title & Duplicate Prevention (1 column) */}
-            <div className="group relative rounded-3xl p-7 bg-white/90 dark:bg-[#0c1220]/90 border border-slate-200/80 dark:border-slate-800/80 hover:border-amber-500/50 dark:hover:border-amber-400/50 shadow-[0_4px_20px_rgba(0,0,0,0.02)] transition-all flex flex-col justify-between">
+            {/* Bento Cell 5: Smart Auto-Title (1 column) */}
+            <div className="group relative rounded-3xl p-7 bg-white/90 dark:bg-[#0c1220]/90 border border-slate-200/90 dark:border-slate-800/90 hover:border-amber-500/50 dark:hover:border-amber-400/50 shadow-[0_4px_20px_rgba(0,0,0,0.02)] transition-all flex flex-col justify-between">
               <div className="space-y-3">
                 <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
                   <Sparkles className="w-5 h-5" />
                 </div>
                 <h4 className="text-lg font-bold text-slate-900 dark:text-white">Smart Auto-Title</h4>
-                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Extracts clean titles from your first line automatically, and resolves duplicate titles seamlessly (`Title (2)`).
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Your first sentence automatically becomes your title. Duplicates like `Meeting (2)` resolve on their own.
                 </p>
               </div>
               <div className="mt-4 p-2.5 rounded-xl bg-amber-500/5 border border-amber-500/20 text-[11px] font-bold text-amber-600 dark:text-amber-400">
-                ✓ Never see "Untitled Note" again
+                ✓ No more blank untitled notes
               </div>
             </div>
 
-            {/* Bento Cell 6: Base64 Multi-Media Attachments (1 column) */}
-            <div className="group relative rounded-3xl p-7 bg-white/90 dark:bg-[#0c1220]/90 border border-slate-200/80 dark:border-slate-800/80 hover:border-pink-500/50 dark:hover:border-pink-400/50 shadow-[0_4px_20px_rgba(0,0,0,0.02)] transition-all flex flex-col justify-between">
+            {/* Bento Cell 6: Photos & Document Attachments (1 column) */}
+            <div className="group relative rounded-3xl p-7 bg-white/90 dark:bg-[#0c1220]/90 border border-slate-200/90 dark:border-slate-800/90 hover:border-pink-500/50 dark:hover:border-pink-400/50 shadow-[0_4px_20px_rgba(0,0,0,0.02)] transition-all flex flex-col justify-between">
               <div className="space-y-3">
                 <div className="w-10 h-10 rounded-xl bg-pink-500/10 text-pink-600 dark:text-pink-400 flex items-center justify-center font-bold">
                   <Paperclip className="w-5 h-5" />
                 </div>
-                <h4 className="text-lg font-bold text-slate-900 dark:text-white">In-Database Files</h4>
-                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Attach images, documents, and assets without configuring public buckets. Direct Base64 encoding.
+                <h4 className="text-lg font-bold text-slate-900 dark:text-white">Photos & Files</h4>
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Attach images, receipts, and PDFs directly into your notes. Fast preview and easy download anytime.
                 </p>
               </div>
               <div className="mt-4 p-2.5 rounded-xl bg-pink-500/5 border border-pink-500/20 text-[11px] font-bold text-pink-600 dark:text-pink-400">
@@ -462,18 +489,18 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
             </div>
 
             {/* Bento Cell 7: Day & Night Ergonomics (1 column) */}
-            <div className="group relative rounded-3xl p-7 bg-white/90 dark:bg-[#0c1220]/90 border border-slate-200/80 dark:border-slate-800/80 hover:border-cyan-500/50 dark:hover:border-cyan-400/50 shadow-[0_4px_20px_rgba(0,0,0,0.02)] transition-all flex flex-col justify-between">
+            <div className="group relative rounded-3xl p-7 bg-white/90 dark:bg-[#0c1220]/90 border border-slate-200/90 dark:border-slate-800/90 hover:border-cyan-500/50 dark:hover:border-cyan-400/50 shadow-[0_4px_20px_rgba(0,0,0,0.02)] transition-all flex flex-col justify-between">
               <div className="space-y-3">
                 <div className="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center font-bold">
                   <Palette className="w-5 h-5" />
                 </div>
-                <h4 className="text-lg font-bold text-slate-900 dark:text-white">OLED Eye-Care</h4>
-                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Crafted for late-night inspiration and bright daylight focus with zero color distortion.
+                <h4 className="text-lg font-bold text-slate-900 dark:text-white">Eye-Care Themes</h4>
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Deep Obsidian Dark mode for late-night focus, and crisp paper Light mode for daylight productivity.
                 </p>
               </div>
               <div className="mt-4 p-2.5 rounded-xl bg-cyan-500/5 border border-cyan-500/20 text-[11px] font-bold text-cyan-600 dark:text-cyan-400">
-                ✓ High-contrast Obsidian Dark
+                ✓ Smooth, comfortable contrast
               </div>
             </div>
 
@@ -481,72 +508,78 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
         </div>
       </section>
 
-      {/* Security Architecture & Rules Deep Dive */}
-      <section id="security" className="py-24 px-6 max-w-6xl mx-auto border-t border-slate-200/60 dark:border-slate-800/80">
+      {/* PRIVACY & SECURITY SECTION (Human & Visual, NO RAW CODE TERMINAL) */}
+      <section id="privacy" className="py-24 px-6 max-w-6xl mx-auto border-t border-slate-200/70 dark:border-slate-800/80">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div className="space-y-6">
             <span className="text-[11px] uppercase font-black tracking-widest text-emerald-600 dark:text-emerald-400">
-              Security Architecture
+              Privacy First
             </span>
             <h3 className="text-3xl md:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
               Your private thoughts remain strictly yours.
             </h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-              Unlike legacy note platforms that store unencrypted plain text in central tables, Glick X Notes executes atomic document validations on every single read and write.
+            <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+              We built Glick X Notes for ourselves first. That means no corporate tracking, no advertisements, and no sharing your personal notes with third parties.
             </p>
 
             <div className="space-y-3 pt-2">
-              <div className="flex items-start gap-3 p-3 rounded-2xl bg-white dark:bg-[#0c1220] border border-slate-200/70 dark:border-slate-800">
+              <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white dark:bg-[#0c1220] border border-slate-200/80 dark:border-slate-800 shadow-xs">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
                 <div className="text-xs text-slate-600 dark:text-slate-300">
-                  <strong className="text-slate-900 dark:text-white block">Cryptographic User Identification</strong>
-                  Requests lacking matching authentication credentials fail immediately at the edge.
+                  <strong className="text-slate-900 dark:text-white block font-bold mb-0.5">Isolated Personal Account</strong>
+                  Only your authenticated login can access your dashboard and notebooks.
                 </div>
               </div>
-              <div className="flex items-start gap-3 p-3 rounded-2xl bg-white dark:bg-[#0c1220] border border-slate-200/70 dark:border-slate-800">
+              <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white dark:bg-[#0c1220] border border-slate-200/80 dark:border-slate-800 shadow-xs">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
                 <div className="text-xs text-slate-600 dark:text-slate-300">
-                  <strong className="text-slate-900 dark:text-white block">Zero Admin Overrides</strong>
-                  Database schemas physically prevent administrative reads on foreign user IDs.
+                  <strong className="text-slate-900 dark:text-white block font-bold mb-0.5">Zero Ads & Zero Trackers</strong>
+                  No cookies tracking your browsing, no marketing popups, ever.
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Clean Terminal Window */}
-          <div className="rounded-2xl border border-slate-800 bg-[#090d16] p-5 shadow-2xl font-mono text-xs text-slate-300">
-            <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-800 text-[10px] text-slate-500 font-bold uppercase tracking-wider">
-              <span>firestore.rules (Edge Security)</span>
-              <span className="text-emerald-400 flex items-center gap-1">
-                <Lock className="w-3 h-3" /> Enforced
-              </span>
+          {/* Clean Visual Privacy Card (Replaced the code terminal!) */}
+          <div className="rounded-3xl border border-slate-200/90 dark:border-slate-800/90 bg-white dark:bg-[#090d16] p-8 shadow-xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-44 h-44 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+            
+            <div className="space-y-6 relative z-10">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                  <Shield className="w-6 h-6" />
+                </div>
+                <div>
+                  <h4 className="text-base font-bold text-slate-900 dark:text-white">Protected Workspace</h4>
+                  <p className="text-xs text-slate-500">Always active & verified</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800 flex items-center justify-between text-xs">
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">Cloud Sync Encryption</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Active
+                  </span>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800 flex items-center justify-between text-xs">
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">Offline Local Storage</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Enabled
+                  </span>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800 flex items-center justify-between text-xs">
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">Third-Party Tracking</span>
+                  <span className="text-slate-400 font-bold">None</span>
+                </div>
+              </div>
             </div>
-            <pre className="text-[11px] leading-relaxed text-slate-400 overflow-x-auto">
-{`rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /notes/{noteId} {
-      // 🔒 User Isolation Gate
-      allow read, update, delete: if request.auth != null 
-        && request.auth.uid == resource.data.userId;
-      allow create: if request.auth != null 
-        && request.auth.uid == request.resource.data.userId;
-      
-      // 📎 Sandboxed Attachments
-      match /attachments/{attachmentId} {
-        allow read, write: if request.auth != null 
-          && get(/databases/$(database)/documents/notes/$(noteId)).data.userId == request.auth.uid;
-      }
-    }
-  }
-}`}
-            </pre>
           </div>
         </div>
       </section>
 
       {/* Accordion FAQ Section */}
-      <section id="faq" className="py-24 px-6 max-w-4xl mx-auto border-t border-slate-200/60 dark:border-slate-800/80">
+      <section id="faq" className="py-24 px-6 max-w-4xl mx-auto border-t border-slate-200/70 dark:border-slate-800/80">
         <div className="space-y-12">
           <div className="text-center space-y-3">
             <span className="text-[11px] uppercase font-black tracking-widest text-indigo-600 dark:text-indigo-400">
@@ -561,7 +594,7 @@ service cloud.firestore {
             {faqs.map((faq, index) => (
               <div 
                 key={index}
-                className="bg-white/80 dark:bg-[#0c1220]/80 border border-slate-200/70 dark:border-slate-800/80 rounded-2xl overflow-hidden transition-all shadow-xs"
+                className="bg-white/90 dark:bg-[#0c1220]/90 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl overflow-hidden transition-all shadow-xs"
               >
                 <button
                   onClick={() => setFaqOpen(faqOpen === index ? null : index)}
@@ -581,7 +614,7 @@ service cloud.firestore {
                       transition={{ duration: 0.2 }}
                       className="overflow-hidden"
                     >
-                      <div className="px-6 pb-5 pt-1 text-xs md:text-sm text-slate-500 dark:text-slate-400 leading-relaxed border-t border-slate-100 dark:border-slate-800/60">
+                      <div className="px-6 pb-5 pt-1 text-xs md:text-sm text-slate-600 dark:text-slate-400 leading-relaxed border-t border-slate-100 dark:border-slate-800/60">
                         {faq.answer}
                       </div>
                     </motion.div>
@@ -600,10 +633,10 @@ service cloud.firestore {
           
           <div className="relative z-10 max-w-2xl mx-auto space-y-6">
             <h3 className="text-3xl md:text-5xl font-black tracking-tight text-white">
-              Ready to elevate how you think and write?
+              Ready to organize your thoughts?
             </h3>
             <p className="text-sm md:text-base text-indigo-200/80 leading-relaxed font-normal">
-              Experience the clarity of a modern visual workspace. Free forever, no credit card required.
+              Experience the clarity of a modern visual workspace. Free forever, no credit card needed.
             </p>
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
               <button
@@ -637,10 +670,10 @@ service cloud.firestore {
           </div>
 
           <div className="flex items-center gap-6 text-xs font-semibold text-slate-500 dark:text-slate-400">
-            <span>React 19</span>
-            <span>TypeScript</span>
-            <span>Firebase 12</span>
-            <span>Tailwind CSS</span>
+            <span>Simple</span>
+            <span>Fast</span>
+            <span>Private</span>
+            <span>Free Forever</span>
           </div>
         </div>
       </footer>
