@@ -50,11 +50,21 @@ const extractFirstImage = (body: string): string | null => {
   return match ? match[1] : null;
 };
 
-const getReadingTime = (body: string) => {
-  const clean = stripHtmlForPreview(body);
-  const words = clean.split(/\s+/).filter(Boolean).length;
-  const minutes = Math.max(1, Math.ceil(words / 180));
-  return `${minutes} min read`;
+const formatRelativeTime = (ts: any): string => {
+  if (!ts) return 'Just now';
+  const date = safeToDate(ts);
+  const now = new Date();
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  if (diffInSeconds < 0 || diffInSeconds < 45) return 'Just now';
+  if (diffInSeconds < 90) return '1 min ago';
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} min ago`;
+  if (diffInSeconds < 7200) return '1 hour ago';
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+  if (diffInSeconds < 172800) return 'Yesterday';
+  if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} days ago`;
+  
+  return format(date, 'MMM d, yyyy');
 };
 
 const getTagDotColor = (tag: string) => {
@@ -137,6 +147,13 @@ export default function Dashboard({
   const [deleting, setDeleting] = useState(false);
   const [activeDropdownNoteId, setActiveDropdownNoteId] = useState<string | null>(null);
   const [isFabVisible, setIsFabVisible] = useState(true);
+
+  // Live auto-refresh relative time stamps every 30 seconds (Just now -> 1 min ago -> 2 min ago)
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => setTick(t => t + 1), 30000);
+    return () => clearInterval(timer);
+  }, []);
 
   // 🌀 Scroll listener: hides FAB with spin on scroll down, reveals on scroll up
   useEffect(() => {
@@ -336,7 +353,6 @@ export default function Dashboard({
   // Render Note Card (Linear / Apple style)
   const renderNoteCard = (note: Note) => {
     const previewImg = note.previewImage || extractFirstImage(note.body);
-    const readingTime = getReadingTime(note.body);
     const previewText = stripHtmlForPreview(note.body);
 
     return (
@@ -449,15 +465,15 @@ export default function Dashboard({
             </div>
           )}
 
-          {/* Metadata: Date & Reading Time */}
+          {/* Metadata: Creation Date & Relative Last Updated */}
           <div className="flex items-center justify-between text-[10px] font-medium text-slate-400 dark:text-slate-500">
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5" title="Creation Date">
               <Calendar className="w-3.5 h-3.5" />
-              <span>{format(safeToDate(note.updatedAt), 'MMM d, yyyy')}</span>
+              <span>{format(safeToDate(note.createdAt || note.updatedAt), 'MMM d, yyyy')}</span>
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5" title="Last Updated">
               <Clock className="w-3.5 h-3.5" />
-              <span>{readingTime}</span>
+              <span>{formatRelativeTime(note.updatedAt)}</span>
             </div>
           </div>
         </div>
@@ -684,7 +700,6 @@ export default function Dashboard({
           <div className="space-y-2.5">
             <AnimatePresence mode="popLayout">
               {filteredNotes.map(note => {
-                const readingTime = getReadingTime(note.body);
                 return (
                   <motion.div
                     key={note.id}
@@ -764,14 +779,17 @@ export default function Dashboard({
                         </div>
                       )}
 
-                      {/* Reading time & Date */}
+                      {/* Date & Updated Relative Time */}
                       <div className="flex items-center gap-3 text-xs font-semibold text-slate-400 dark:text-slate-500">
-                        <span className="flex items-center gap-1.5">
+                        <span className="flex items-center gap-1.5" title="Creation Date">
                           <Calendar className="w-3.5 h-3.5" />
-                          {format(safeToDate(note.updatedAt), 'MMM d')}
+                          {format(safeToDate(note.createdAt || note.updatedAt), 'MMM d')}
                         </span>
                         <span className="hidden sm:inline-block">•</span>
-                        <span>{readingTime}</span>
+                        <span className="flex items-center gap-1.5" title="Last Updated">
+                          <Clock className="w-3.5 h-3.5" />
+                          {formatRelativeTime(note.updatedAt)}
+                        </span>
                       </div>
                     </div>
                   </motion.div>
