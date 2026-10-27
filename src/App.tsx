@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { auth, db } from './firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
@@ -50,15 +50,54 @@ function AppContent() {
     }
   });
 
+  const userRef = useRef<User | null>(null);
+  const isInitialAuthCheck = useRef(true);
+  const authTransitionTimer = useRef<NodeJS.Timeout | null>(null);
+
+  // Unified auth transition animator (guarantees spinner displays first, blocking dashboard)
+  const startAuthTransition = useCallback((type: 'signin' | 'signout', name?: string) => {
+    if (authTransitionTimer.current) clearTimeout(authTransitionTimer.current);
+    if (type === 'signin') sound.playPop();
+    else sound.playSwoosh();
+
+    const targetUser = name || auth.currentUser?.displayName || auth.currentUser?.email?.split('@')[0] || '';
+    setTransitionUser(targetUser);
+    setAuthTransition(type);
+
+    authTransitionTimer.current = setTimeout(() => {
+      setAuthTransition(null);
+      if (type === 'signin') {
+        setView('dashboard');
+        sessionStorage.setItem('glick_notes_view', 'dashboard');
+        window.history.replaceState({ view: 'dashboard', editingNote: null }, '');
+      } else {
+        setView('landing');
+        sessionStorage.setItem('glick_notes_view', 'landing');
+        window.history.replaceState({ view: 'landing', editingNote: null }, '');
+      }
+    }, type === 'signin' ? 1200 : 900);
+  }, []);
+
   useEffect(() => {
     // Safety fallback timeout so the app never hangs indefinitely on cold start/slow network
     const fallbackTimer = setTimeout(() => {
       setLoading(false);
     }, 2500);
 
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       clearTimeout(fallbackTimer);
-      setUser(user);
+      
+      const isInitial = isInitialAuthCheck.current;
+      isInitialAuthCheck.current = false;
+
+      const isFreshSignIn = !isInitial && !!currentUser && !userRef.current;
+      userRef.current = currentUser;
+
+      if (isFreshSignIn) {
+        startAuthTransition('signin', currentUser.displayName || currentUser.email?.split('@')[0] || '');
+      }
+
+      setUser(currentUser);
       
       const savedView = sessionStorage.getItem('glick_notes_view');
       let parsedNote = null;
@@ -69,7 +108,7 @@ function AppContent() {
         console.error("Error parsing editing note on auth change:", e);
       }
 
-      if (user) {
+      if (currentUser) {
         // If logged in, check if the saved view is a valid logged-in view
         if (savedView === 'settings' || savedView === 'editor' || savedView === 'dashboard') {
           setView(savedView as any);
@@ -98,9 +137,10 @@ function AppContent() {
 
     return () => {
       clearTimeout(fallbackTimer);
+      if (authTransitionTimer.current) clearTimeout(authTransitionTimer.current);
       unsubscribe();
     };
-  }, []);
+  }, [startAuthTransition]);
 
   // Listen to user's notes in real-time to compute folder counts for the sidebar
   useEffect(() => {
@@ -187,31 +227,32 @@ function AppContent() {
   }, [view, editingNote]);
 
   // Smooth Sign In transition with centered modal popup and spinner
+  // Smooth Sign In transition with centered modal popup and spinner
   const handleLoginSuccess = useCallback((userName?: string) => {
-    sound.playPop();
-    setTransitionUser(userName || auth.currentUser?.displayName || '');
-    setAuthTransition('signin');
-    setTimeout(() => {
-      setAuthTransition(null);
-      navigateTo('dashboard');
-    }, 1100);
-  }, [navigateTo]);
+    startAuthTransition('signin', userName);
+  }, [startAuthTransition]);
 
   // Smooth Sign Out transition with centered modal popup and spinner
   const handleInitiateSignOut = useCallback(() => {
-    sound.playSwoosh();
-    setAuthTransition('signout');
+    startAuthTransition('signout');
     setTimeout(async () => {
       try {
         await auth.signOut();
-      } finally {
-        setTimeout(() => {
-          setAuthTransition(null);
-          navigateTo('landing');
-        }, 300);
+        sessionStorage.clear();
+      } catch (e) {
+        console.error("Sign out error:", e);
       }
-    }, 900);
-  }, [navigateTo]);
+    }, 700);
+  }, [startAuthTransition]);
+
+  // Priority 1: Auth Transition Modal (blocks Dashboard from appearing until transition completes)
+  if (authTransition === 'signin' || authTransition === 'signout') {
+    return (
+      <div className="min-h-screen bg-[#f8fafc] dark:bg-[#0b0f19] flex items-center justify-center p-4 select-none">
+        <AuthTransitionModal type={authTransition} userName={transitionUser} />
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -305,7 +346,6 @@ function AppContent() {
             onBackToLogin={() => navigateTo('login')} 
           />
         )}
-        <AuthTransitionModal type={authTransition} userName={transitionUser} />
       </AuthLayout>
     );
   }
@@ -380,9 +420,6 @@ function AppContent() {
           navigateTo('editor', { folder: defaultFolder } as any);
         }} 
       />
-
-      {/* Centered Smooth Auth Transition Popup Modal */}
-      <AuthTransitionModal type={authTransition} userName={transitionUser} />
     </div>
   );
 }
