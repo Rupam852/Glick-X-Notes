@@ -715,11 +715,11 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
             </a>
 
             <a
-              href="https://www.instagram.com/rupam_bairagya"
+              href="https://www.instagram.com/_rupambairagya_/"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Instagram Profile"
-              title="Instagram - @rupam_bairagya"
+              title="Instagram - @_rupambairagya_"
               className="p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 text-slate-600 dark:text-slate-300 hover:text-[#E4405F] dark:hover:text-[#E4405F] hover:border-[#E4405F]/40 hover:bg-[#E4405F]/10 transition-all shadow-xs"
             >
               <Instagram className="w-4 h-4" />
