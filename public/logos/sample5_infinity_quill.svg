@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad5" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+
+    <!-- Champagne Gold Gradient -->
+    <linearGradient id="goldGrad5" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="35%" stop-color="#eab308" />
+      <stop offset="70%" stop-color="#ca8a04" />
+      <stop offset="100%" stop-color="#a16207" />
+    </linearGradient>
+
+    <!-- Platinum Silver Gradient -->
+    <linearGradient id="silverGrad5" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#94a3b8" />
+      <stop offset="50%" stop-color="#f1f5f9" />
+      <stop offset="100%" stop-color="#cbd5e1" />
+    </linearGradient>
+
+    <!-- Electric Indigo Glow Gradient -->
+    <linearGradient id="indigoGlow5" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#818cf8" />
+      <stop offset="100%" stop-color="#4f46e5" />
+    </linearGradient>
+
+    <filter id="shadow5" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="14" stdDeviation="20" flood-color="#ca8a04" flood-opacity="0.25" />
+    </filter>
+
+    <filter id="ambient5" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="40" result="blur" />
+    </filter>
+  </defs>
+
+  <!-- Container Tile -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad5)" />
+  <rect width="508" height="508" x="2" y="2" rx="110" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="2" />
+
+  <!-- Soft Gold Ambient Center Lighting -->
+  <circle cx="256" cy="256" r="140" fill="#eab308" opacity="0.12" filter="url(#ambient5)" />
+
+  <!-- Infinity Note & Fountain Nib Composition -->
+  <g filter="url(#shadow5)">
+    <!-- Infinity Ribbon Left Loop (Open Folded Book Spine) -->
+    <path d="M 256,256 
+             C 210,180 140,165 95,205 
+             C 45,250 55,325 110,345 
+             C 165,365 220,320 256,256 Z" 
+          fill="none" 
+          stroke="url(#indigoGlow5)" 
+          stroke-width="36" 
+          stroke-linecap="round" />
+
+    <!-- Infinity Ribbon Right Loop (Flowing into Stylized Pen Nib) -->
+    <path d="M 256,256 
+             C 300,190 365,165 415,205 
+             C 465,250 455,325 400,345 
+             C 345,365 295,320 256,256 Z" 
+          fill="none" 
+          stroke="url(#goldGrad5)" 
+          stroke-width="36" 
+          stroke-linecap="round" />
+
+    <!-- Center Fountain Pen Nib Tip (Crossing the Apex) -->
+    <path d="M 256,120 L 290,195 L 256,230 L 222,195 Z" fill="url(#goldGrad5)" />
+    <!-- Nib Ink Line -->
+    <line x1="256" y1="130" x2="256" y2="185" stroke="#1e293b" stroke-width="4" stroke-linecap="round" />
+    <!-- Nib Breather Hole -->
+    <circle cx="256" cy="188" r="6" fill="#1e293b" />
+    
+    <!-- Accent Platinum Sparkle at the Tip -->
+    <circle cx="256" cy="120" r="8" fill="#ffffff" />
+  </g>
+</svg>

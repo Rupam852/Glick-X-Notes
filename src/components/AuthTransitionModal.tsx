@@ -48,8 +48,7 @@ export default function AuthTransitionModal({ type, userName }: AuthTransitionMo
             style={{ animationDuration: '1.1s' }}
           />
 
-          {/* Inner Circular App Logo */}
-          <div className="relative w-16 h-16 rounded-full p-1 bg-white dark:bg-slate-900 shadow-md border-2 border-slate-100 dark:border-slate-800 flex items-center justify-center z-10">
+          <div className="relative w-16 h-16 rounded-full p-0.5 bg-[#0a0f1d] shadow-md border-2 border-slate-200/80 dark:border-slate-800 flex items-center justify-center z-10">
             <img 
               src="/favicon.png" 
               alt="Glick Logo" 
