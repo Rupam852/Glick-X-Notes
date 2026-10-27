@@ -107,6 +107,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
 
   // --- REFS ---
   const contentRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const fontMenuRef = useRef<HTMLDivElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
   const fontSizeMenuRef = useRef<HTMLDivElement>(null);
@@ -499,18 +500,15 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
 
       if (contentRef.current) {
         contentRef.current.innerHTML = note?.body || '';
-        
-        // Move caret to end
-        contentRef.current.focus();
-        try {
-          const range = document.createRange();
-          const sel = window.getSelection();
-          range.selectNodeContents(contentRef.current);
-          range.collapse(false);
-          sel?.removeAllRanges();
-          sel?.addRange(range);
-        } catch (e) { /* ignore */ }
       }
+
+      // Always reset scroll to the very top so title and note header are cleanly visible
+      requestAnimationFrame(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = 0;
+        }
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' as any });
+      });
     }
   }, [note?.id]);
 
@@ -1992,7 +1990,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
 
   return (
     <div 
-      className="min-h-screen bg-[#f2f4f7] dark:bg-[#0b0f19] flex flex-col relative text-slate-800 dark:text-slate-200 font-sans"
+      className="h-screen overflow-hidden bg-[#f2f4f7] dark:bg-[#0b0f19] flex flex-col relative text-slate-800 dark:text-slate-200 font-sans"
       onDragOver={handleDragOver}
       onDragEnter={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -2911,7 +2909,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         {/* Content Pane with Eye-Care Paper Document Canvas */}
         <div className="flex-1 flex flex-col bg-[#f2f4f7] dark:bg-[#0b0f19] overflow-hidden relative">
           
-          <div className="flex-1 overflow-y-auto no-scrollbar relative px-2 sm:px-4 md:px-8 py-3 md:py-6">
+          <div ref={scrollContainerRef} className="flex-1 overflow-y-auto no-scrollbar relative px-2 sm:px-4 md:px-8 py-3 md:py-6">
             
             {/* Eye-Care Warm Paper Document Sheet */}
             <div className="max-w-4xl mx-auto bg-[#fafbfc] dark:bg-[#111726] rounded-2xl md:rounded-3xl border border-slate-200/70 dark:border-slate-800/80 shadow-[0_2px_16px_rgba(15,23,42,0.03)] p-5 sm:p-8 md:p-12 min-h-[calc(100vh-140px)] transition-colors">
