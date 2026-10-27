@@ -91,7 +91,7 @@ export default function Sidebar({
       <div className="flex items-center gap-3 px-2 pt-1">
         <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-blue-500 p-0.5 shadow-md shadow-indigo-500/20 flex items-center justify-center">
           <div className="w-full h-full bg-[#0a0f1d] dark:bg-slate-950 rounded-[10px] flex items-center justify-center p-1.5 overflow-hidden">
-            <img src="/favicon.png?v=3" alt="Logo" className="w-full h-full object-contain" />
+            <img src="/favicon.png?v=4" alt="Logo" className="w-full h-full object-contain" />
           </div>
         </div>
         <div>

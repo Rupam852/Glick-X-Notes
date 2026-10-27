@@ -107,7 +107,7 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
             {/* Logo & Brand */}
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-[#080d19] dark:bg-slate-950 flex items-center justify-center shadow-md border border-slate-700/60 p-1.5 overflow-hidden shrink-0">
-                <img src="/favicon.png?v=3" alt="Glick X Notes" className="w-full h-full object-contain" />
+                <img src="/favicon.png?v=4" alt="Glick X Notes" className="w-full h-full object-contain" />
               </div>
               <span className="text-base md:text-lg font-black tracking-tight bg-gradient-to-r from-slate-900 via-indigo-900 to-slate-800 dark:from-white dark:via-indigo-200 dark:to-slate-200 bg-clip-text text-transparent">
                 Glick X Notes
@@ -574,7 +574,7 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
           <div className="flex flex-col sm:flex-row items-center gap-3 text-center sm:text-left">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-lg bg-[#080d19] dark:bg-slate-950 flex items-center justify-center shadow-sm border border-slate-700/60 p-1 overflow-hidden shrink-0">
-                <img src="/favicon.png?v=3" alt="Glick X Notes" className="w-full h-full object-contain" />
+                <img src="/favicon.png?v=4" alt="Glick X Notes" className="w-full h-full object-contain" />
               </div>
               <span className="text-sm font-black tracking-tight text-slate-800 dark:text-slate-200">
                 Glick X Notes

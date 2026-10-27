@@ -50,7 +50,7 @@ export default function AuthTransitionModal({ type, userName }: AuthTransitionMo
 
           <div className="relative w-16 h-16 rounded-full p-2 bg-[#080d19] dark:bg-slate-950 shadow-lg border border-slate-700/60 dark:border-slate-800 flex items-center justify-center z-10">
             <img 
-              src="/favicon.png?v=3" 
+              src="/favicon.png?v=4" 
               alt="Glick Logo" 
               className="w-full h-full object-contain select-none filter drop-shadow-[0_2px_8px_rgba(99,102,241,0.4)]" 
             />
