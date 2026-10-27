@@ -48,11 +48,11 @@ export default function AuthTransitionModal({ type, userName }: AuthTransitionMo
             style={{ animationDuration: '1.1s' }}
           />
 
-          <div className="relative w-16 h-16 rounded-full p-0.5 bg-[#0a0f1d] shadow-md border-2 border-slate-200/80 dark:border-slate-800 flex items-center justify-center z-10">
+          <div className="relative w-16 h-16 rounded-full p-2 bg-[#080d19] dark:bg-slate-950 shadow-lg border border-slate-700/60 dark:border-slate-800 flex items-center justify-center z-10">
             <img 
-              src="/favicon.png" 
+              src="/favicon.png?v=3" 
               alt="Glick Logo" 
-              className="w-full h-full object-cover rounded-full select-none" 
+              className="w-full h-full object-contain select-none filter drop-shadow-[0_2px_8px_rgba(99,102,241,0.4)]" 
             />
 
             {/* Corner status icon badge */}

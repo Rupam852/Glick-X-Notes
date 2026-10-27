@@ -281,11 +281,11 @@ function AppContent() {
           {/* Spinning ring */}
           <div className="absolute w-20 h-20 rounded-full border-[3px] border-transparent border-t-indigo-600 border-r-blue-500 animate-spin" />
           {/* Logo center */}
-          <div className="absolute w-13 h-13 rounded-full p-0.5 bg-[#0a0f1d] shadow-md border border-slate-200/90 dark:border-slate-800 flex items-center justify-center">
+          <div className="absolute w-14 h-14 rounded-full p-2 bg-[#080d19] dark:bg-slate-950 shadow-lg border border-slate-700/60 dark:border-slate-800 flex items-center justify-center">
             <img 
-              src="/favicon.png" 
+              src="/favicon.png?v=3" 
               alt="Glick Notes" 
-              className="w-10 h-10 object-cover rounded-full" 
+              className="w-full h-full object-contain filter drop-shadow-[0_2px_8px_rgba(99,102,241,0.4)]" 
             />
           </div>
         </div>

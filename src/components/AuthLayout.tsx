@@ -25,8 +25,8 @@ export default function AuthLayout({ children, title, subtitle }: AuthLayoutProp
       >
         <div className="p-8 md:p-10">
           <div className="flex justify-center mb-6">
-            <div className="w-16 h-16 bg-slate-950 rounded-2xl flex items-center justify-center shadow-lg border border-slate-800/80 overflow-hidden">
-              <img src="/favicon.png" alt="Logo" className="w-full h-full object-cover" />
+            <div className="w-16 h-16 bg-[#080d19] dark:bg-slate-950 rounded-2xl flex items-center justify-center shadow-lg border border-slate-700/60 dark:border-slate-800 p-2.5 overflow-hidden">
+              <img src="/favicon.png?v=3" alt="Logo" className="w-full h-full object-contain filter drop-shadow-[0_2px_8px_rgba(99,102,241,0.35)]" />
             </div>
           </div>
           
