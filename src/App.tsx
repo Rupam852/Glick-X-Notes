@@ -51,7 +51,13 @@ function AppContent() {
   });
 
   useEffect(() => {
+    // Safety fallback timeout so the app never hangs indefinitely on cold start/slow network
+    const fallbackTimer = setTimeout(() => {
+      setLoading(false);
+    }, 2500);
+
     const unsubscribe = onAuthStateChanged(auth, (user) => {
+      clearTimeout(fallbackTimer);
       setUser(user);
       
       const savedView = sessionStorage.getItem('glick_notes_view');
@@ -90,7 +96,10 @@ function AppContent() {
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      clearTimeout(fallbackTimer);
+      unsubscribe();
+    };
   }, []);
 
   // Listen to user's notes in real-time to compute folder counts for the sidebar
@@ -206,8 +215,24 @@ function AppContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f2f4f7] dark:bg-[#0b0f19] flex items-center justify-center p-4">
-        <AuthTransitionModal type="signin" userName="" />
+      <div className="min-h-screen bg-[#f8fafc] dark:bg-[#0b0f19] flex flex-col items-center justify-center p-4 select-none">
+        <div className="relative flex items-center justify-center mb-5">
+          {/* Subtle static track */}
+          <div className="w-20 h-20 rounded-full border border-slate-200/80 dark:border-slate-800" />
+          {/* Spinning ring */}
+          <div className="absolute w-20 h-20 rounded-full border-[3px] border-transparent border-t-indigo-600 border-r-blue-500 animate-spin" />
+          {/* Logo center */}
+          <div className="absolute w-13 h-13 rounded-full p-1 bg-white dark:bg-slate-900 shadow-md border border-slate-200/90 dark:border-slate-800 flex items-center justify-center">
+            <img 
+              src="/favicon.png" 
+              alt="Glick Notes" 
+              className="w-10 h-10 object-cover rounded-full" 
+            />
+          </div>
+        </div>
+        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 tracking-wider uppercase animate-pulse">
+          Loading Glick Notes...
+        </p>
       </div>
     );
   }
