@@ -26,7 +26,12 @@ import {
   Smile,
   ListTodo,
   Quote,
-  Lightbulb
+  Lightbulb,
+  Linkedin,
+  Instagram,
+  Github,
+  Mail,
+  X
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { sound } from '../utils/sound';
@@ -39,6 +44,7 @@ interface LandingPageProps {
 export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
   const { theme, toggleTheme } = useTheme();
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
+  const [activeModal, setActiveModal] = useState<'privacy' | 'terms' | null>(null);
 
   // Guarantee that Landing Page always loads at top (hero section)
   useEffect(() => {
@@ -658,25 +664,225 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
 
       {/* Clean Modern Footer */}
       <footer className="border-t border-slate-200/70 dark:border-slate-900/80 bg-white/60 dark:bg-[#070b14]/60 backdrop-blur-md">
-        <div className="max-w-6xl mx-auto px-6 py-12 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-[#080d19] dark:bg-slate-950 flex items-center justify-center shadow-sm border border-slate-700/60 p-1 overflow-hidden shrink-0">
-              <img src="/favicon.png?v=3" alt="Glick X Notes" className="w-full h-full object-contain" />
+        <div className="max-w-6xl mx-auto px-6 py-10 flex flex-col md:flex-row items-center justify-between gap-6">
+          
+          {/* Brand & Author */}
+          <div className="flex flex-col sm:flex-row items-center gap-3 text-center sm:text-left">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-[#080d19] dark:bg-slate-950 flex items-center justify-center shadow-sm border border-slate-700/60 p-1 overflow-hidden shrink-0">
+                <img src="/favicon.png?v=3" alt="Glick X Notes" className="w-full h-full object-contain" />
+              </div>
+              <span className="text-sm font-black tracking-tight text-slate-800 dark:text-slate-200">
+                Glick X Notes
+              </span>
             </div>
-            <span className="text-sm font-black tracking-tight text-slate-800 dark:text-slate-200">
-              Glick X Notes
+            <span className="hidden sm:inline text-slate-300 dark:text-slate-700">•</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">
+              Crafted by{' '}
+              <a 
+                href="https://github.com/Rupam852" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
+              >
+                Rupam Bairagya
+              </a>
             </span>
-            <span className="text-xs text-slate-400">© 2026. Free & Open Source.</span>
           </div>
 
-          <div className="flex items-center gap-6 text-xs font-semibold text-slate-500 dark:text-slate-400">
-            <span>Simple</span>
-            <span>Fast</span>
-            <span>Private</span>
-            <span>Free Forever</span>
+          {/* Social Profiles & Support Email */}
+          <div className="flex flex-wrap items-center justify-center gap-2.5">
+            <a
+              href="https://www.linkedin.com/in/rupam-bairagya"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="LinkedIn Profile"
+              title="LinkedIn - Rupam Bairagya"
+              className="p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 text-slate-600 dark:text-slate-300 hover:text-[#0A66C2] dark:hover:text-[#0A66C2] hover:border-[#0A66C2]/40 hover:bg-[#0A66C2]/10 transition-all shadow-xs"
+            >
+              <Linkedin className="w-4 h-4" />
+            </a>
+
+            <a
+              href="https://github.com/Rupam852"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="GitHub Profile"
+              title="GitHub - Rupam852"
+              className="p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 text-slate-600 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white hover:border-slate-400/40 hover:bg-slate-200/50 dark:hover:bg-slate-800/80 transition-all shadow-xs"
+            >
+              <Github className="w-4 h-4" />
+            </a>
+
+            <a
+              href="https://www.instagram.com/rupam_bairagya"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Instagram Profile"
+              title="Instagram - @rupam_bairagya"
+              className="p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 text-slate-600 dark:text-slate-300 hover:text-[#E4405F] dark:hover:text-[#E4405F] hover:border-[#E4405F]/40 hover:bg-[#E4405F]/10 transition-all shadow-xs"
+            >
+              <Instagram className="w-4 h-4" />
+            </a>
+
+            <a
+              href="mailto:rupambairagya08@gmail.com"
+              aria-label="Contact Support"
+              title="Support: rupambairagya08@gmail.com"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-500/40 hover:bg-indigo-500/10 transition-all shadow-xs"
+            >
+              <Mail className="w-3.5 h-3.5 text-indigo-500" />
+              <span>Contact Support</span>
+            </a>
+          </div>
+
+          {/* Legal Modals Links */}
+          <div className="flex items-center gap-4 text-xs font-semibold text-slate-500 dark:text-slate-400">
+            <button
+              onClick={() => setActiveModal('privacy')}
+              className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors underline-offset-4 hover:underline cursor-pointer"
+            >
+              Privacy Policy
+            </button>
+            <span className="text-slate-300 dark:text-slate-700">•</span>
+            <button
+              onClick={() => setActiveModal('terms')}
+              className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors underline-offset-4 hover:underline cursor-pointer"
+            >
+              Terms & Conditions
+            </button>
           </div>
         </div>
       </footer>
+
+      {/* Privacy Policy & Terms & Conditions Popup Modal */}
+      <AnimatePresence>
+        {activeModal && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 sm:p-6 bg-slate-950/70 backdrop-blur-md">
+            {/* Modal Card */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ duration: 0.2 }}
+              className="relative w-full max-w-2xl max-h-[85vh] bg-white dark:bg-[#0c1322] border border-slate-200 dark:border-slate-800/90 rounded-3xl shadow-2xl flex flex-col overflow-hidden"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/50">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold">
+                    {activeModal === 'privacy' ? <Shield className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+                      {activeModal === 'privacy' ? 'Privacy Policy' : 'Terms & Conditions'}
+                    </h3>
+                    <p className="text-[11px] text-slate-400">
+                      Glick X Notes · Last Updated: October 2026
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setActiveModal(null)}
+                  className="p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                  aria-label="Close Modal"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Scrollable Content */}
+              <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                {activeModal === 'privacy' ? (
+                  <>
+                    <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 flex items-center gap-2.5">
+                      <Lock className="w-4 h-4 shrink-0 text-emerald-500" />
+                      <span className="font-semibold text-xs">Zero Tracking Pledge: Your notes and personal data are strictly yours. We do not track, profile, or sell your information.</span>
+                    </div>
+
+                    <div>
+                      <h4 className="font-bold text-slate-900 dark:text-white mb-1.5 text-sm sm:text-base">1. Information Collection</h4>
+                      <p>Glick X Notes collects only the minimal data essential to provide the service: your authenticated account email/UID and the notes, attachments, tags, and folder categories you create.</p>
+                    </div>
+
+                    <div>
+                      <h4 className="font-bold text-slate-900 dark:text-white mb-1.5 text-sm sm:text-base">2. Strict Zero-Trust Data Isolation</h4>
+                      <p>All database reads and writes are cryptographically restricted to your authenticated user account via Firebase Firestore Security Rules. Nobody—including other registered users—can access or query your notes.</p>
+                    </div>
+
+                    <div>
+                      <h4 className="font-bold text-slate-900 dark:text-white mb-1.5 text-sm sm:text-base">3. Local Storage & Offline Cache</h4>
+                      <p>Your notes and preferences (such as dark/light theme) are cached locally in your device's browser memory (IndexedDB/LocalStorage) to empower seamless offline editing. This local data never leaves your device without your explicit sync.</p>
+                    </div>
+
+                    <div>
+                      <h4 className="font-bold text-slate-900 dark:text-white mb-1.5 text-sm sm:text-base">4. Media & Attachment Storage</h4>
+                      <p>Images, screenshots, and document attachments are stored as secure sandboxed Base64 data chunks within isolated sub-collections under your personal account hierarchy.</p>
+                    </div>
+
+                    <div>
+                      <h4 className="font-bold text-slate-900 dark:text-white mb-1.5 text-sm sm:text-base">5. Your Rights & Data Deletion</h4>
+                      <p>You maintain complete ownership of your content. You can edit, archive, or permanently delete any note or attachment at any time. When you delete a note, it is permanently purged.</p>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                      <p className="text-xs text-slate-400">
+                        For any privacy-related inquiries or assistance, contact developer <strong className="text-slate-600 dark:text-slate-300">Rupam Bairagya</strong> at <a href="mailto:rupambairagya08@gmail.com" className="text-indigo-500 underline font-semibold">rupambairagya08@gmail.com</a>.
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-700 dark:text-indigo-300 flex items-center gap-2.5">
+                      <Sparkles className="w-4 h-4 shrink-0 text-indigo-500" />
+                      <span className="font-semibold text-xs">Free, open-source personal workspace designed for modern productivity and peace of mind.</span>
+                    </div>
+
+                    <div>
+                      <h4 className="font-bold text-slate-900 dark:text-white mb-1.5 text-sm sm:text-base">1. Acceptance of Terms</h4>
+                      <p>By accessing Glick X Notes or creating an account, you agree to these Terms and Conditions. If you disagree with any portion, please discontinue use of the application.</p>
+                    </div>
+
+                    <div>
+                      <h4 className="font-bold text-slate-900 dark:text-white mb-1.5 text-sm sm:text-base">2. 100% Intellectual Property Rights</h4>
+                      <p>You retain 100% full ownership, copyright, and intellectual property rights over any notes, documents, attachments, and ideas you write or store in Glick X Notes.</p>
+                    </div>
+
+                    <div>
+                      <h4 className="font-bold text-slate-900 dark:text-white mb-1.5 text-sm sm:text-base">3. Acceptable Use</h4>
+                      <p>You agree to use Glick X Notes lawfully and ethically. You may not attempt to reverse-engineer, exploit security rules, or distribute malicious or harmful materials using the platform.</p>
+                    </div>
+
+                    <div>
+                      <h4 className="font-bold text-slate-900 dark:text-white mb-1.5 text-sm sm:text-base">4. Availability & Warranty Disclaimer</h4>
+                      <p>Glick X Notes is provided "as is" and "as available" without warranties of any kind. While we strive for 100% uptime and offline data resilience, we recommend keeping regular backups of critical information.</p>
+                    </div>
+
+                    <div>
+                      <h4 className="font-bold text-slate-900 dark:text-base mb-1.5 text-sm sm:text-base">5. Contact & Inquiries</h4>
+                      <p>Glick X Notes is maintained by Rupam Bairagya. If you have questions regarding these terms, please contact <a href="mailto:rupambairagya08@gmail.com" className="text-indigo-500 underline font-semibold">rupambairagya08@gmail.com</a>.</p>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between">
+                <span className="text-[11px] text-slate-400">
+                  © 2026 Glick X Notes · Crafted with care
+                </span>
+                <button
+                  onClick={() => setActiveModal(null)}
+                  className="px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 font-bold text-xs transition-colors cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
     </div>
   );
