@@ -33,33 +33,41 @@ export default function AuthTransitionModal({ type, userName }: AuthTransitionMo
           }`} 
         />
 
-        {/* Central Icon with rotating spinner ring */}
-        <div className="relative flex items-center justify-center pt-2">
-          {/* Rotating outer gradient spinner */}
+        {/* Central Round App Logo with Outer Rotating Spinner */}
+        <div className="relative flex items-center justify-center pt-2 pb-1">
+          {/* Subtle static circular track */}
+          <div className="absolute w-24 h-24 rounded-full border border-slate-200/60 dark:border-slate-800/80" />
+
+          {/* Rotating outer spinner ring around the round logo */}
           <div 
-            className={`absolute w-20 h-20 rounded-3xl border-2 border-transparent animate-spin ${
+            className={`absolute w-24 h-24 rounded-full border-[3px] border-transparent animate-spin ${
               isSignOut 
-                ? 'border-t-rose-500 border-r-amber-500/50' 
-                : 'border-t-indigo-600 border-r-blue-500 border-b-purple-500/40'
+                ? 'border-t-rose-500 border-r-amber-500/70 border-b-rose-400/20' 
+                : 'border-t-indigo-600 border-r-blue-500 border-b-purple-500/30'
             }`} 
-            style={{ animationDuration: '1.2s' }}
+            style={{ animationDuration: '1.1s' }}
           />
 
-          {/* Inner badge */}
-          <div 
-            className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-inner relative z-10 ${
-              isSignOut 
-                ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-900/40' 
-                : 'bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-900/40'
-            }`}
-          >
-            {isSignOut ? (
-              <LogOut className="w-7 h-7" />
-            ) : (
-              <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
-                <img src="/favicon.png" alt="Logo" className="w-full h-full object-cover" />
-              </div>
-            )}
+          {/* Inner Circular App Logo */}
+          <div className="relative w-16 h-16 rounded-full p-1 bg-white dark:bg-slate-900 shadow-md border-2 border-slate-100 dark:border-slate-800 flex items-center justify-center z-10">
+            <img 
+              src="/favicon.png" 
+              alt="Glick Logo" 
+              className="w-full h-full object-cover rounded-full select-none" 
+            />
+
+            {/* Corner status icon badge */}
+            <div 
+              className={`absolute -bottom-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center shadow-md border-2 border-white dark:border-[#101726] ${
+                isSignOut ? 'bg-rose-500 text-white' : 'bg-indigo-600 text-white'
+              }`}
+            >
+              {isSignOut ? (
+                <LogOut className="w-3 h-3 stroke-[2.5]" />
+              ) : (
+                <Sparkles className="w-3 h-3 fill-white" />
+              )}
+            </div>
           </div>
         </div>
 
