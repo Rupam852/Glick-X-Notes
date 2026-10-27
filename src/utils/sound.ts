@@ -21,8 +21,9 @@ class SoundEffects {
   }
 
   public isEnabled(): boolean {
-    if (typeof window === 'undefined') return true;
-    return localStorage.getItem('glick_sound_enabled') !== 'false';
+    if (typeof window === 'undefined') return false;
+    // Sound effects are completely turned OFF by default
+    return localStorage.getItem('glick_sound_enabled') === 'true';
   }
 
   public setEnabled(enabled: boolean) {
