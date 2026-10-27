@@ -76,7 +76,19 @@ export default function SignupForm({ onSwitchToLogin, onSuccess }: SignupFormPro
 
       onSuccess(displayName || email.split('@')[0]);
     } catch (err: any) {
-      setError(err.message || 'Signup failed');
+      if (err.code === 'auth/email-already-in-use') {
+        setError('An account with this email already exists. Please sign in instead.');
+      } else if (err.code === 'auth/invalid-email') {
+        setError('Invalid email address format.');
+      } else if (err.code === 'auth/weak-password') {
+        setError('Password should be at least 6 characters.');
+      } else if (err.code === 'auth/network-request-failed') {
+        setError('Network error. Please check your internet connection.');
+      } else if (err.code === 'auth/too-many-requests') {
+        setError('Too many attempts. Please try again after a few minutes.');
+      } else {
+        setError(err.message || 'Signup failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -203,10 +215,21 @@ export default function SignupForm({ onSwitchToLogin, onSuccess }: SignupFormPro
           <motion.div 
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
-            className="flex items-center gap-2.5 text-red-400 text-sm bg-red-950/20 border border-red-900/40 p-3.5 rounded-xl"
+            className="flex items-center justify-between gap-3 text-red-400 text-xs sm:text-sm bg-red-950/30 border border-red-900/50 p-3.5 rounded-xl"
           >
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
-            <p>{error}</p>
+            <div className="flex items-center gap-2.5">
+              <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+              <p>{error}</p>
+            </div>
+            {error.includes('already exists') && (
+              <button
+                type="button"
+                onClick={onSwitchToLogin}
+                className="shrink-0 px-2.5 py-1 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg transition-colors cursor-pointer"
+              >
+                Sign In
+              </button>
+            )}
           </motion.div>
         )}
 
