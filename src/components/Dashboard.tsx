@@ -150,6 +150,19 @@ export default function Dashboard({
     }
   };
 
+  const handleUpdateNoteFolder = async (e: React.ChangeEvent<HTMLSelectElement>, note: Note) => {
+    e.stopPropagation();
+    const newFolder = e.target.value;
+    setNotes(prev => prev.map(n => n.id === note.id ? { ...n, folder: newFolder } : n));
+    try {
+      await setDoc(doc(db, 'notes', note.id), {
+        folder: newFolder
+      }, { merge: true });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `notes/${note.id}`);
+    }
+  };
+
   // Extract all unique tags
   const allTags = Array.from(new Set(notes.flatMap(n => n.tags || [])));
 
@@ -248,7 +261,22 @@ export default function Dashboard({
               {highlightText(note.title || 'Untitled Note', search)}
             </h3>
 
-            <div className="flex items-center gap-1 shrink-0">
+            <div className="flex items-center gap-1.5 shrink-0">
+              {/* Quick folder select */}
+              <select
+                value={note.folder || 'all'}
+                onClick={(e) => e.stopPropagation()}
+                onChange={(e) => handleUpdateNoteFolder(e, note)}
+                className="text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg px-2 py-1 border border-slate-200/60 dark:border-slate-700 outline-none cursor-pointer hover:border-indigo-400 max-w-[95px] truncate"
+                title="Move note to folder"
+              >
+                <option value="all">📁 General</option>
+                <option value="work">💼 Work</option>
+                <option value="personal">💚 Personal</option>
+                <option value="ideas">💡 Ideas</option>
+                <option value="archive">📦 Archive</option>
+              </select>
+
               {/* Pin button */}
               <button
                 onClick={(e) => handleTogglePin(e, note)}
@@ -592,7 +620,21 @@ export default function Dashboard({
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-3 pl-3 sm:pl-0 shrink-0">
+                    <div className="flex flex-wrap items-center gap-2.5 pl-3 sm:pl-0 shrink-0">
+                      {/* Quick folder select in list view */}
+                      <select
+                        value={note.folder || 'all'}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => handleUpdateNoteFolder(e, note)}
+                        className="text-[9px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg px-2 py-0.5 border border-slate-200/60 dark:border-slate-700 outline-none cursor-pointer hover:border-indigo-400"
+                        title="Move note to folder"
+                      >
+                        <option value="all">📁 General</option>
+                        <option value="work">💼 Work</option>
+                        <option value="personal">💚 Personal</option>
+                        <option value="ideas">💡 Ideas</option>
+                        <option value="archive">📦 Archive</option>
+                      </select>
                       {/* Tags */}
                       {note.tags && note.tags.length > 0 && (
                         <div className="flex gap-1">

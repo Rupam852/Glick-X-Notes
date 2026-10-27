@@ -7,7 +7,8 @@ import {
   ArrowLeft, Save, Trash2, Paperclip, X, Download, FileText, Image as ImageIcon, Plus, Tag, Check, 
   Bold, Italic, List, ListOrdered, Link, Heading1, Heading2, Heading3, Quote, Undo, Redo, UploadCloud, 
   ChevronDown, ChevronUp, Underline, Strikethrough, Eraser, Type, AlignLeft, AlignCenter, AlignRight, 
-  CheckSquare, Table, Search, Replace, GripVertical, Info, Clock, Highlighter, Minus
+  CheckSquare, Table, Search, Replace, GripVertical, Info, Clock, Highlighter, Minus,
+  Folder, Briefcase, Heart, Lightbulb, Archive
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useToast } from '../contexts/ToastContext';
@@ -101,6 +102,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   const [title, setTitle] = useState(note?.title || '');
   const [body, setBody] = useState(note?.body || '');
   const [tags, setTags] = useState(note?.tags?.join(', ') || '');
+  const [folder, setFolder] = useState<string>(note?.folder || 'all');
   const [color, setColor] = useState(note?.color || COLORS[0].value);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [saving, setSaving] = useState(false);
@@ -111,6 +113,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     title: note?.title || '',
     body: note?.body || '',
     tags: note?.tags?.join(', ') || '',
+    folder: note?.folder || 'all',
     color: note?.color || COLORS[0].value
   });
 
@@ -452,6 +455,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       setTitle(note?.title || '');
       setBody(note?.body || '');
       setTags(note?.tags?.join(', ') || '');
+      setFolder(note?.folder || 'all');
       setColor(note?.color || COLORS[0].value);
       setLastSaved(note ? new Date() : null);
       
@@ -464,6 +468,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         title: note?.title || '',
         body: note?.body || '',
         tags: note?.tags?.join(', ') || '',
+        folder: note?.folder || 'all',
         color: note?.color || COLORS[0].value
       });
 
@@ -1645,6 +1650,8 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       body: currentBody,
       tags: tags.split(',').map(t => t.trim()).filter(t => t),
       color,
+      folder: folder || 'all',
+      pinned: note?.pinned || false,
       updatedAt: serverTimestamp(),
       ...(isNewNote ? { createdAt: serverTimestamp() } : {})
     };
@@ -1653,7 +1660,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       await setDoc(doc(db, 'notes', noteId), noteData, { merge: true });
       const now = new Date();
       setLastSaved(now);
-      setLastSavedSnapshot({ title: finalTitle, body: currentBody, tags, color });
+      setLastSavedSnapshot({ title: finalTitle, body: currentBody, tags, folder, color });
       
       if (onSave) {
         onSave({
@@ -1663,6 +1670,8 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
           body: currentBody,
           tags: tags.split(',').map(t => t.trim()).filter(t => t),
           color,
+          folder: folder || 'all',
+          pinned: note?.pinned || false,
           createdAt: note?.createdAt || Timestamp.fromDate(now),
           updatedAt: Timestamp.fromDate(now)
         });
@@ -1678,7 +1687,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     } finally {
       setSaving(false);
     }
-  }, [currentNoteId, title, tags, color, user, showToast, onSave, note]);
+  }, [currentNoteId, title, tags, folder, color, user, showToast, onSave, note]);
 
   // Unsaved Changes check
   const hasUnsavedChanges = useMemo(() => {
@@ -1687,9 +1696,10 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       title !== lastSavedSnapshot.title ||
       currentBody !== lastSavedSnapshot.body ||
       tags !== lastSavedSnapshot.tags ||
+      folder !== lastSavedSnapshot.folder ||
       color !== lastSavedSnapshot.color
     );
-  }, [title, body, tags, color, lastSavedSnapshot]);
+  }, [title, body, tags, folder, color, lastSavedSnapshot]);
 
   // Auto-save debounced effect
   useEffect(() => {
@@ -1762,7 +1772,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         await setDoc(newDocRef, noteData);
         setCurrentNoteId(targetNoteId);
         setLastSaved(new Date());
-        setLastSavedSnapshot({ title: finalTitle, body: noteData.body, tags, color });
+        setLastSavedSnapshot({ title: finalTitle, body: noteData.body, tags, folder, color });
       } catch (error) {
         handleFirestoreError(error, OperationType.WRITE, `notes/${targetNoteId}`);
         showToast('Failed to create note for attachment', 'error');
@@ -2054,6 +2064,22 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                   Draft
                 </span>
               )}
+            </div>
+
+            {/* Notebook / Folder Selector Pill */}
+            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 rounded-full shrink-0">
+              <Folder className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+              <select
+                value={folder}
+                onChange={(e) => setFolder(e.target.value)}
+                className="bg-transparent text-[10px] md:text-xs font-bold text-slate-700 dark:text-slate-300 outline-none cursor-pointer"
+              >
+                <option value="all" className="bg-white dark:bg-slate-900">📁 All Notes</option>
+                <option value="work" className="bg-white dark:bg-slate-900">💼 Work & Projects</option>
+                <option value="personal" className="bg-white dark:bg-slate-900">💚 Personal & Life</option>
+                <option value="ideas" className="bg-white dark:bg-slate-900">💡 Ideas & Brainstorm</option>
+                <option value="archive" className="bg-white dark:bg-slate-900">📦 Archive</option>
+              </select>
             </div>
           </div>
 
@@ -2705,6 +2731,23 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                           {color === c.value && <Check className="w-3 h-3 text-white" />}
                         </button>
                       ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Notebook / Folder</label>
+                    <div className="relative">
+                      <select
+                        value={folder}
+                        onChange={(e) => setFolder(e.target.value)}
+                        className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 text-xs font-semibold text-slate-800 dark:text-slate-200 px-3 py-2 rounded-xl outline-none cursor-pointer hover:border-indigo-500 transition-colors"
+                      >
+                        <option value="all">📁 All Notes / General</option>
+                        <option value="work">💼 Work & Projects</option>
+                        <option value="personal">💚 Personal & Life</option>
+                        <option value="ideas">💡 Ideas & Brainstorm</option>
+                        <option value="archive">📦 Archive</option>
+                      </select>
                     </div>
                   </div>
 

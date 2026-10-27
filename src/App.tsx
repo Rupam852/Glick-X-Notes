@@ -334,7 +334,10 @@ function AppContent() {
           <Dashboard 
             user={user}
             onEditNote={(note) => navigateTo('editor', note)}
-            onNewNote={() => navigateTo('editor', null)}
+            onNewNote={() => {
+              const defaultFolder = (selectedFolder !== 'all' && selectedFolder !== 'pinned') ? selectedFolder : 'all';
+              navigateTo('editor', { folder: defaultFolder } as any);
+            }}
             selectedFolder={selectedFolder}
             onFolderChange={(f) => setSelectedFolder(f)}
           />
@@ -347,7 +350,10 @@ function AppContent() {
       <BottomNav 
         activeView={view} 
         onViewChange={(v) => navigateTo(v)} 
-        onNewNote={() => navigateTo('editor', null)} 
+        onNewNote={() => {
+          const defaultFolder = (selectedFolder !== 'all' && selectedFolder !== 'pinned') ? selectedFolder : 'all';
+          navigateTo('editor', { folder: defaultFolder } as any);
+        }} 
       />
 
       {/* Centered Smooth Auth Transition Popup Modal */}
