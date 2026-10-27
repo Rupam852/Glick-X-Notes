@@ -43,7 +43,8 @@ import {
   Link,
   Tag
 } from 'lucide-react';
-
+import { useTheme } from '../contexts/ThemeContext';
+import { sound } from '../utils/sound';
 
 interface LandingPageProps {
   onLogin: () => void;
@@ -51,6 +52,7 @@ interface LandingPageProps {
 }
 
 export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
+  const { theme, toggleTheme } = useTheme();
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
 
 
@@ -78,7 +80,7 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-slate-100/30 to-white dark:bg-none dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-500 font-sans overflow-x-hidden selection:bg-indigo-500 selection:text-white relative">
+    <div className="min-h-screen bg-[#f2f4f7] dark:bg-[#0b0f19] text-slate-800 dark:text-slate-100 transition-colors duration-300 font-sans overflow-x-hidden selection:bg-indigo-500 selection:text-white relative">
       {/* Premium Background Grid Overlay */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none -z-20" />
       
@@ -88,7 +90,7 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
       <div className="absolute bottom-1/4 left-10 w-[500px] h-[500px] bg-emerald-300/20 dark:bg-emerald-900/5 rounded-full blur-[120px] pointer-events-none -z-10" />
 
       {/* Navigation */}
-      <header className="sticky top-0 z-50 backdrop-blur-xl bg-white/70 dark:bg-slate-950/70 border-b border-slate-200/50 dark:border-slate-800/40 transition-colors">
+      <header className="sticky top-0 z-50 backdrop-blur-xl bg-[#fafbfc]/85 dark:bg-[#0c1220]/85 border-b border-slate-200/70 dark:border-slate-800/60 transition-colors">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-2 md:gap-3">
             <div className="w-8 h-8 md:w-10 md:h-10 bg-slate-950 rounded-lg md:rounded-xl flex items-center justify-center shadow-lg border border-slate-800/80 overflow-hidden shrink-0">
@@ -105,19 +107,34 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
             <a href="#faq" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">FAQs</a>
           </nav>
 
-          <div className="flex items-center gap-2 md:gap-4 shrink-0">
-
+          <div className="flex items-center gap-2 md:gap-3 shrink-0">
+            {/* ☀️/🌙 Dedicated Light & Dark Mode Toggle Button */}
+            <button
+              onClick={() => {
+                sound.playPop();
+                toggleTheme();
+              }}
+              className="p-2 md:p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-[#fafbfc] dark:bg-slate-900/80 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition-all cursor-pointer shadow-xs flex items-center justify-center shrink-0"
+              title={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`}
+              aria-label="Toggle theme"
+            >
+              {theme === 'light' ? (
+                <Moon className="w-4 h-4 text-slate-700 hover:text-indigo-600 transition-transform duration-200 hover:-rotate-12" />
+              ) : (
+                <Sun className="w-4 h-4 text-amber-400 hover:text-amber-300 transition-transform duration-200 hover:rotate-45" />
+              )}
+            </button>
 
             {/* Auth CTAs */}
             <button 
               onClick={onLogin}
-              className="inline-flex text-xs md:text-sm font-semibold text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 px-2 md:px-4 py-2 transition-colors cursor-pointer shrink-0"
+              className="inline-flex text-xs md:text-sm font-bold text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 px-2 md:px-3 py-2 transition-colors cursor-pointer shrink-0"
             >
               Sign In
             </button>
             <button 
               onClick={onSignup}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs md:text-sm font-semibold px-3 py-2 md:px-5 md:py-2.5 rounded-lg md:rounded-xl shadow-lg shadow-indigo-500/20 hover:shadow-xl hover:shadow-indigo-500/30 transition-all flex items-center gap-1 cursor-pointer shrink-0"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs md:text-sm font-bold px-3 py-2 md:px-5 md:py-2.5 rounded-xl shadow-lg shadow-indigo-500/20 hover:shadow-xl hover:shadow-indigo-500/30 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
             >
               Get Started
               <ArrowRight className="w-3.5 h-3.5 md:w-4 md:h-4" />
@@ -209,7 +226,7 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {/* Feature 1 */}
-            <div className="group bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 hover:border-indigo-500/40 dark:hover:border-indigo-500/40 rounded-2xl p-8 hover:shadow-xl hover:shadow-indigo-500/[0.02] transition-all duration-300">
+            <div className="group bg-[#fafbfc] dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800/60 hover:border-indigo-500/40 dark:hover:border-indigo-500/40 rounded-2xl p-8 hover:shadow-xl hover:shadow-indigo-500/[0.02] transition-all duration-300">
               <div className="p-3 bg-indigo-50 dark:bg-indigo-950/50 w-12 h-12 rounded-xl text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <Lock className="w-6 h-6" />
               </div>
@@ -220,7 +237,7 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
             </div>
 
             {/* Feature 2 */}
-            <div className="group bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 hover:border-pink-500/40 dark:hover:border-pink-500/40 rounded-2xl p-8 hover:shadow-xl hover:shadow-pink-500/[0.02] transition-all duration-300">
+            <div className="group bg-[#fafbfc] dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800/60 hover:border-pink-500/40 dark:hover:border-pink-500/40 rounded-2xl p-8 hover:shadow-xl hover:shadow-pink-500/[0.02] transition-all duration-300">
               <div className="p-3 bg-pink-50 dark:bg-pink-950/50 w-12 h-12 rounded-xl text-pink-600 dark:text-pink-400 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <Zap className="w-6 h-6" />
               </div>
@@ -231,7 +248,7 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
             </div>
 
             {/* Feature 3 */}
-            <div className="group bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 hover:border-emerald-500/40 dark:hover:border-emerald-500/40 rounded-2xl p-8 hover:shadow-xl hover:shadow-emerald-500/[0.02] transition-all duration-300">
+            <div className="group bg-[#fafbfc] dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800/60 hover:border-emerald-500/40 dark:hover:border-emerald-500/40 rounded-2xl p-8 hover:shadow-xl hover:shadow-emerald-500/[0.02] transition-all duration-300">
               <div className="p-3 bg-emerald-50 dark:bg-emerald-950/50 w-12 h-12 rounded-xl text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <Cloud className="w-6 h-6" />
               </div>
@@ -242,7 +259,7 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
             </div>
 
             {/* Feature 4 */}
-            <div className="group bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 hover:border-purple-500/40 dark:hover:border-purple-500/40 rounded-2xl p-8 hover:shadow-xl hover:shadow-purple-500/[0.02] transition-all duration-300">
+            <div className="group bg-[#fafbfc] dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800/60 hover:border-purple-500/40 dark:hover:border-purple-500/40 rounded-2xl p-8 hover:shadow-xl hover:shadow-purple-500/[0.02] transition-all duration-300">
               <div className="p-3 bg-purple-50 dark:bg-purple-950/50 w-12 h-12 rounded-xl text-purple-600 dark:text-purple-400 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <FileText className="w-6 h-6" />
               </div>
@@ -253,7 +270,7 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
             </div>
 
             {/* Feature 5 */}
-            <div className="group bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 hover:border-amber-500/40 dark:hover:border-amber-500/40 rounded-2xl p-8 hover:shadow-xl hover:shadow-amber-500/[0.02] transition-all duration-300">
+            <div className="group bg-[#fafbfc] dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800/60 hover:border-amber-500/40 dark:hover:border-amber-500/40 rounded-2xl p-8 hover:shadow-xl hover:shadow-amber-500/[0.02] transition-all duration-300">
               <div className="p-3 bg-amber-50 dark:bg-amber-950/50 w-12 h-12 rounded-xl text-amber-600 dark:text-amber-400 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <Database className="w-6 h-6" />
               </div>
@@ -264,7 +281,7 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
             </div>
 
             {/* Feature 6 */}
-            <div className="group bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 hover:border-rose-500/40 dark:hover:border-rose-500/40 rounded-2xl p-8 hover:shadow-xl hover:shadow-rose-500/[0.02] transition-all duration-300">
+            <div className="group bg-[#fafbfc] dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800/60 hover:border-rose-500/40 dark:hover:border-rose-500/40 rounded-2xl p-8 hover:shadow-xl hover:shadow-rose-500/[0.02] transition-all duration-300">
               <div className="p-3 bg-rose-50 dark:bg-rose-950/50 w-12 h-12 rounded-xl text-rose-600 dark:text-rose-400 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <Smartphone className="w-6 h-6" />
               </div>
@@ -278,7 +295,7 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
       </section>
 
       {/* Security Architecture Deep Dive */}
-      <section id="security" className="py-24 bg-slate-100 dark:bg-slate-900/30 border-t border-slate-200/50 dark:border-slate-900/80 relative">
+      <section id="security" className="py-24 bg-[#eef2f6]/50 dark:bg-slate-900/30 border-t border-slate-200/60 dark:border-slate-900/80 relative">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-6">
@@ -355,7 +372,7 @@ service cloud.firestore {
 
 
       {/* Accordion FAQ Section */}
-      <section id="faq" className="py-24 bg-slate-100 dark:bg-slate-900/30 border-t border-slate-200/50 dark:border-slate-900/80 relative">
+      <section id="faq" className="py-24 bg-[#eef2f6]/60 dark:bg-slate-900/30 border-t border-slate-200/60 dark:border-slate-900/80 relative">
         <div className="max-w-4xl mx-auto px-6 space-y-16">
           <div className="text-center space-y-4">
             <h2 className="text-xs uppercase font-extrabold tracking-widest text-indigo-600 dark:text-indigo-400">Frequently Asked Questions</h2>
@@ -366,7 +383,7 @@ service cloud.firestore {
             {faqs.map((faq, index) => (
               <div 
                 key={index}
-                className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/80 rounded-2xl overflow-hidden transition-all duration-300"
+                className="bg-[#fafbfc] dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800/80 rounded-2xl overflow-hidden transition-all duration-300"
               >
                 <button
                   onClick={() => setFaqOpen(faqOpen === index ? null : index)}
@@ -446,7 +463,7 @@ service cloud.firestore {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-slate-200/50 dark:border-slate-900/80 bg-white dark:bg-slate-950 transition-colors">
+      <footer className="border-t border-slate-200/70 dark:border-slate-900/80 bg-[#fafbfc] dark:bg-[#0b0f19] transition-colors">
         <div className="max-w-7xl mx-auto px-6 py-12 md:py-16 space-y-12">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="space-y-4">
