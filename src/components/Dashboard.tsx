@@ -830,17 +830,16 @@ export default function Dashboard({
           ? { scale: 1, rotate: 0, opacity: 1, y: 0 } 
           : { scale: 0, rotate: 180, opacity: 0, y: 35 }
         }
-        whileHover={{ scale: 1.1, rotate: 90 }}
-        whileTap={{ scale: 0.92 }}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
         transition={{ type: "spring", stiffness: 320, damping: 24 }}
-        className="fixed bottom-20 md:bottom-8 right-6 md:right-8 z-40 w-14 h-14 md:w-16 md:h-16 rounded-2xl md:rounded-3xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white shadow-[0_10px_35px_rgba(99,102,241,0.45)] hover:shadow-[0_16px_45px_rgba(99,102,241,0.65)] border-2 border-white/25 dark:border-white/10 flex items-center justify-center cursor-pointer group"
-        title="Create New Note (+)"
+        className="fixed bottom-20 md:bottom-8 right-6 md:right-8 z-40 w-14 h-14 md:w-16 md:h-16 rounded-2xl md:rounded-3xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white border-2 border-white/25 dark:border-white/10 flex items-center justify-center cursor-pointer group"
         aria-label="Create New Note"
       >
         <Plus className="w-7 h-7 md:w-8 md:h-8 stroke-[2.5]" />
         
         {/* Tooltip on Desktop hover */}
-        <span className="hidden md:block absolute right-full mr-3.5 top-1/2 -translate-y-1/2 bg-slate-900/90 dark:bg-slate-800/90 text-white text-xs font-bold px-3 py-1.5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-lg border border-white/10">
+        <span className="hidden md:block absolute right-full mr-3.5 top-1/2 -translate-y-1/2 bg-slate-900/90 dark:bg-slate-800/90 text-white text-xs font-bold px-3 py-1.5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-md border border-white/10">
           Create Note
         </span>
       </motion.button>
