@@ -4,8 +4,9 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { auth } from './firebase';
+import { auth, db } from './firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import AuthLayout from './components/AuthLayout';
 import LoginForm from './components/LoginForm';
 import SignupForm from './components/SignupForm';
@@ -18,14 +19,20 @@ import Settings from './components/Settings';
 import LandingPage from './components/LandingPage';
 import EmailVerification from './components/EmailVerification';
 import EmailActionHandler from './components/EmailActionHandler';
+import AuthTransitionModal from './components/AuthTransitionModal';
 import { Loader2 } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { Note } from './types';
+import { sound } from './utils/sound';
 
 function AppContent() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedFolder, setSelectedFolder] = useState<string>('all');
+  const [folderCounts, setFolderCounts] = useState<Record<string, number>>({});
+  const [authTransition, setAuthTransition] = useState<'signin' | 'signout' | null>(null);
+  const [transitionUser, setTransitionUser] = useState<string>('');
   
   // Read initial view from sessionStorage, default to 'landing'
   const [view, setView] = useState<'landing' | 'login' | 'signup' | 'forgot-password' | 'dashboard' | 'settings' | 'editor'>(() => {
@@ -86,6 +93,41 @@ function AppContent() {
     return () => unsubscribe();
   }, []);
 
+  // Listen to user's notes in real-time to compute folder counts for the sidebar
+  useEffect(() => {
+    if (!user) {
+      setFolderCounts({});
+      return;
+    }
+
+    const q = query(collection(db, 'notes'), where('userId', '==', user.uid));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const counts: Record<string, number> = {
+        all: snapshot.size,
+        pinned: 0,
+        work: 0,
+        personal: 0,
+        ideas: 0,
+        archive: 0
+      };
+
+      snapshot.docs.forEach((docSnap) => {
+        const data = docSnap.data();
+        if (data.pinned) counts.pinned++;
+        const tags = (data.tags || []).map((t: string) => t.toLowerCase());
+        const folder = data.folder || '';
+        if (folder === 'work' || tags.some((t: string) => t.includes('work') || t.includes('project'))) counts.work++;
+        if (folder === 'personal' || tags.some((t: string) => t.includes('personal') || t.includes('life'))) counts.personal++;
+        if (folder === 'ideas' || tags.some((t: string) => t.includes('idea') || t.includes('brainstorm'))) counts.ideas++;
+        if (folder === 'archive') counts.archive++;
+      });
+
+      setFolderCounts(counts);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
   // Sync state with browser history
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
@@ -135,13 +177,37 @@ function AppContent() {
     window.history.pushState({ view: newView, editingNote: note }, '');
   }, [view, editingNote]);
 
+  // Smooth Sign In transition with centered modal popup and spinner
+  const handleLoginSuccess = useCallback((userName?: string) => {
+    sound.playPop();
+    setTransitionUser(userName || auth.currentUser?.displayName || '');
+    setAuthTransition('signin');
+    setTimeout(() => {
+      setAuthTransition(null);
+      navigateTo('dashboard');
+    }, 1100);
+  }, [navigateTo]);
+
+  // Smooth Sign Out transition with centered modal popup and spinner
+  const handleInitiateSignOut = useCallback(() => {
+    sound.playSwoosh();
+    setAuthTransition('signout');
+    setTimeout(async () => {
+      try {
+        await auth.signOut();
+      } finally {
+        setTimeout(() => {
+          setAuthTransition(null);
+          navigateTo('landing');
+        }, 300);
+      }
+    }, 900);
+  }, [navigateTo]);
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-10 h-10 text-indigo-600 animate-spin" />
-          <p className="text-slate-500 dark:text-slate-400 font-medium">Initializing Glick X Notes...</p>
-        </div>
+      <div className="min-h-screen bg-[#f5f8fc] dark:bg-[#0b0f19] flex items-center justify-center p-4">
+        <AuthTransitionModal type="signin" userName="" />
       </div>
     );
   }
@@ -199,14 +265,14 @@ function AppContent() {
         {view === 'login' && (
           <LoginForm 
             onSwitchToSignup={() => navigateTo('signup')} 
-            onForgotPassword={() => navigateTo('forgot-password')}
-            onSuccess={() => navigateTo('dashboard')} 
+            onForgotPassword={() => navigateTo('forgot-password')} 
+            onSuccess={handleLoginSuccess} 
           />
         )}
         {view === 'signup' && (
           <SignupForm 
             onSwitchToLogin={() => navigateTo('login')} 
-            onSuccess={() => navigateTo('dashboard')} 
+            onSuccess={handleLoginSuccess} 
           />
         )}
         {view === 'forgot-password' && (
@@ -214,6 +280,7 @@ function AppContent() {
             onBackToLogin={() => navigateTo('login')} 
           />
         )}
+        <AuthTransitionModal type={authTransition} userName={transitionUser} />
       </AuthLayout>
     );
   }
@@ -251,8 +318,16 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col md:flex-row">
-      <Sidebar user={user} activeView={view} onViewChange={(v) => navigateTo(v)} />
+    <div className="min-h-screen bg-[#f5f8fc] dark:bg-[#0b0f19] text-slate-800 dark:text-slate-100 flex flex-col md:flex-row transition-colors duration-200">
+      <Sidebar 
+        user={user} 
+        activeView={view} 
+        onViewChange={(v) => navigateTo(v)} 
+        selectedFolder={selectedFolder}
+        onFolderChange={(f) => setSelectedFolder(f)}
+        folderCounts={folderCounts}
+        onSignOut={handleInitiateSignOut}
+      />
       
       <main className="flex-1 overflow-y-auto pb-24 md:pb-0">
         {view === 'dashboard' && (
@@ -260,9 +335,13 @@ function AppContent() {
             user={user}
             onEditNote={(note) => navigateTo('editor', note)}
             onNewNote={() => navigateTo('editor', null)}
+            selectedFolder={selectedFolder}
+            onFolderChange={(f) => setSelectedFolder(f)}
           />
         )}
-        {view === 'settings' && <Settings user={user} />}
+        {view === 'settings' && (
+          <Settings user={user} onSignOut={handleInitiateSignOut} />
+        )}
       </main>
 
       <BottomNav 
@@ -270,6 +349,9 @@ function AppContent() {
         onViewChange={(v) => navigateTo(v)} 
         onNewNote={() => navigateTo('editor', null)} 
       />
+
+      {/* Centered Smooth Auth Transition Popup Modal */}
+      <AuthTransitionModal type={authTransition} userName={transitionUser} />
     </div>
   );
 }

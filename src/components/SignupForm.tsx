@@ -16,7 +16,7 @@ const GoogleIcon = () => (
 
 interface SignupFormProps {
   onSwitchToLogin: () => void;
-  onSuccess: () => void;
+  onSuccess: (userName?: string) => void;
 }
 
 export default function SignupForm({ onSwitchToLogin, onSuccess }: SignupFormProps) {
@@ -74,7 +74,7 @@ export default function SignupForm({ onSwitchToLogin, onSuccess }: SignupFormPro
       // Send email verification
       await sendEmailVerification(user);
 
-      onSuccess();
+      onSuccess(displayName || email.split('@')[0]);
     } catch (err: any) {
       setError(err.message || 'Signup failed');
     } finally {
@@ -105,7 +105,7 @@ export default function SignupForm({ onSwitchToLogin, onSuccess }: SignupFormPro
           photoURL: user.photoURL || userDoc.data().photoURL || ''
         }, { merge: true });
       }
-      onSuccess();
+      onSuccess(user.displayName || user.email?.split('@')[0]);
     } catch (err: any) {
       setError(err.message || 'Google login failed');
     } finally {

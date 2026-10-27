@@ -17,6 +17,9 @@ export interface Note {
   createdAt: Timestamp;
   updatedAt: Timestamp;
   attachmentCount?: number;
+  pinned?: boolean;
+  folder?: string;
+  previewImage?: string;
 }
 
 export interface Attachment {

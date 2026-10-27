@@ -18,7 +18,7 @@ const GoogleIcon = () => (
 interface LoginFormProps {
   onSwitchToSignup: () => void;
   onForgotPassword: () => void;
-  onSuccess: () => void;
+  onSuccess: (userName?: string) => void;
 }
 
 export default function LoginForm({ onSwitchToSignup, onForgotPassword, onSuccess }: LoginFormProps) {
@@ -56,8 +56,8 @@ export default function LoginForm({ onSwitchToSignup, onForgotPassword, onSucces
     setLoading(true);
     setError(null);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      onSuccess();
+      const userCred = await signInWithEmailAndPassword(auth, email, password);
+      onSuccess(userCred.user.displayName || email.split('@')[0]);
     } catch (err: any) {
       if (err.code === 'auth/user-not-found') {
         setError('Please sign up first');
@@ -96,7 +96,7 @@ export default function LoginForm({ onSwitchToSignup, onForgotPassword, onSucces
           photoURL: user.photoURL || userDoc.data().photoURL || ''
         }, { merge: true });
       }
-      onSuccess();
+      onSuccess(user.displayName || user.email?.split('@')[0]);
     } catch (err: any) {
       setError(err.message || 'Google login failed');
     } finally {
