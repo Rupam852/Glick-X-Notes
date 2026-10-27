@@ -339,23 +339,23 @@ export default function Dashboard({
               {/* Pin button */}
               <button
                 onClick={(e) => handleTogglePin(e, note)}
-                className={`p-1.5 rounded-lg transition-all duration-150 cursor-pointer ${
+                className={`p-2 rounded-xl transition-all duration-150 cursor-pointer ${
                   note.pinned 
                     ? 'text-amber-500 hover:text-amber-600 bg-amber-500/10' 
-                    : 'text-slate-300 dark:text-slate-600 hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-800 opacity-60 group-hover:opacity-100'
+                    : 'text-slate-400 dark:text-slate-500 hover:text-amber-500 hover:bg-amber-500/10 opacity-70 group-hover:opacity-100'
                 }`}
                 title={note.pinned ? "Unpin note" : "Pin note"}
               >
-                <Pin className={`w-3.5 h-3.5 ${note.pinned ? 'fill-amber-500 rotate-45' : ''}`} />
+                <Pin className={`w-4 h-4 ${note.pinned ? 'fill-amber-500 rotate-45' : ''}`} />
               </button>
 
               {/* 🗑️ Delete dustbin button right beside Pin */}
               <button
                 onClick={(e) => handleDeleteClick(e, note)}
-                className="p-1.5 rounded-lg text-slate-300 dark:text-slate-600 hover:text-rose-500 hover:bg-rose-500/10 opacity-60 group-hover:opacity-100 transition-all duration-150 cursor-pointer"
+                className="p-2 rounded-xl text-slate-400 dark:text-slate-500 hover:text-rose-500 hover:bg-rose-500/10 opacity-70 group-hover:opacity-100 transition-all duration-150 cursor-pointer"
                 title="Delete note"
               >
-                <Trash2 className="w-3.5 h-3.5" />
+                <Trash2 className="w-4 h-4" />
               </button>
 
               {/* Attachment count badge */}
@@ -651,60 +651,67 @@ export default function Dashboard({
                       sound.playPop();
                       onEditNote(note);
                     }}
-                    className="group relative bg-[#fafbfc]/95 dark:bg-[#111726]/85 backdrop-blur-xl border border-slate-200/70 dark:border-slate-800/80 hover:border-indigo-500/40 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer transition-all duration-150 shadow-xs hover:shadow-md"
+                    className={`group relative bg-[#fafbfc]/95 dark:bg-[#111726]/85 backdrop-blur-xl border border-slate-200/70 dark:border-slate-800/80 hover:border-indigo-500/40 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 cursor-pointer transition-all duration-150 shadow-xs hover:shadow-md ${
+                      activeDropdownNoteId === note.id ? 'z-30' : 'z-10'
+                    }`}
                   >
                     <div 
-                      className="absolute top-0 left-0 w-1.5 h-full rounded-l-xl" 
+                      className="absolute top-0 left-0 w-1.5 h-full rounded-l-2xl" 
                       style={{ backgroundColor: note.color || '#6366f1' }}
                     />
 
-                    <div className="flex items-center gap-3 pl-3 flex-1 min-w-0">
-                      <div className="flex items-center gap-1 shrink-0">
+                    <div className="flex items-center gap-3.5 pl-3 flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 shrink-0">
                         <button
                           onClick={(e) => handleTogglePin(e, note)}
-                          className="text-slate-300 dark:text-slate-600 hover:text-amber-500 p-1 shrink-0 cursor-pointer"
+                          className={`p-2 rounded-xl transition-all duration-150 cursor-pointer ${
+                            note.pinned
+                              ? 'text-amber-500 hover:text-amber-600 bg-amber-500/10'
+                              : 'text-slate-400 dark:text-slate-500 hover:text-amber-500 hover:bg-amber-500/10'
+                          }`}
                           title={note.pinned ? "Unpin note" : "Pin note"}
                         >
-                          <Pin className={`w-3.5 h-3.5 ${note.pinned ? 'fill-amber-500 text-amber-500 rotate-45' : ''}`} />
+                          <Pin className={`w-4 h-4 ${note.pinned ? 'fill-amber-500 rotate-45' : ''}`} />
                         </button>
 
                         {/* 🗑️ Delete dustbin button right beside Pin */}
                         <button
                           onClick={(e) => handleDeleteClick(e, note)}
-                          className="text-slate-300 dark:text-slate-600 hover:text-rose-500 p-1 shrink-0 cursor-pointer transition-colors"
+                          className="p-2 rounded-xl text-slate-400 dark:text-slate-500 hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
                           title="Delete note"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
 
-                      <div className="space-y-0.5 min-w-0">
+                      <div className="space-y-1 min-w-0">
                         <h3 className="font-bold text-sm md:text-base text-slate-800 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors truncate">
                           {highlightText(note.title || 'Untitled Note', search)}
                         </h3>
-                        <p className="text-slate-400 dark:text-slate-500 text-xs line-clamp-1 truncate">
+                        <p className="text-slate-400 dark:text-slate-500 text-xs md:text-sm line-clamp-1 truncate">
                           {stripHtmlForPreview(note.body) || 'No preview available'}
                         </p>
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2.5 pl-3 sm:pl-0 shrink-0">
+                    <div className="flex flex-wrap items-center gap-3 pl-3 sm:pl-0 shrink-0">
                       {/* Quick folder select in list view */}
                       <FolderDropdown
                         value={note.folder || 'all'}
                         onChange={(newFolder) => handleUpdateNoteFolder(newFolder, note)}
-                        size="xs"
-                        align="left"
+                        size="sm"
+                        align="right"
+                        onOpenStateChange={(isOpen) => setActiveDropdownNoteId(isOpen ? note.id : null)}
                       />
                       {/* Tags */}
                       {note.tags && note.tags.length > 0 && (
-                        <div className="flex gap-1">
+                        <div className="flex gap-1.5">
                           {note.tags.slice(0, 2).map(tag => (
                             <span 
                               key={tag} 
-                              className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[9px] font-bold rounded-md"
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold rounded-lg border border-slate-200/50 dark:border-slate-700/50"
                             >
-                              <span className={`w-1.5 h-1.5 rounded-full ${getTagDotColor(tag)}`} />
+                              <span className={`w-2 h-2 rounded-full ${getTagDotColor(tag)}`} />
                               #{tag}
                             </span>
                           ))}
@@ -712,9 +719,9 @@ export default function Dashboard({
                       )}
 
                       {/* Reading time & Date */}
-                      <div className="flex items-center gap-3 text-[10px] font-medium text-slate-400 dark:text-slate-500">
-                        <span className="flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
+                      <div className="flex items-center gap-3 text-xs font-semibold text-slate-400 dark:text-slate-500">
+                        <span className="flex items-center gap-1.5">
+                          <Calendar className="w-3.5 h-3.5" />
                           {format(safeToDate(note.updatedAt), 'MMM d')}
                         </span>
                         <span className="hidden sm:inline-block">•</span>
