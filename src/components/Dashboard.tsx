@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, doc, setDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, setDoc, deleteDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { User } from 'firebase/auth';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { Note } from '../types';
 import { 
   Search, Plus, SortDesc, SortAsc, Tag, Paperclip, Calendar, Clock, 
   LayoutGrid, List, Sparkles, BookOpen, Star, Pin, Image as ImageIcon, 
-  Folder, ArrowUpDown, Filter, X
+  Folder, ArrowUpDown, Filter, X, Trash2, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { format } from 'date-fns';
 import { sound } from '../utils/sound';
+import { useToast } from '../contexts/ToastContext';
 
 const stripHtmlForPreview = (html: string) => {
   if (!html) return '';
@@ -79,6 +80,7 @@ export default function Dashboard({
   selectedFolder = 'all',
   onFolderChange
 }: DashboardProps) {
+  const { showToast } = useToast();
   const [notes, setNotes] = useState<Note[]>([]);
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'createdAt' | 'updatedAt' | 'title'>('updatedAt');
@@ -86,6 +88,8 @@ export default function Dashboard({
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [noteToDelete, setNoteToDelete] = useState<Note | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -147,6 +151,28 @@ export default function Dashboard({
       }, { merge: true });
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `notes/${note.id}`);
+    }
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent, note: Note) => {
+    e.stopPropagation();
+    sound.playPop();
+    setNoteToDelete(note);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!noteToDelete) return;
+    setDeleting(true);
+    try {
+      await deleteDoc(doc(db, 'notes', noteToDelete.id));
+      sound.playSwoosh();
+      showToast('Note deleted successfully', 'success');
+      setNoteToDelete(null);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `notes/${noteToDelete.id}`);
+      showToast('Failed to delete note', 'error');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -288,6 +314,15 @@ export default function Dashboard({
                 title={note.pinned ? "Unpin note" : "Pin note"}
               >
                 <Pin className={`w-3.5 h-3.5 ${note.pinned ? 'fill-amber-500 rotate-45' : ''}`} />
+              </button>
+
+              {/* 🗑️ Delete dustbin button right beside Pin */}
+              <button
+                onClick={(e) => handleDeleteClick(e, note)}
+                className="p-1.5 rounded-lg text-slate-300 dark:text-slate-600 hover:text-rose-500 hover:bg-rose-500/10 opacity-60 group-hover:opacity-100 transition-all duration-150 cursor-pointer"
+                title="Delete note"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
               </button>
 
               {/* Attachment count badge */}
@@ -602,13 +637,24 @@ export default function Dashboard({
                     />
 
                     <div className="flex items-center gap-3 pl-3 flex-1 min-w-0">
-                      <button
-                        onClick={(e) => handleTogglePin(e, note)}
-                        className="text-slate-300 dark:text-slate-600 hover:text-amber-500 p-1 shrink-0 cursor-pointer"
-                        title={note.pinned ? "Unpin note" : "Pin note"}
-                      >
-                        <Pin className={`w-3.5 h-3.5 ${note.pinned ? 'fill-amber-500 text-amber-500 rotate-45' : ''}`} />
-                      </button>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          onClick={(e) => handleTogglePin(e, note)}
+                          className="text-slate-300 dark:text-slate-600 hover:text-amber-500 p-1 shrink-0 cursor-pointer"
+                          title={note.pinned ? "Unpin note" : "Pin note"}
+                        >
+                          <Pin className={`w-3.5 h-3.5 ${note.pinned ? 'fill-amber-500 text-amber-500 rotate-45' : ''}`} />
+                        </button>
+
+                        {/* 🗑️ Delete dustbin button right beside Pin */}
+                        <button
+                          onClick={(e) => handleDeleteClick(e, note)}
+                          className="text-slate-300 dark:text-slate-600 hover:text-rose-500 p-1 shrink-0 cursor-pointer transition-colors"
+                          title="Delete note"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
 
                       <div className="space-y-0.5 min-w-0">
                         <h3 className="font-bold text-sm md:text-base text-slate-800 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors truncate">
@@ -691,6 +737,72 @@ export default function Dashboard({
           </button>
         </div>
       )}
+
+      {/* 🗑️ Delete Note Confirmation Dialog */}
+      <AnimatePresence>
+        {noteToDelete && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setNoteToDelete(null)}
+            className="fixed inset-0 z-[120] bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.92, opacity: 0, y: 15 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.92, opacity: 0, y: 15 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-[#fafbfc] dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl space-y-6"
+            >
+              <div className="flex items-center gap-4">
+                <div className="p-3.5 bg-rose-500/10 text-rose-500 rounded-2xl shrink-0">
+                  <Trash2 className="w-7 h-7" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-lg font-black text-slate-900 dark:text-white truncate">Delete Note?</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                    "{noteToDelete.title || 'Untitled Note'}" will be permanently removed.
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed bg-slate-100/70 dark:bg-slate-800/60 p-3.5 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+                Are you sure you want to delete this note? This action is permanent and cannot be undone.
+              </p>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setNoteToDelete(null)}
+                  disabled={deleting}
+                  className="px-5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDelete}
+                  disabled={deleting}
+                  className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all shadow-lg shadow-rose-600/25 active:scale-95 cursor-pointer flex items-center gap-2"
+                >
+                  {deleting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4" />
+                      Delete Note
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );
