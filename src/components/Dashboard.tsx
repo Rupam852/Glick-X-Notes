@@ -243,7 +243,7 @@ export default function Dashboard({
           sound.playPop();
           onEditNote(note);
         }}
-        className="group relative bg-white/90 dark:bg-[#111726]/85 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 hover:border-indigo-500/40 dark:hover:border-indigo-400/40 rounded-2xl p-5 shadow-[0_4px_20px_rgba(15,23,42,0.03)] hover:shadow-[0_16px_36px_rgba(99,102,241,0.12)] transition-all duration-200 cursor-pointer overflow-hidden flex flex-col justify-between min-h-[200px]"
+        className="group relative bg-[#fafbfc]/95 dark:bg-[#111726]/85 backdrop-blur-xl border border-slate-200/70 dark:border-slate-800/80 hover:border-indigo-500/40 dark:hover:border-indigo-400/40 rounded-2xl p-5 shadow-[0_2px_14px_rgba(15,23,42,0.03)] hover:shadow-[0_14px_32px_rgba(99,102,241,0.10)] transition-all duration-200 cursor-pointer overflow-hidden flex flex-col justify-between min-h-[200px]"
       >
         {/* Subtle hover gradient mesh highlight */}
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
@@ -355,7 +355,7 @@ export default function Dashboard({
     <div className="p-6 max-w-7xl mx-auto space-y-7 select-none">
       
       {/* 🌟 Modern Hero Banner with Soft Light / Dark Polish */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-indigo-50/90 via-sky-50/50 to-white dark:from-slate-900/40 dark:via-indigo-950/20 dark:to-slate-900/30 border border-indigo-100/80 dark:border-slate-800/80 rounded-3xl p-6 md:p-8 backdrop-blur-2xl shadow-[0_8px_30px_rgba(99,102,241,0.04)]">
+      <div className="relative overflow-hidden bg-gradient-to-r from-indigo-50/70 via-sky-50/30 to-slate-100/60 dark:from-slate-900/40 dark:via-indigo-950/20 dark:to-slate-900/30 border border-slate-200/70 dark:border-slate-800/80 rounded-3xl p-6 md:p-8 backdrop-blur-2xl shadow-[0_4px_20px_rgba(99,102,241,0.03)]">
         <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-500/10 rounded-full blur-[90px] pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-80 h-80 bg-sky-500/10 rounded-full blur-[90px] pointer-events-none" />
         
@@ -393,7 +393,7 @@ export default function Dashboard({
       </div>
 
       {/* 🎛️ Control Panel (Search, Sort, View Toggle) */}
-      <div className="bg-white/70 dark:bg-slate-900/30 border border-slate-200/80 dark:border-slate-800/80 p-3.5 rounded-2xl space-y-3 backdrop-blur-md shadow-xs">
+      <div className="bg-[#f8f9fb]/85 dark:bg-slate-900/30 border border-slate-200/70 dark:border-slate-800/80 p-3.5 rounded-2xl space-y-3 backdrop-blur-md shadow-xs">
         <div className="flex flex-col lg:flex-row gap-3">
           
           {/* Enhanced Search Input */}
@@ -404,7 +404,7 @@ export default function Dashboard({
               placeholder="Search notes, body text, tags..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-11 pr-4 py-2.5 bg-white dark:bg-slate-950/60 border border-slate-200/80 dark:border-slate-800 focus:border-indigo-500 text-slate-800 dark:text-slate-100 rounded-xl outline-none transition-all shadow-inner focus:ring-2 focus:ring-indigo-500/10 text-xs md:text-sm"
+              className="w-full pl-11 pr-4 py-2.5 bg-[#fbfcfd] dark:bg-slate-950/60 border border-slate-200/70 dark:border-slate-800 focus:border-indigo-500 text-slate-800 dark:text-slate-100 rounded-xl outline-none transition-all shadow-inner focus:ring-2 focus:ring-indigo-500/10 text-xs md:text-sm"
             />
             {search && (
               <button 
@@ -425,7 +425,7 @@ export default function Dashboard({
                   sound.playTick();
                   setSortBy(e.target.value as any);
                 }}
-                className="bg-white dark:bg-slate-950/60 border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-700 dark:text-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-bold uppercase tracking-wider outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer transition-all duration-150"
+                className="bg-[#fbfcfd] dark:bg-slate-950/60 border border-slate-200/70 dark:border-slate-800 hover:bg-slate-100/60 dark:hover:bg-slate-900 text-slate-700 dark:text-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-bold uppercase tracking-wider outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer transition-all duration-150"
               >
                 <option value="updatedAt">Last Modified</option>
                 <option value="createdAt">Date Created</option>
@@ -439,7 +439,7 @@ export default function Dashboard({
                 sound.playTick();
                 setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
               }}
-              className="bg-white dark:bg-slate-950/60 border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 p-2.5 rounded-xl text-slate-600 dark:text-slate-300 transition-all cursor-pointer shadow-xs"
+              className="bg-[#fbfcfd] dark:bg-slate-950/60 border border-slate-200/70 dark:border-slate-800 hover:bg-slate-100/60 dark:hover:bg-slate-900 p-2.5 rounded-xl text-slate-600 dark:text-slate-300 transition-all cursor-pointer shadow-xs"
               title="Toggle Sort Order"
             >
               {sortOrder === 'asc' ? <SortAsc className="w-4.5 h-4.5" /> : <SortDesc className="w-4.5 h-4.5" />}
@@ -509,7 +509,7 @@ export default function Dashboard({
                 className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer shrink-0 ${
                   selectedTag === tag 
                     ? 'bg-indigo-600 text-white shadow-xs' 
-                    : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                    : 'bg-[#fbfcfd] dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
                 <span className={`w-1.5 h-1.5 rounded-full ${getTagDotColor(tag)}`} />
@@ -526,7 +526,7 @@ export default function Dashboard({
           {[1, 2, 3, 4, 5, 6].map(i => (
             <div 
               key={i} 
-              className="shimmer-card h-56 bg-white/60 dark:bg-slate-900/40 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-5 flex flex-col justify-between shadow-xs"
+              className="shimmer-card h-56 bg-[#fafbfc]/70 dark:bg-slate-900/40 border border-slate-200/70 dark:border-slate-800/80 rounded-2xl p-5 flex flex-col justify-between shadow-xs"
             >
               <div className="space-y-3">
                 <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded-md w-3/4" />
@@ -594,7 +594,7 @@ export default function Dashboard({
                       sound.playPop();
                       onEditNote(note);
                     }}
-                    className="group relative bg-white/90 dark:bg-[#111726]/85 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 hover:border-indigo-500/40 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer transition-all duration-150 shadow-xs hover:shadow-md"
+                    className="group relative bg-[#fafbfc]/95 dark:bg-[#111726]/85 backdrop-blur-xl border border-slate-200/70 dark:border-slate-800/80 hover:border-indigo-500/40 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer transition-all duration-150 shadow-xs hover:shadow-md"
                   >
                     <div 
                       className="absolute top-0 left-0 w-1.5 h-full rounded-l-xl" 

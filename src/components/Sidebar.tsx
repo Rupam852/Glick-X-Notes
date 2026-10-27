@@ -85,12 +85,12 @@ export default function Sidebar({
   };
 
   return (
-    <aside className="hidden md:flex flex-col w-72 bg-white/95 dark:bg-[#0c1220]/95 backdrop-blur-xl border-r border-slate-200/70 dark:border-slate-800/80 h-screen sticky top-0 p-5 space-y-6 select-none shadow-[2px_0_12px_rgba(15,23,42,0.02)] transition-colors duration-200">
+    <aside className="hidden md:flex flex-col w-72 bg-[#f8f9fb]/95 dark:bg-[#0c1220]/95 backdrop-blur-xl border-r border-slate-200/70 dark:border-slate-800/80 h-screen sticky top-0 p-5 space-y-6 select-none shadow-[2px_0_12px_rgba(15,23,42,0.02)] transition-colors duration-200">
       
       {/* Brand Logo & Title */}
       <div className="flex items-center gap-3 px-2 pt-1">
         <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-blue-500 p-0.5 shadow-md shadow-indigo-500/20 flex items-center justify-center">
-          <div className="w-full h-full bg-white dark:bg-slate-950 rounded-[10px] flex items-center justify-center overflow-hidden">
+          <div className="w-full h-full bg-[#f8f9fb] dark:bg-slate-950 rounded-[10px] flex items-center justify-center overflow-hidden">
             <img src="/favicon.png" alt="Logo" className="w-6 h-6 object-cover" />
           </div>
         </div>
@@ -110,8 +110,8 @@ export default function Sidebar({
           onClick={() => handleNavClick('dashboard')}
           className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all duration-150 font-semibold text-sm cursor-pointer ${
             activeView === 'dashboard' && selectedFolder === 'all'
-              ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 font-bold shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-200'
+              ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 font-bold shadow-xs'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-200'
           }`}
         >
           <div className="flex items-center gap-3">
@@ -129,8 +129,8 @@ export default function Sidebar({
           onClick={() => handleNavClick('settings')}
           className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all duration-150 font-semibold text-sm cursor-pointer ${
             activeView === 'settings'
-              ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 font-bold shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-200'
+              ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 font-bold shadow-xs'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-200'
           }`}
         >
           <div className="flex items-center gap-3">
@@ -161,7 +161,7 @@ export default function Sidebar({
               className={`w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-150 cursor-pointer group ${
                 isSelected
                   ? 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-l-[3px] border-indigo-600 dark:border-indigo-400 pl-[11px] font-bold shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100/80 dark:hover:bg-slate-850/60 hover:text-slate-900 dark:hover:text-slate-200'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-850/60 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               <div className="flex items-center gap-2.5 truncate">

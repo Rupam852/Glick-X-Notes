@@ -206,7 +206,7 @@ function AppContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f5f8fc] dark:bg-[#0b0f19] flex items-center justify-center p-4">
+      <div className="min-h-screen bg-[#f2f4f7] dark:bg-[#0b0f19] flex items-center justify-center p-4">
         <AuthTransitionModal type="signin" userName="" />
       </div>
     );
@@ -318,7 +318,7 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f8fc] dark:bg-[#0b0f19] text-slate-800 dark:text-slate-100 flex flex-col md:flex-row transition-colors duration-200">
+    <div className="min-h-screen bg-[#f2f4f7] dark:bg-[#0b0f19] text-slate-800 dark:text-slate-100 flex flex-col md:flex-row transition-colors duration-200">
       <Sidebar 
         user={user} 
         activeView={view} 

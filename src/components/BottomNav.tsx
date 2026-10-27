@@ -10,7 +10,7 @@ interface BottomNavProps {
 
 export default function BottomNav({ activeView, onViewChange, onNewNote }: BottomNavProps) {
   return (
-    <div className="md:hidden fixed bottom-0 left-0 w-full bg-white/90 dark:bg-[#0c1220]/90 backdrop-blur-xl border-t border-slate-200/80 dark:border-slate-800/80 px-12 py-3 flex items-center justify-between z-40 pb-[calc(10px+env(safe-area-inset-bottom))] shadow-[0_-4px_20px_rgba(0,0,0,0.04)]">
+    <div className="md:hidden fixed bottom-0 left-0 w-full bg-[#f8f9fb]/95 dark:bg-[#0c1220]/90 backdrop-blur-xl border-t border-slate-200/80 dark:border-slate-800/80 px-12 py-3 flex items-center justify-between z-40 pb-[calc(10px+env(safe-area-inset-bottom))] shadow-[0_-4px_20px_rgba(0,0,0,0.04)]">
       <button
         onClick={() => {
           sound.playPop();
@@ -29,7 +29,7 @@ export default function BottomNav({ activeView, onViewChange, onNewNote }: Botto
             sound.playPop();
             onNewNote();
           }}
-          className="bg-gradient-to-tr from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white p-3.5 rounded-2xl shadow-xl shadow-indigo-500/30 border-4 border-white dark:border-[#0c1220] cursor-pointer active:scale-90 transition-all flex items-center justify-center"
+          className="bg-gradient-to-tr from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white p-3.5 rounded-2xl shadow-xl shadow-indigo-500/30 border-4 border-[#f8f9fb] dark:border-[#0c1220] cursor-pointer active:scale-90 transition-all flex items-center justify-center"
         >
           <Plus className="w-6 h-6 stroke-[3]" />
         </button>

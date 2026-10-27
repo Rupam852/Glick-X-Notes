@@ -52,7 +52,7 @@
   overflow: hidden;
   border: 1px solid rgba(148, 163, 184, 0.25);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
-  background: #ffffff;
+  background: #fbfcfd;
 }
 
 .dark .editor-content table {
@@ -138,9 +138,9 @@ button *,
   cursor: pointer !important;
 }
 
-/* Base Body background with soft ice-blue tint for light mode and deep OLED slate for dark mode */
+/* Base Body background with eye-care warm alabaster for light mode and deep OLED slate for dark mode */
 html, body {
-  background-color: #f5f8fc;
+  background-color: #f2f4f7;
   color: #1e293b;
   min-height: 100vh;
 }

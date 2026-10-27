@@ -247,7 +247,7 @@ export default function Settings({ user, onSignOut }: { user: FirebaseUser; onSi
       </div>
 
       {/* 🎨 Theme & Appearance Section (Light / Dark Mode Selection) */}
-      <div className="bg-white/85 dark:bg-slate-900/40 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-6 shadow-xs space-y-5 backdrop-blur-md">
+      <div className="bg-[#fafbfc]/90 dark:bg-slate-900/40 border border-slate-200/70 dark:border-slate-800/80 rounded-2xl p-6 shadow-xs space-y-5 backdrop-blur-md">
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/70 pb-4">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-indigo-50 dark:bg-indigo-950/60 rounded-xl text-indigo-600 dark:text-indigo-400">
@@ -256,7 +256,7 @@ export default function Settings({ user, onSignOut }: { user: FirebaseUser; onSi
             <div>
               <h3 className="font-bold text-base text-slate-900 dark:text-white">Theme & Appearance</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Choose between soft light or deep dark mode. Default is soft light mode.
+                Choose between soft eye-care light or deep dark mode. Default is soft light mode.
               </p>
             </div>
           </div>
@@ -269,7 +269,7 @@ export default function Settings({ user, onSignOut }: { user: FirebaseUser; onSi
             onClick={() => handleThemeChange('light')}
             className={`p-4 rounded-xl border text-left transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-3 ${
               theme === 'light'
-                ? 'bg-gradient-to-br from-white to-blue-50/60 border-indigo-500 shadow-md ring-2 ring-indigo-500/20'
+                ? 'bg-gradient-to-br from-[#fafbfc] to-indigo-50/40 border-indigo-500 shadow-md ring-2 ring-indigo-500/20'
                 : 'bg-slate-50/70 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
             }`}
           >
@@ -287,7 +287,7 @@ export default function Settings({ user, onSignOut }: { user: FirebaseUser; onSi
               )}
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Soft light background with a refined ice-blue tint for long writing sessions.
+              Eye-care warm alabaster & soft paper tones designed to eliminate glare and eye fatigue.
             </p>
           </button>
 
@@ -355,7 +355,7 @@ export default function Settings({ user, onSignOut }: { user: FirebaseUser; onSi
 
       {/* 📊 Intelligent Workspace Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="relative overflow-hidden bg-white/85 dark:bg-slate-900/35 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-5 shadow-xs">
+        <div className="relative overflow-hidden bg-[#fafbfc]/90 dark:bg-slate-900/35 border border-slate-200/70 dark:border-slate-800/80 rounded-2xl p-5 shadow-xs">
           <div className="flex items-center gap-3">
             <div className="p-3 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/40 rounded-xl text-indigo-600 dark:text-indigo-400">
               <BookOpen className="w-5 h-5" />
@@ -367,7 +367,7 @@ export default function Settings({ user, onSignOut }: { user: FirebaseUser; onSi
           </div>
         </div>
 
-        <div className="relative overflow-hidden bg-white/85 dark:bg-slate-900/35 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-5 shadow-xs">
+        <div className="relative overflow-hidden bg-[#fafbfc]/90 dark:bg-slate-900/35 border border-slate-200/70 dark:border-slate-800/80 rounded-2xl p-5 shadow-xs">
           <div className="flex items-center gap-3">
             <div className="p-3 bg-purple-50 dark:bg-purple-950/40 border border-purple-100 dark:border-purple-900/40 rounded-xl text-purple-600 dark:text-purple-400">
               <PenTool className="w-5 h-5" />
@@ -379,7 +379,7 @@ export default function Settings({ user, onSignOut }: { user: FirebaseUser; onSi
           </div>
         </div>
 
-        <div className="relative overflow-hidden bg-white/85 dark:bg-slate-900/35 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-5 shadow-xs">
+        <div className="relative overflow-hidden bg-[#fafbfc]/90 dark:bg-slate-900/35 border border-slate-200/70 dark:border-slate-800/80 rounded-2xl p-5 shadow-xs">
           <div className="flex items-center gap-3">
             <div className="p-3 bg-pink-50 dark:bg-pink-950/40 border border-pink-100 dark:border-pink-900/40 rounded-xl text-pink-600 dark:text-pink-400">
               <Calendar className="w-5 h-5" />
@@ -396,7 +396,7 @@ export default function Settings({ user, onSignOut }: { user: FirebaseUser; onSi
         
         {/* Profile Card & Info */}
         <div className="md:col-span-2 space-y-6">
-          <div className="bg-white/85 dark:bg-slate-900/35 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-6 space-y-6 shadow-xs">
+          <div className="bg-[#fafbfc]/90 dark:bg-slate-900/35 border border-slate-200/70 dark:border-slate-800/80 rounded-2xl p-6 space-y-6 shadow-xs">
             <div className="flex flex-col sm:flex-row items-center gap-6">
               <div className="relative">
                 <div className="w-24 h-24 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white overflow-hidden shadow-lg border-2 border-white dark:border-slate-800">
@@ -435,7 +435,7 @@ export default function Settings({ user, onSignOut }: { user: FirebaseUser; onSi
         </div>
 
         {/* Action Buttons Panel */}
-        <div className="bg-white/85 dark:bg-slate-900/35 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-6 flex flex-col justify-between shadow-xs">
+        <div className="bg-[#fafbfc]/90 dark:bg-slate-900/35 border border-slate-200/70 dark:border-slate-800/80 rounded-2xl p-6 flex flex-col justify-between shadow-xs">
           <div className="space-y-4">
             <h3 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
               Workspace Actions

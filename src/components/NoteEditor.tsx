@@ -1933,7 +1933,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
 
   return (
     <div 
-      className="min-h-screen bg-white dark:bg-slate-900 flex flex-col relative text-slate-800 dark:text-slate-200 font-sans"
+      className="min-h-screen bg-[#f2f4f7] dark:bg-[#0b0f19] flex flex-col relative text-slate-800 dark:text-slate-200 font-sans"
       onDragOver={handleDragOver}
       onDragEnter={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -2037,16 +2037,16 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       </AnimatePresence>
 
       {/* 2-Row Adaptive Toolbar */}
-      <div ref={popupRef} onTouchStart={handleToolbarTouchStart} className="sticky top-0 z-35 flex flex-col border-b border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md relative">
+      <div ref={popupRef} onTouchStart={handleToolbarTouchStart} className="sticky top-0 z-35 flex flex-col border-b border-slate-200/70 dark:border-slate-800 bg-[#f8f9fb]/95 dark:bg-[#0c1220]/95 backdrop-blur-md relative">
                 {/* ROW 1: Navigation and status controls */}
-        <div className="flex items-center justify-between px-3 md:px-4 py-2 border-b border-slate-100/60 dark:border-slate-800/60 gap-2">
+        <div className="flex items-center justify-between px-3 md:px-4 py-2 border-b border-slate-200/60 dark:border-slate-800/60 gap-2">
           <div className="flex items-center gap-2 md:gap-3 shrink-0">
-            <button onClick={handleBackClick} className="p-1.5 md:p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all cursor-pointer text-slate-500 dark:text-slate-400 shrink-0">
+            <button onClick={handleBackClick} className="p-1.5 md:p-2 hover:bg-slate-200/60 dark:hover:bg-slate-800 rounded-xl transition-all cursor-pointer text-slate-500 dark:text-slate-400 shrink-0">
               <ArrowLeft className="w-5 h-5" />
             </button>
             
             {/* Auto-save status bubble */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/50 rounded-full select-none text-[9px] md:text-[10px] font-bold tracking-wider uppercase shrink-0">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-100/70 dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/50 rounded-full select-none text-[9px] md:text-[10px] font-bold tracking-wider uppercase shrink-0">
               {saving ? (
                 <span className="flex items-center gap-1 text-indigo-500">
                   <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-ping" /> Saving
@@ -2067,7 +2067,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
             </div>
 
             {/* Notebook / Folder Selector Pill */}
-            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 rounded-full shrink-0">
+            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 bg-slate-100/70 dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 rounded-full shrink-0">
               <Folder className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
               <select
                 value={folder}
@@ -2100,7 +2100,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                     initial={{ opacity: 0, y: 5, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 5, scale: 0.95 }}
-                    className="absolute right-0 mt-1.5 w-44 max-h-[300px] overflow-y-auto z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-1.5 shadow-2xl space-y-0.5"
+                    className="absolute right-0 mt-1.5 w-44 max-h-[300px] overflow-y-auto z-50 bg-[#fafbfc] dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl p-1.5 shadow-2xl space-y-0.5"
                   >
                     {FONT_OPTIONS.map(item => (
                       <button
@@ -2110,7 +2110,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                           setActiveFont(item.value);
                           setShowFontMenu(false);
                         }}
-                        className={`w-full text-left px-3 py-1.5 rounded-lg transition-all cursor-pointer flex flex-col justify-start ${activeFont === item.value ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                        className={`w-full text-left px-3 py-1.5 rounded-lg transition-all cursor-pointer flex flex-col justify-start ${activeFont === item.value ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200/60 dark:hover:bg-slate-800'}`}
                       >
                         <span className="text-xs font-bold">{item.label}</span>
                         <span className={`text-[9px] ${activeFont === item.value ? 'text-indigo-200' : 'text-slate-400 dark:text-slate-500'}`}>{item.desc}</span>
@@ -2139,7 +2139,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
           </div>
         </div>
 
-        <div className="flex md:flex-wrap items-center gap-1.5 p-2 bg-slate-50/50 dark:bg-slate-900/50 overflow-x-auto no-scrollbar scroll-smooth">
+        <div className="flex md:flex-wrap items-center gap-1.5 p-2 bg-[#f4f6fa]/60 dark:bg-slate-900/50 overflow-x-auto no-scrollbar scroll-smooth">
           
           <button onMouseDown={handleButtonMouseDown} onClick={() => togglePopup('text')} className={`p-2 w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all ${activePopup === 'text' ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Text Styles">
             <Type className="w-5 h-5" />
@@ -2706,7 +2706,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
                   <FileText className="w-4 h-4" /> Note Details
                 </h3>
-                <div className="space-y-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                <div className="space-y-4 bg-[#fafbfc] dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/70 dark:border-slate-800 shadow-xs">
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Title</label>
                     <input
@@ -2788,7 +2788,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -10 }}
                         onClick={() => setViewingAttachment(file)}
-                        className="group relative bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl p-2 flex items-center gap-2.5 cursor-pointer hover:border-indigo-200 dark:hover:border-indigo-900 transition-all shadow-sm"
+                        className="group relative bg-[#fafbfc] dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800 rounded-xl p-2 flex items-center gap-2.5 cursor-pointer hover:border-indigo-200 dark:hover:border-indigo-900 transition-all shadow-xs"
                       >
                         <div className="w-8 h-8 bg-slate-50 dark:bg-slate-950 rounded-lg flex items-center justify-center border border-slate-150/40 dark:border-slate-800 overflow-hidden shrink-0">
                           {file.type.startsWith('image/') ? (
@@ -2849,80 +2849,83 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
           </div>
         )}
 
-        {/* Content Pane */}
-        <div className="flex-1 flex flex-col bg-white dark:bg-slate-900 overflow-hidden relative">
+        {/* Content Pane with Eye-Care Paper Document Canvas */}
+        <div className="flex-1 flex flex-col bg-[#f2f4f7] dark:bg-[#0b0f19] overflow-hidden relative">
           
-          <div className="flex-1 overflow-y-auto no-scrollbar relative">
+          <div className="flex-1 overflow-y-auto no-scrollbar relative px-2 sm:px-4 md:px-8 py-3 md:py-6">
             
-            {/* Inline Title input (Visible only in focusMode or on narrow screens) */}
-            <div className={`w-full pt-4 px-4 md:px-8 ${focusMode ? 'block' : 'block md:hidden'}`}>
-              <input
-                type="text"
-                placeholder="Untitled Note..."
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="w-full text-3.5xl font-black bg-transparent border-none outline-none text-slate-900 dark:text-white placeholder:text-slate-200 dark:placeholder:text-slate-800"
-              />
-              <div className="w-full h-px bg-slate-100 dark:bg-slate-800 mt-4 mb-2" />
-            </div>
-
-            {/* Center Content Editor container */}
-            <div className="w-full">
+            {/* Eye-Care Warm Paper Document Sheet */}
+            <div className="max-w-4xl mx-auto bg-[#fafbfc] dark:bg-[#111726] rounded-2xl md:rounded-3xl border border-slate-200/70 dark:border-slate-800/80 shadow-[0_2px_16px_rgba(15,23,42,0.03)] p-5 sm:p-8 md:p-12 min-h-[calc(100vh-140px)] transition-colors">
               
-              <div
-                ref={contentRef}
-                contentEditable
-                onInput={handleInput}
-                onKeyDown={handleKeyDown}
-                onKeyUp={updateFormatState}
-                onMouseUp={updateFormatState}
-                onClick={handleContentClick}
-                data-placeholder="Start writing your note..."
-                className={`editor-content flex-1 w-full px-4 md:px-8 py-4 bg-transparent border-none outline-none text-[17px] text-slate-700 dark:text-slate-300 leading-relaxed outline-transparent focus:ring-0 ${
-                  FONT_OPTIONS.find(f => f.value === activeFont)?.class || 'font-outfit'
-                }`}
-                style={{ minHeight: '400px' }}
-              />
+              {/* Inline Title input (Visible only in focusMode or on narrow screens) */}
+              <div className={`w-full ${focusMode ? 'block' : 'block md:hidden'} pb-3 mb-3 border-b border-slate-200/60 dark:border-slate-800/80`}>
+                <input
+                  type="text"
+                  placeholder="Untitled Note..."
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full text-2.5xl md:text-3.5xl font-black bg-transparent border-none outline-none text-slate-850 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-700"
+                />
+              </div>
 
-              {/* Clickable padding at the bottom to append new line */}
-              <div 
-                className="w-full cursor-text min-h-[100px]" 
-                onClick={() => {
-                  if (contentRef.current) {
-                    const lastChild = contentRef.current.lastElementChild;
-                    let targetNode = lastChild;
-                    
-                    if (!lastChild || (lastChild.nodeName !== 'DIV' && lastChild.nodeName !== 'P') || (lastChild.textContent?.trim() !== '' && lastChild.innerHTML !== '<br>')) {
-                      const p = document.createElement('div');
-                      p.innerHTML = '<br>';
-                      contentRef.current.appendChild(p);
-                      targetNode = p;
+              {/* Center Content Editor container */}
+              <div className="w-full">
+                
+                <div
+                  ref={contentRef}
+                  contentEditable
+                  onInput={handleInput}
+                  onKeyDown={handleKeyDown}
+                  onKeyUp={updateFormatState}
+                  onMouseUp={updateFormatState}
+                  onClick={handleContentClick}
+                  data-placeholder="Start writing your note..."
+                  className={`editor-content flex-1 w-full bg-transparent border-none outline-none text-[17px] text-slate-750 dark:text-slate-250 leading-relaxed outline-transparent focus:ring-0 ${
+                    FONT_OPTIONS.find(f => f.value === activeFont)?.class || 'font-outfit'
+                  }`}
+                  style={{ minHeight: '400px' }}
+                />
+
+                {/* Clickable padding at the bottom to append new line */}
+                <div 
+                  className="w-full cursor-text min-h-[100px]" 
+                  onClick={() => {
+                    if (contentRef.current) {
+                      const lastChild = contentRef.current.lastElementChild;
+                      let targetNode = lastChild;
                       
-                      const html = contentRef.current.innerHTML;
-                      latestContent.current = html;
-                      setBody(html);
-                      pushToHistory(html);
+                      if (!lastChild || (lastChild.nodeName !== 'DIV' && lastChild.nodeName !== 'P') || (lastChild.textContent?.trim() !== '' && lastChild.innerHTML !== '<br>')) {
+                        const p = document.createElement('div');
+                        p.innerHTML = '<br>';
+                        contentRef.current.appendChild(p);
+                        targetNode = p;
+                        
+                        const html = contentRef.current.innerHTML;
+                        latestContent.current = html;
+                        setBody(html);
+                        pushToHistory(html);
+                      }
+                      
+                      const range = document.createRange();
+                      if (targetNode) {
+                        range.setStart(targetNode, 0);
+                      } else {
+                        range.setStart(contentRef.current, 0);
+                      }
+                      range.collapse(true);
+                      const sel = window.getSelection();
+                      sel?.removeAllRanges();
+                      sel?.addRange(range);
+                      contentRef.current.focus();
                     }
-                    
-                    const range = document.createRange();
-                    if (targetNode) {
-                      range.setStart(targetNode, 0);
-                    } else {
-                      range.setStart(contentRef.current, 0);
-                    }
-                    range.collapse(true);
-                    const sel = window.getSelection();
-                    sel?.removeAllRanges();
-                    sel?.addRange(range);
-                    contentRef.current.focus();
-                  }
-                }}
-              />
+                  }}
+                />
+              </div>
             </div>
           </div>
 
           {/* Premium Bottom status bar */}
-          <div className="w-full border-t border-slate-100 dark:border-slate-800/80 px-5 py-2.5 bg-slate-50/50 dark:bg-slate-900/60 backdrop-blur flex justify-between items-center text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest select-none">
+          <div className="w-full border-t border-slate-200/60 dark:border-slate-800/80 px-5 py-2.5 bg-[#f4f6fa]/80 dark:bg-slate-900/60 backdrop-blur flex justify-between items-center text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest select-none">
             <div className="flex items-center gap-4">
               <span>Chars: {charCount}</span>
             </div>
