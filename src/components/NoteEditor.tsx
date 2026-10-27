@@ -8,13 +8,19 @@ import {
   Bold, Italic, List, ListOrdered, Link, Heading1, Heading2, Heading3, Quote, Undo, Redo, UploadCloud, 
   ChevronDown, ChevronUp, Underline, Strikethrough, Eraser, Type, AlignLeft, AlignCenter, AlignRight, 
   CheckSquare, Table, Search, Replace, GripVertical, Info, Clock, Highlighter, Minus,
-  Folder, Briefcase, Heart, Lightbulb, Archive
+  Folder, Briefcase, Heart, Lightbulb, Archive,
+  Sparkles, Mic, MicOff, Volume2, VolumeX, Share2, Maximize2, Minimize2,
+  AlertTriangle, Target, ChevronRight, Code as CodeIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useToast } from '../contexts/ToastContext';
 import { format, formatDistanceToNow } from 'date-fns';
 import FolderDropdown from './FolderDropdown';
 import { useBackHandler } from '../utils/smartBackNavigation';
+import AIAssistantDrawer from './AIAssistantDrawer';
+import SlashCommandMenu from './SlashCommandMenu';
+import ExportModal from './ExportModal';
+import { voiceDictation, audioReader } from '../utils/audioTools';
 
 interface NoteEditorProps {
   user: FirebaseUser;
@@ -164,6 +170,18 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     fontColor: '',
     isInsideTable: false
   });
+
+  // --- NEW FEATURES STATES ---
+  const [showAIDrawer, setShowAIDrawer] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [isDictating, setIsDictating] = useState(false);
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [zenMode, setZenMode] = useState(false);
+  
+  // Slash Command Menu States
+  const [slashMenuOpen, setSlashMenuOpen] = useState(false);
+  const [slashMenuPos, setSlashMenuPos] = useState({ top: 0, left: 0 });
+  const [slashQuery, setSlashQuery] = useState('');
 
   const [activePopup, setActivePopup] = useState<'text' | 'paragraph' | 'table' | 'tableActions' | 'link' | null>(null);
 
@@ -1159,6 +1177,184 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     }
   };
 
+  // --- RICH CONTENT BLOCKS INSERTERS ---
+  const handleInsertCallout = (type: 'tip' | 'warn' | 'goal') => {
+    restoreSelection(savedSelectionRef.current);
+    let border = '#6366f1';
+    let bg = 'rgba(99, 102, 241, 0.08)';
+    let emoji = '💡';
+    let title = 'Tip';
+    if (type === 'warn') {
+      border = '#f59e0b';
+      bg = 'rgba(245, 158, 11, 0.08)';
+      emoji = '⚠️';
+      title = 'Warning';
+    } else if (type === 'goal') {
+      border = '#10b981';
+      bg = 'rgba(16, 185, 129, 0.08)';
+      emoji = '🎯';
+      title = 'Goal';
+    }
+
+    const html = `<div class="glick-callout callout-${type}" style="padding: 12px 16px; margin: 12px 0; border-radius: 12px; background: ${bg}; border-left: 4px solid ${border}; display: flex; align-items: flex-start; gap: 10px;"><span style="font-size: 18px; user-select: none;">${emoji}</span><div style="flex: 1;"><strong style="color: ${border}; font-size: 13px;">${title}:</strong><p style="margin: 4px 0 0 0; font-size: 14px;">Write your ${title.toLowerCase()} details here...</p></div></div><p><br/></p>`;
+    document.execCommand('insertHTML', false, html);
+    if (contentRef.current) {
+      const h = contentRef.current.innerHTML;
+      latestContent.current = h;
+      setBody(h);
+      pushToHistory(h);
+    }
+    showToast(`Inserted ${title} callout box`, 'success');
+  };
+
+  const handleInsertCodeBlock = () => {
+    restoreSelection(savedSelectionRef.current);
+    const html = `<pre style="background: #0f172a; color: #f8fafc; padding: 14px 16px; border-radius: 12px; font-family: monospace; font-size: 13px; margin: 12px 0; overflow-x: auto; border: 1px solid #1e293b;"><code>// Enter code snippet here...</code></pre><p><br/></p>`;
+    document.execCommand('insertHTML', false, html);
+    if (contentRef.current) {
+      const h = contentRef.current.innerHTML;
+      latestContent.current = h;
+      setBody(h);
+      pushToHistory(h);
+    }
+    showToast('Inserted code snippet block', 'success');
+  };
+
+  const handleInsertToggle = () => {
+    restoreSelection(savedSelectionRef.current);
+    const html = `<details style="padding: 10px 14px; margin: 10px 0; border: 1px solid rgba(148, 163, 184, 0.35); border-radius: 12px; background: rgba(248, 250, 252, 0.5);"><summary style="font-weight: 700; font-size: 14px; cursor: pointer; outline: none; user-select: none; color: #4f46e5;">Toggle Section (Click to expand)</summary><div style="margin-top: 8px; padding-left: 8px; font-size: 14px;"><p>Hidden notes, checklist, or deeper details go here...</p></div></details><p><br/></p>`;
+    document.execCommand('insertHTML', false, html);
+    if (contentRef.current) {
+      const h = contentRef.current.innerHTML;
+      latestContent.current = h;
+      setBody(h);
+      pushToHistory(h);
+    }
+    showToast('Inserted collapsible toggle', 'success');
+  };
+
+  // --- AUDIO TOOLS (DICTATION & READER) ---
+  const toggleVoiceDictation = () => {
+    if (!voiceDictation.isSupported()) {
+      showToast('Speech Recognition not supported in this browser. Try Chrome/Edge.', 'error');
+      return;
+    }
+
+    if (isDictating) {
+      voiceDictation.stop();
+      setIsDictating(false);
+      showToast('Voice dictation stopped', 'info');
+    } else {
+      savedSelectionRef.current = saveSelection();
+      const started = voiceDictation.start(
+        (transcript, isFinal) => {
+          if (isFinal && transcript.trim()) {
+            restoreSelection(savedSelectionRef.current);
+            document.execCommand('insertText', false, ' ' + transcript.trim());
+            if (contentRef.current) {
+              const h = contentRef.current.innerHTML;
+              latestContent.current = h;
+              setBody(h);
+              pushToHistory(h);
+            }
+            savedSelectionRef.current = saveSelection();
+          }
+        },
+        (error) => {
+          showToast(`Microphone error: ${error}`, 'error');
+          setIsDictating(false);
+        },
+        () => {
+          setIsDictating(false);
+        }
+      );
+      if (started) {
+        setIsDictating(true);
+        showToast('🎙️ Dictation active: Speak now in English or Hindi', 'success');
+      }
+    }
+  };
+
+  const toggleAudioReader = () => {
+    if (!audioReader.isSupported()) {
+      showToast('Text-to-speech audio reader not supported in this browser.', 'error');
+      return;
+    }
+
+    if (isPlayingAudio) {
+      audioReader.stop();
+      setIsPlayingAudio(false);
+      showToast('Audio reader stopped', 'info');
+    } else {
+      const textToRead = (title ? title + '. ' : '') + extractTextFromHtml(body);
+      if (!textToRead.trim()) {
+        showToast('Note is empty! Nothing to read.', 'error');
+        return;
+      }
+      setIsPlayingAudio(true);
+      showToast('🔊 Reading note aloud...', 'info');
+      audioReader.speak(
+        textToRead,
+        () => setIsPlayingAudio(false),
+        () => setIsPlayingAudio(false)
+      );
+    }
+  };
+
+  const handleExecuteSlashCommand = (cmdId: string) => {
+    setSlashMenuOpen(false);
+    
+    // Remove the slash trigger text if any
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      document.execCommand('delete', false);
+    }
+
+    switch (cmdId) {
+      case 'ai':
+        setShowAIDrawer(true);
+        break;
+      case 'todo':
+        handleChecklist();
+        break;
+      case 'h1':
+        handleHeading('h1');
+        break;
+      case 'h2':
+        handleHeading('h2');
+        break;
+      case 'h3':
+        handleHeading('h3');
+        break;
+      case 'callout-tip':
+        handleInsertCallout('tip');
+        break;
+      case 'callout-warn':
+        handleInsertCallout('warn');
+        break;
+      case 'callout-goal':
+        handleInsertCallout('goal');
+        break;
+      case 'code':
+        handleInsertCodeBlock();
+        break;
+      case 'toggle':
+        handleInsertToggle();
+        break;
+      case 'table':
+        handleTableInsert(3, 3);
+        break;
+      case 'bullet':
+        handleFormat('insertUnorderedList');
+        break;
+      case 'quote':
+        handleBlockquote();
+        break;
+      default:
+        break;
+    }
+  };
+
   const handleTable = () => {
     if (activeFormats.isInsideTable) {
       togglePopup('tableActions');
@@ -1619,9 +1815,38 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       }
     }
 
+    if (e.key === '/') {
+      setTimeout(() => {
+        const sel = window.getSelection();
+        if (sel && sel.rangeCount > 0) {
+          const range = sel.getRangeAt(0);
+          const rect = range.getBoundingClientRect();
+          setSlashMenuPos({ top: rect.bottom + 6, left: rect.left });
+          setSlashMenuOpen(true);
+          setSlashQuery('');
+        }
+      }, 10);
+    } else if (slashMenuOpen) {
+      if (e.key === 'Escape' || e.key === ' ') {
+        setSlashMenuOpen(false);
+      } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'Enter') {
+        setSlashQuery(prev => prev + e.key);
+      } else if (e.key === 'Backspace') {
+        setSlashQuery(prev => {
+          if (prev.length <= 1) {
+            setSlashMenuOpen(false);
+            return '';
+          }
+          return prev.slice(0, -1);
+        });
+      }
+    }
+
     if (e.key === 'Escape') {
       setActivePopup(null);
       setShowFindReplace(false);
+      setSlashMenuOpen(false);
+      if (zenMode) setZenMode(false);
     }
 
     if (e.key === 'Enter') {
@@ -2121,8 +2346,9 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         )}
       </AnimatePresence>
 
-      {/* 2-Row Adaptive Toolbar */}
-      <div ref={popupRef} onTouchStart={handleToolbarTouchStart} className="sticky top-0 z-35 flex flex-col border-b border-slate-200/70 dark:border-slate-800 bg-[#f8f9fb]/95 dark:bg-[#0c1220]/95 backdrop-blur-md relative">
+      {/* 2-Row Adaptive Toolbar (Hidden in Zen Mode) */}
+      {!zenMode && (
+        <div ref={popupRef} onTouchStart={handleToolbarTouchStart} className="sticky top-0 z-35 flex flex-col border-b border-slate-200/70 dark:border-slate-800 bg-[#f8f9fb]/95 dark:bg-[#0c1220]/95 backdrop-blur-md relative">
                 {/* ROW 1: Navigation and status controls */}
         <div className="flex items-center justify-between px-3 md:px-4 py-2 border-b border-slate-200/60 dark:border-slate-800/60 gap-2">
           <div className="flex items-center gap-2 md:gap-3 shrink-0">
@@ -2205,6 +2431,69 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                 )}
               </AnimatePresence>
             </div>
+
+            {/* AI Assistant Button */}
+            <button
+              type="button"
+              onClick={() => setShowAIDrawer(true)}
+              className="px-2.5 md:px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white text-xs font-bold transition-all shadow-sm hover:shadow-indigo-500/20 flex items-center gap-1.5 cursor-pointer shrink-0"
+              title="Open AI Assistant (Summarize, Polish, Title & Tags, Chat)"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">AI Assistant</span>
+            </button>
+
+            {/* Voice Dictation (Speech-to-Text) */}
+            <button
+              type="button"
+              onClick={toggleVoiceDictation}
+              className={`p-1.5 md:p-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer shrink-0 ${
+                isDictating 
+                  ? 'bg-rose-600 border-rose-500 text-white shadow-md animate-pulse' 
+                  : 'bg-slate-100 dark:bg-slate-900 border-slate-250 dark:border-slate-800 text-slate-600 dark:text-slate-350 hover:bg-slate-200 dark:hover:bg-slate-800'
+              }`}
+              title={isDictating ? "Stop Voice Dictation (Recording...)" : "Start Voice Dictation (Speech-to-Text)"}
+            >
+              {isDictating ? <Mic className="w-4 h-4 animate-bounce" /> : <Mic className="w-4 h-4" />}
+            </button>
+
+            {/* Audio Reader (Text-to-Speech) */}
+            <button
+              type="button"
+              onClick={toggleAudioReader}
+              className={`p-1.5 md:p-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer shrink-0 ${
+                isPlayingAudio 
+                  ? 'bg-indigo-600 border-indigo-500 text-white shadow-md' 
+                  : 'bg-slate-100 dark:bg-slate-900 border-slate-250 dark:border-slate-800 text-slate-600 dark:text-slate-350 hover:bg-slate-200 dark:hover:bg-slate-800'
+              }`}
+              title={isPlayingAudio ? "Stop Reading Note" : "Listen Note (Text-to-Speech)"}
+            >
+              {isPlayingAudio ? <VolumeX className="w-4 h-4 text-white" /> : <Volume2 className="w-4 h-4" />}
+            </button>
+
+            {/* Export & Share */}
+            <button
+              type="button"
+              onClick={() => setShowExportModal(true)}
+              className="p-1.5 md:p-2 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-250 dark:border-slate-800 text-slate-600 dark:text-slate-350 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all cursor-pointer shrink-0"
+              title="Export to PDF, Markdown, Text or Share Card"
+            >
+              <Share2 className="w-4 h-4" />
+            </button>
+
+            {/* Zen Mode Toggle */}
+            <button
+              type="button"
+              onClick={() => setZenMode(prev => !prev)}
+              className={`p-1.5 md:p-2 rounded-xl border transition-all cursor-pointer shrink-0 ${
+                zenMode 
+                  ? 'bg-indigo-600 border-indigo-500 text-white shadow-md' 
+                  : 'bg-slate-100 dark:bg-slate-900 border-slate-250 dark:border-slate-800 text-slate-600 dark:text-slate-350 hover:bg-slate-200 dark:hover:bg-slate-800'
+              }`}
+              title={zenMode ? "Exit Zen Mode (Esc)" : "Distraction-Free Zen Mode"}
+            >
+              {zenMode ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            </button>
 
             {/* Distraction-free Focus Toggle */}
             <button
@@ -2376,6 +2665,39 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
           
           <button onMouseDown={handleButtonMouseDown} onClick={handleTable} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-all ${activeFormats.isInsideTable || activePopup === 'table' || activePopup === 'tableActions' ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Table options">
             <Table className="w-5 h-5" />
+          </button>
+          
+          {/* Callout Box Inserter */}
+          <button 
+            type="button"
+            onMouseDown={handleButtonMouseDown} 
+            onClick={() => togglePopup(activePopup === ('callout' as any) ? null : ('callout' as any))} 
+            className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-all ${activePopup === ('callout' as any) ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} 
+            title="Insert Callout / Alert Box"
+          >
+            <Lightbulb className="w-5 h-5" />
+          </button>
+
+          {/* Code Block Inserter */}
+          <button 
+            type="button"
+            onMouseDown={handleButtonMouseDown} 
+            onClick={handleInsertCodeBlock} 
+            className="p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all" 
+            title="Insert Code Snippet Block"
+          >
+            <CodeIcon className="w-5 h-5" />
+          </button>
+
+          {/* Collapsible Toggle List Inserter */}
+          <button 
+            type="button"
+            onMouseDown={handleButtonMouseDown} 
+            onClick={handleInsertToggle} 
+            className="p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all" 
+            title="Insert Collapsible Toggle List"
+          >
+            <ChevronRight className="w-5 h-5" />
           </button>
           
 
@@ -2718,8 +3040,44 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
               </div>
             </motion.div>
           )}
+
+          {activePopup === ('callout' as any) && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 absolute top-full left-0 w-full z-30 shadow-xl p-4">
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Select Callout Box Style</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <button
+                  type="button"
+                  onClick={() => { handleInsertCallout('tip'); setActivePopup(null); }}
+                  className="p-3 rounded-xl border border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/50 dark:bg-indigo-950/20 text-left hover:scale-[1.02] transition cursor-pointer"
+                >
+                  <span className="text-base">💡</span>
+                  <p className="text-xs font-bold text-indigo-900 dark:text-indigo-200 mt-1">Tip Box</p>
+                  <p className="text-[10px] text-indigo-700/70 dark:text-indigo-400">Highlight important ideas</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { handleInsertCallout('warn'); setActivePopup(null); }}
+                  className="p-3 rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/50 dark:bg-amber-950/20 text-left hover:scale-[1.02] transition cursor-pointer"
+                >
+                  <span className="text-base">⚠️</span>
+                  <p className="text-xs font-bold text-amber-900 dark:text-amber-200 mt-1">Warning Box</p>
+                  <p className="text-[10px] text-amber-700/70 dark:text-amber-400">Caution or critical notes</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { handleInsertCallout('goal'); setActivePopup(null); }}
+                  className="p-3 rounded-xl border border-emerald-200 dark:border-emerald-900/60 bg-emerald-50/50 dark:bg-emerald-950/20 text-left hover:scale-[1.02] transition cursor-pointer"
+                >
+                  <span className="text-base">🎯</span>
+                  <p className="text-xs font-bold text-emerald-900 dark:text-emerald-200 mt-1">Goal Box</p>
+                  <p className="text-[10px] text-emerald-700/70 dark:text-emerald-400">Targets and milestones</p>
+                </button>
+              </div>
+            </motion.div>
+          )}
         </AnimatePresence>
       </div>
+      )}
 
       {/* Floating Find & Replace Panel (Ctrl+F) */}
       <AnimatePresence>
@@ -3077,6 +3435,70 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* 🤖 AI Assistant Drawer */}
+      <AIAssistantDrawer
+        isOpen={showAIDrawer}
+        onClose={() => setShowAIDrawer(false)}
+        noteTitle={title}
+        noteText={(title ? title + '\n\n' : '') + extractTextFromHtml(body)}
+        onApplyTitle={(newTitle) => setTitle(newTitle)}
+        onApplyTags={(newTags) => {
+          const currentTagsList = tags ? tags.split(',').map(t => t.trim().toLowerCase()).filter(Boolean) : [];
+          const merged = Array.from(new Set([...currentTagsList, ...newTags]));
+          setTags(merged.join(', '));
+        }}
+        onInsertText={(text) => {
+          if (contentRef.current) {
+            contentRef.current.innerHTML += text.replace(/\n/g, '<br/>');
+            const html = contentRef.current.innerHTML;
+            latestContent.current = html;
+            setBody(html);
+            pushToHistory(html);
+          }
+        }}
+        onReplaceContent={(newHtml) => {
+          if (contentRef.current) {
+            contentRef.current.innerHTML = newHtml;
+            latestContent.current = newHtml;
+            setBody(newHtml);
+            pushToHistory(newHtml);
+          }
+        }}
+      />
+
+      {/* ⚡ Notion-Style Slash Command Menu */}
+      <SlashCommandMenu
+        isOpen={slashMenuOpen}
+        position={slashMenuPos}
+        query={slashQuery}
+        onClose={() => setSlashMenuOpen(false)}
+        onExecute={handleExecuteSlashCommand}
+      />
+
+      {/* 📤 Export & Share Modal */}
+      <ExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        noteTitle={title}
+        noteHtml={body}
+        noteText={extractTextFromHtml(body)}
+        tags={tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : []}
+        createdAt={lastSaved || new Date()}
+      />
+
+      {/* 🧘 Zen Mode Floating Exit Bar */}
+      {zenMode && (
+        <div className="fixed top-4 right-4 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+          <button
+            onClick={() => setZenMode(false)}
+            className="px-3.5 py-1.5 rounded-full bg-slate-900/80 hover:bg-slate-900 text-white border border-slate-700/80 backdrop-blur-md text-xs font-bold flex items-center gap-1.5 shadow-xl transition-all cursor-pointer"
+          >
+            <Minimize2 className="w-3.5 h-3.5" />
+            <span>Exit Zen Mode (Esc)</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -11,6 +11,8 @@ import { useToast } from '../contexts/ToastContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { sound } from '../utils/sound';
 import { motion, AnimatePresence } from 'motion/react';
+import AIConfigModal from './AIConfigModal';
+import { getAIConfig } from '../services/aiService';
 
 export default function Settings({ user, onSignOut }: { user: FirebaseUser; onSignOut?: () => void }) {
   const { showToast } = useToast();
@@ -22,6 +24,7 @@ export default function Settings({ user, onSignOut }: { user: FirebaseUser; onSi
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(sound.isEnabled());
+  const [showAIModal, setShowAIModal] = useState(false);
   
   // Stats state
   const [stats, setStats] = useState({ totalNotes: 0, totalWords: 0, activeDays: 1 });
@@ -353,6 +356,36 @@ export default function Settings({ user, onSignOut }: { user: FirebaseUser; onSi
 
       </div>
 
+      {/* 🤖 AI Configuration Section */}
+      <div className="bg-[#fafbfc]/90 dark:bg-slate-900/40 border border-slate-200/70 dark:border-slate-800/80 rounded-2xl p-6 shadow-xs space-y-4 backdrop-blur-md">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-gradient-to-tr from-indigo-500 to-purple-600 rounded-xl text-white shadow-md shadow-indigo-500/20">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-base text-slate-900 dark:text-white">AI Engine Configuration</h3>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 uppercase tracking-wider">
+                  {getAIConfig().mode === 'custom' ? 'Custom Engine' : 'Default Engine'}
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Configure smart assistance, test model latency, or connect your personal Gemini & OpenAI API keys.
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setShowAIModal(true)}
+            className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 shadow-sm shadow-indigo-500/20 cursor-pointer shrink-0"
+          >
+            <Sparkles className="w-4 h-4" />
+            Manage AI Engine
+          </button>
+        </div>
+      </div>
+
       {/* 📊 Intelligent Workspace Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="relative overflow-hidden bg-[#fafbfc]/90 dark:bg-slate-900/35 border border-slate-200/70 dark:border-slate-800/80 rounded-2xl p-5 shadow-xs">
@@ -589,6 +622,12 @@ export default function Settings({ user, onSignOut }: { user: FirebaseUser; onSi
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* AI Configuration Modal */}
+      <AIConfigModal 
+        isOpen={showAIModal} 
+        onClose={() => setShowAIModal(false)} 
+      />
     </div>
   );
 }
