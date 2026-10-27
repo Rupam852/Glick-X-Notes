@@ -90,6 +90,43 @@ export default function Dashboard({
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [noteToDelete, setNoteToDelete] = useState<Note | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [isFabVisible, setIsFabVisible] = useState(true);
+
+  // 🌀 Scroll listener: hides FAB with spin on scroll down, reveals on scroll up
+  useEffect(() => {
+    let lastScrollY = 0;
+    const mainEl = document.querySelector('main');
+
+    const handleScroll = () => {
+      const currentY = mainEl ? mainEl.scrollTop : window.scrollY;
+      const diff = currentY - lastScrollY;
+
+      // Always show near the very top
+      if (currentY < 40) {
+        setIsFabVisible(true);
+      } else if (diff > 8) {
+        // Scrolling DOWN -> Hide with spin
+        setIsFabVisible(false);
+      } else if (diff < -8) {
+        // Scrolling UP -> Reveal with spin
+        setIsFabVisible(true);
+      }
+
+      lastScrollY = currentY;
+    };
+
+    if (mainEl) {
+      mainEl.addEventListener('scroll', handleScroll, { passive: true });
+    }
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      if (mainEl) {
+        mainEl.removeEventListener('scroll', handleScroll);
+      }
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -413,17 +450,6 @@ export default function Dashboard({
               Manage your ideas across <span className="text-indigo-600 dark:text-indigo-400 font-bold">{filteredNotes.length} notes</span> • {(totalStorage / 1024).toFixed(1)} KB synchronized
             </p>
           </div>
-
-          <button
-            onClick={() => {
-              sound.playPop();
-              onNewNote();
-            }}
-            className="flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 via-indigo-500 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-bold px-5 py-3 rounded-xl shadow-lg shadow-indigo-500/20 active:scale-95 transition-all duration-150 cursor-pointer text-xs uppercase tracking-wider shrink-0"
-          >
-            <Plus className="w-4 h-4 stroke-[3]" />
-            <span>Create Note</span>
-          </button>
         </div>
       </div>
 
@@ -803,6 +829,32 @@ export default function Dashboard({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* 🚀 Floating Action Button (FAB) with Hide-on-Scroll Spin Animation */}
+      <motion.button
+        onClick={() => {
+          sound.playPop();
+          onNewNote();
+        }}
+        initial={{ scale: 0, rotate: -180, opacity: 0 }}
+        animate={isFabVisible 
+          ? { scale: 1, rotate: 0, opacity: 1, y: 0 } 
+          : { scale: 0, rotate: 180, opacity: 0, y: 35 }
+        }
+        whileHover={{ scale: 1.1, rotate: 90 }}
+        whileTap={{ scale: 0.92 }}
+        transition={{ type: "spring", stiffness: 320, damping: 24 }}
+        className="fixed bottom-20 md:bottom-8 right-6 md:right-8 z-40 w-14 h-14 md:w-16 md:h-16 rounded-2xl md:rounded-3xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white shadow-[0_10px_35px_rgba(99,102,241,0.45)] hover:shadow-[0_16px_45px_rgba(99,102,241,0.65)] border-2 border-white/25 dark:border-white/10 flex items-center justify-center cursor-pointer group"
+        title="Create New Note (+)"
+        aria-label="Create New Note"
+      >
+        <Plus className="w-7 h-7 md:w-8 md:h-8 stroke-[2.5]" />
+        
+        {/* Tooltip on Desktop hover */}
+        <span className="hidden md:block absolute right-full mr-3.5 top-1/2 -translate-y-1/2 bg-slate-900/90 dark:bg-slate-800/90 text-white text-xs font-bold px-3 py-1.5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-lg border border-white/10">
+          Create Note
+        </span>
+      </motion.button>
 
     </div>
   );
