@@ -13,6 +13,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { useToast } from '../contexts/ToastContext';
 import { format, formatDistanceToNow } from 'date-fns';
+import FolderDropdown from './FolderDropdown';
 
 interface NoteEditorProps {
   user: FirebaseUser;
@@ -2737,17 +2738,13 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Notebook / Folder</label>
                     <div className="relative">
-                      <select
+                      <FolderDropdown
                         value={folder}
-                        onChange={(e) => setFolder(e.target.value)}
-                        className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 text-xs font-semibold text-slate-800 dark:text-slate-200 px-3 py-2 rounded-xl outline-none cursor-pointer hover:border-indigo-500 transition-colors"
-                      >
-                        <option value="all">📁 All Notes / General</option>
-                        <option value="work">💼 Work & Projects</option>
-                        <option value="personal">💚 Personal & Life</option>
-                        <option value="ideas">💡 Ideas & Brainstorm</option>
-                        <option value="archive">📦 Archive</option>
-                      </select>
+                        onChange={(newFolder) => setFolder(newFolder)}
+                        size="md"
+                        align="left"
+                        className="w-full"
+                      />
                     </div>
                   </div>
 

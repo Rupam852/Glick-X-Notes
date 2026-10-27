@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { format } from 'date-fns';
 import { sound } from '../utils/sound';
 import { useToast } from '../contexts/ToastContext';
+import FolderDropdown from './FolderDropdown';
 
 const stripHtmlForPreview = (html: string) => {
   if (!html) return '';
@@ -90,6 +91,7 @@ export default function Dashboard({
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [noteToDelete, setNoteToDelete] = useState<Note | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [activeDropdownNoteId, setActiveDropdownNoteId] = useState<string | null>(null);
   const [isFabVisible, setIsFabVisible] = useState(true);
 
   // 🌀 Scroll listener: hides FAB with spin on scroll down, reveals on scroll up
@@ -213,9 +215,7 @@ export default function Dashboard({
     }
   };
 
-  const handleUpdateNoteFolder = async (e: React.ChangeEvent<HTMLSelectElement>, note: Note) => {
-    e.stopPropagation();
-    const newFolder = e.target.value;
+  const handleUpdateNoteFolder = async (newFolder: string, note: Note) => {
     setNotes(prev => prev.map(n => n.id === note.id ? { ...n, folder: newFolder } : n));
     try {
       await setDoc(doc(db, 'notes', note.id), {
@@ -306,10 +306,12 @@ export default function Dashboard({
           sound.playPop();
           onEditNote(note);
         }}
-        className="group relative bg-[#fafbfc]/95 dark:bg-[#111726]/85 backdrop-blur-xl border border-slate-200/70 dark:border-slate-800/80 hover:border-indigo-500/40 dark:hover:border-indigo-400/40 rounded-2xl p-5 shadow-[0_2px_14px_rgba(15,23,42,0.03)] hover:shadow-[0_14px_32px_rgba(99,102,241,0.10)] transition-all duration-200 cursor-pointer overflow-hidden flex flex-col justify-between min-h-[200px]"
+        className={`group relative bg-[#fafbfc]/95 dark:bg-[#111726]/85 backdrop-blur-xl border border-slate-200/70 dark:border-slate-800/80 hover:border-indigo-500/40 dark:hover:border-indigo-400/40 rounded-2xl p-5 shadow-[0_2px_14px_rgba(15,23,42,0.03)] hover:shadow-[0_14px_32px_rgba(99,102,241,0.10)] transition-all duration-200 cursor-pointer flex flex-col justify-between min-h-[200px] ${
+          activeDropdownNoteId === note.id ? 'z-30' : 'z-10'
+        }`}
       >
         {/* Subtle hover gradient mesh highlight */}
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-2xl" />
 
         {/* Left Border accent color bar */}
         <div 
@@ -325,20 +327,14 @@ export default function Dashboard({
             </h3>
 
             <div className="flex items-center gap-1.5 shrink-0">
-              {/* Quick folder select */}
-              <select
+              {/* Quick folder select dropdown */}
+              <FolderDropdown
                 value={note.folder || 'all'}
-                onClick={(e) => e.stopPropagation()}
-                onChange={(e) => handleUpdateNoteFolder(e, note)}
-                className="text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg px-2 py-1 border border-slate-200/60 dark:border-slate-700 outline-none cursor-pointer hover:border-indigo-400 max-w-[95px] truncate"
-                title="Move note to folder"
-              >
-                <option value="all">📁 General</option>
-                <option value="work">💼 Work</option>
-                <option value="personal">💚 Personal</option>
-                <option value="ideas">💡 Ideas</option>
-                <option value="archive">📦 Archive</option>
-              </select>
+                onChange={(newFolder) => handleUpdateNoteFolder(newFolder, note)}
+                size="sm"
+                align="right"
+                onOpenStateChange={(isOpen) => setActiveDropdownNoteId(isOpen ? note.id : null)}
+              />
 
               {/* Pin button */}
               <button
@@ -694,19 +690,12 @@ export default function Dashboard({
 
                     <div className="flex flex-wrap items-center gap-2.5 pl-3 sm:pl-0 shrink-0">
                       {/* Quick folder select in list view */}
-                      <select
+                      <FolderDropdown
                         value={note.folder || 'all'}
-                        onClick={(e) => e.stopPropagation()}
-                        onChange={(e) => handleUpdateNoteFolder(e, note)}
-                        className="text-[9px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg px-2 py-0.5 border border-slate-200/60 dark:border-slate-700 outline-none cursor-pointer hover:border-indigo-400"
-                        title="Move note to folder"
-                      >
-                        <option value="all">📁 General</option>
-                        <option value="work">💼 Work</option>
-                        <option value="personal">💚 Personal</option>
-                        <option value="ideas">💡 Ideas</option>
-                        <option value="archive">📦 Archive</option>
-                      </select>
+                        onChange={(newFolder) => handleUpdateNoteFolder(newFolder, note)}
+                        size="xs"
+                        align="left"
+                      />
                       {/* Tags */}
                       {note.tags && note.tags.length > 0 && (
                         <div className="flex gap-1">
