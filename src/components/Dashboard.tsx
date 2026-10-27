@@ -33,6 +33,15 @@ const stripHtmlForPreview = (html: string) => {
     .trim();
 };
 
+const safeToDate = (ts: any): Date => {
+  if (!ts) return new Date();
+  if (typeof ts.toDate === 'function') return ts.toDate();
+  if (ts.seconds !== undefined) return new Date(ts.seconds * 1000);
+  if (ts._seconds !== undefined) return new Date(ts._seconds * 1000);
+  if (ts instanceof Date) return ts;
+  return new Date(ts);
+};
+
 const extractFirstImage = (body: string): string | null => {
   if (!body) return null;
   const match = body.match(/<img[^>]+src=["']([^"']+)["']/i);
@@ -97,9 +106,14 @@ export default function Dashboard({
         let valA: any = a[sortBy];
         let valB: any = b[sortBy];
 
-        // Handle Firestore Timestamps
+        // Handle Firestore Timestamps safely
         if (valA instanceof Timestamp) valA = valA.toMillis();
+        else if (valA && typeof valA.toMillis === 'function') valA = valA.toMillis();
+        else if (valA && typeof valA.toDate === 'function') valA = valA.toDate().getTime();
+
         if (valB instanceof Timestamp) valB = valB.toMillis();
+        else if (valB && typeof valB.toMillis === 'function') valB = valB.toMillis();
+        else if (valB && typeof valB.toDate === 'function') valB = valB.toDate().getTime();
         
         if (!valA) valA = Date.now();
         if (!valB) valB = Date.now();
@@ -124,12 +138,12 @@ export default function Dashboard({
 
   const handleTogglePin = async (e: React.MouseEvent, note: Note) => {
     e.stopPropagation();
-    sound.playPin();
     const newPinned = !note.pinned;
+    // Optimistic local state update for zero-latency instant transition
+    setNotes(prev => prev.map(n => n.id === note.id ? { ...n, pinned: newPinned } : n));
     try {
       await setDoc(doc(db, 'notes', note.id), {
-        pinned: newPinned,
-        updatedAt: serverTimestamp()
+        pinned: newPinned
       }, { merge: true });
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `notes/${note.id}`);
@@ -297,7 +311,7 @@ export default function Dashboard({
           <div className="flex items-center justify-between text-[10px] font-medium text-slate-400 dark:text-slate-500">
             <div className="flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5" />
-              <span>{format(note.updatedAt.toDate(), 'MMM d, yyyy')}</span>
+              <span>{format(safeToDate(note.updatedAt), 'MMM d, yyyy')}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5" />
@@ -598,7 +612,7 @@ export default function Dashboard({
                       <div className="flex items-center gap-3 text-[10px] font-medium text-slate-400 dark:text-slate-500">
                         <span className="flex items-center gap-1">
                           <Calendar className="w-3 h-3" />
-                          {format(note.updatedAt.toDate(), 'MMM d')}
+                          {format(safeToDate(note.updatedAt), 'MMM d')}
                         </span>
                         <span className="hidden sm:inline-block">•</span>
                         <span>{readingTime}</span>
