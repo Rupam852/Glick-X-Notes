@@ -223,6 +223,35 @@ function AppContent() {
     };
   }, [user, view, editingNote]);
 
+  // Reset scroll to top on any view switch
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, [view]);
+
+  // Wrapper for setView that also updates history and sessionStorage
+  const navigateTo = useCallback((newView: typeof view, note: Note | null = null) => {
+    // Only push state if it's a different view or note
+    if (view === newView && editingNote?.id === note?.id) return;
+    
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+
+    setView(newView);
+    setEditingNote(note);
+    
+    sessionStorage.setItem('glick_notes_view', newView);
+    if (note) {
+      sessionStorage.setItem('glick_notes_editing_note', JSON.stringify(note));
+    } else {
+      sessionStorage.removeItem('glick_notes_editing_note');
+    }
+    
+    window.history.pushState({ view: newView, editingNote: note }, '');
+  }, [view, editingNote]);
+
   const lastBackPressTimeRef = useRef<number>(0);
 
   // 🛡️ Global Smart Back Gesture handler (Edge swipe & Programmatic Back)
@@ -254,35 +283,6 @@ function AppContent() {
       }
     }
   }, [view, navigateTo, showToast]);
-
-  // Reset scroll to top on any view switch
-  useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-    document.documentElement.scrollTop = 0;
-    document.body.scrollTop = 0;
-  }, [view]);
-
-  // Wrapper for setView that also updates history and sessionStorage
-  const navigateTo = useCallback((newView: typeof view, note: Note | null = null) => {
-    // Only push state if it's a different view or note
-    if (view === newView && editingNote?.id === note?.id) return;
-    
-    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-    document.documentElement.scrollTop = 0;
-    document.body.scrollTop = 0;
-
-    setView(newView);
-    setEditingNote(note);
-    
-    sessionStorage.setItem('glick_notes_view', newView);
-    if (note) {
-      sessionStorage.setItem('glick_notes_editing_note', JSON.stringify(note));
-    } else {
-      sessionStorage.removeItem('glick_notes_editing_note');
-    }
-    
-    window.history.pushState({ view: newView, editingNote: note }, '');
-  }, [view, editingNote]);
 
   // Smooth Sign In transition with centered modal popup and spinner
   const handleLoginSuccess = useCallback((userName?: string) => {
