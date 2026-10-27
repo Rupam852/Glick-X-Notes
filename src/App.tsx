@@ -66,6 +66,11 @@ function AppContent() {
 
     authTransitionTimer.current = setTimeout(() => {
       setAuthTransition(null);
+      // Immediately reset scroll to top so target page never opens scrolled down
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+
       if (type === 'signin') {
         setView('dashboard');
         sessionStorage.setItem('glick_notes_view', 'dashboard');
@@ -208,11 +213,22 @@ function AppContent() {
     };
   }, [user]);
 
+  // Reset scroll to top on any view switch
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, [view]);
+
   // Wrapper for setView that also updates history and sessionStorage
   const navigateTo = useCallback((newView: typeof view, note: Note | null = null) => {
     // Only push state if it's a different view or note
     if (view === newView && editingNote?.id === note?.id) return;
     
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+
     setView(newView);
     setEditingNote(note);
     
@@ -227,13 +243,15 @@ function AppContent() {
   }, [view, editingNote]);
 
   // Smooth Sign In transition with centered modal popup and spinner
-  // Smooth Sign In transition with centered modal popup and spinner
   const handleLoginSuccess = useCallback((userName?: string) => {
     startAuthTransition('signin', userName);
   }, [startAuthTransition]);
 
   // Smooth Sign Out transition with centered modal popup and spinner
   const handleInitiateSignOut = useCallback(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
     startAuthTransition('signout');
     setTimeout(async () => {
       try {

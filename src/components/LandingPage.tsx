@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Shield, 
@@ -54,6 +54,13 @@ interface LandingPageProps {
 export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
   const { theme, toggleTheme } = useTheme();
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
+
+  // Guarantee that Landing Page always loads at top (hero section)
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, []);
 
 
   const faqs = [
