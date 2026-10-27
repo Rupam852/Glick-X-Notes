@@ -624,12 +624,12 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
 
             <a
               href="mailto:rupambairagya08@gmail.com"
-              aria-label="Contact Support"
-              title="Support: rupambairagya08@gmail.com"
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-500/40 hover:bg-indigo-500/10 transition-all shadow-xs"
+              aria-label="Support: rupambairagya08@gmail.com"
+              title="Email: rupambairagya08@gmail.com"
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-500/40 hover:bg-indigo-500/10 transition-all shadow-xs"
             >
-              <Mail className="w-3.5 h-3.5 text-indigo-500" />
-              <span>Contact Support</span>
+              <Mail className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+              <span>Support: <span className="text-slate-800 dark:text-slate-200 font-medium">rupambairagya08@gmail.com</span></span>
             </a>
           </div>
 
