@@ -14,6 +14,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useToast } from '../contexts/ToastContext';
 import { format, formatDistanceToNow } from 'date-fns';
 import FolderDropdown from './FolderDropdown';
+import { useBackHandler } from '../utils/smartBackNavigation';
 
 interface NoteEditorProps {
   user: FirebaseUser;
@@ -222,6 +223,33 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   const [findText, setFindText] = useState('');
   const [replaceText, setReplaceText] = useState('');
   const [matchCount, setMatchCount] = useState(0);
+
+  // 🛡️ Smart Back Handlers: close open modals, sheets, and popups on back gesture without leaving editor
+  useBackHandler(() => {
+    setViewingAttachment(null);
+    return true;
+  }, viewingAttachment !== null);
+
+  useBackHandler(() => {
+    setShowDeleteConfirm(false);
+    return true;
+  }, showDeleteConfirm);
+
+  useBackHandler(() => {
+    setShowFindReplace(false);
+    return true;
+  }, showFindReplace);
+
+  useBackHandler(() => {
+    setActivePopup(null);
+    return true;
+  }, activePopup !== null);
+
+  useBackHandler(() => {
+    setShowFontMenu(false);
+    setShowFontSizeMenu(false);
+    return true;
+  }, showFontMenu || showFontSizeMenu);
 
   // Auto-sync Font Stepper
   useEffect(() => {

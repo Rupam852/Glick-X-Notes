@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { sound } from '../utils/sound';
+import { useBackHandler } from '../utils/smartBackNavigation';
 
 interface LandingPageProps {
   onLogin: () => void;
@@ -45,6 +46,12 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
   const { theme, toggleTheme } = useTheme();
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
   const [activeModal, setActiveModal] = useState<'privacy' | 'terms' | null>(null);
+
+  // Close legal modals on smart back gesture
+  useBackHandler(() => {
+    setActiveModal(null);
+    return true;
+  }, activeModal !== null);
 
   // Guarantee that Landing Page always loads at top (hero section)
   useEffect(() => {

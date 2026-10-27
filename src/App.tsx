@@ -22,11 +22,14 @@ import EmailActionHandler from './components/EmailActionHandler';
 import AuthTransitionModal from './components/AuthTransitionModal';
 import { Loader2 } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
-import { ToastProvider } from './contexts/ToastContext';
+import { ToastProvider, useToast } from './contexts/ToastContext';
 import { Note } from './types';
 import { sound } from './utils/sound';
+import SmartBackGesture from './components/SmartBackGesture';
+import { triggerSmartBack } from './utils/smartBackNavigation';
 
 function AppContent() {
+  const { showToast } = useToast();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedFolder, setSelectedFolder] = useState<string>('all');
@@ -182,9 +185,16 @@ function AppContent() {
     return () => unsubscribe();
   }, [user]);
 
-  // Sync state with browser history
+  // Sync state with browser history + Smart modal interception
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
+      // 1. If an active modal, sheet, or popup is open, close it without changing view
+      const modalHandled = triggerSmartBack();
+      if (modalHandled) {
+        window.history.pushState({ view, editingNote }, '');
+        return;
+      }
+
       if (event.state) {
         const { view: targetView, editingNote: targetNote } = event.state;
         setView(targetView);
@@ -211,7 +221,39 @@ function AppContent() {
     return () => {
       window.removeEventListener('popstate', handlePopState);
     };
-  }, [user]);
+  }, [user, view, editingNote]);
+
+  const lastBackPressTimeRef = useRef<number>(0);
+
+  // 🛡️ Global Smart Back Gesture handler (Edge swipe & Programmatic Back)
+  const handleSmartBackGesture = useCallback(() => {
+    // 1. Check if any active modal or sheet consumes the gesture
+    const handledByModal = triggerSmartBack();
+    if (handledByModal) return;
+
+    // 2. Hierarchical View navigation
+    if (view === 'editor' || view === 'settings') {
+      navigateTo('dashboard');
+      return;
+    }
+
+    if (view === 'login' || view === 'signup' || view === 'forgot-password') {
+      navigateTo('landing');
+      return;
+    }
+
+    // 3. Root views: Dashboard (logged in) or Landing (guest)
+    if (view === 'dashboard' || view === 'landing') {
+      const now = Date.now();
+      if (now - lastBackPressTimeRef.current < 2500) {
+        // Double-back within 2.5s -> allow browser exit
+        window.history.back();
+      } else {
+        lastBackPressTimeRef.current = now;
+        showToast('Swipe or press back again to exit', 'info');
+      }
+    }
+  }, [view, navigateTo, showToast]);
 
   // Reset scroll to top on any view switch
   useEffect(() => {
@@ -316,10 +358,13 @@ function AppContent() {
   if (!user) {
     if (view === 'landing') {
       return (
-        <LandingPage 
-          onLogin={() => navigateTo('login')}
-          onSignup={() => navigateTo('signup')}
-        />
+        <>
+          <SmartBackGesture onBack={handleSmartBackGesture} />
+          <LandingPage 
+            onLogin={() => navigateTo('login')}
+            onSignup={() => navigateTo('signup')}
+          />
+        </>
       );
     }
 
@@ -342,29 +387,32 @@ function AppContent() {
     };
 
     return (
-      <AuthLayout 
-        title={getTitle()} 
-        subtitle={getSubtitle()}
-      >
-        {view === 'login' && (
-          <LoginForm 
-            onSwitchToSignup={() => navigateTo('signup')} 
-            onForgotPassword={() => navigateTo('forgot-password')} 
-            onSuccess={handleLoginSuccess} 
-          />
-        )}
-        {view === 'signup' && (
-          <SignupForm 
-            onSwitchToLogin={() => navigateTo('login')} 
-            onSuccess={handleLoginSuccess} 
-          />
-        )}
-        {view === 'forgot-password' && (
-          <ForgotPasswordForm 
-            onBackToLogin={() => navigateTo('login')} 
-          />
-        )}
-      </AuthLayout>
+      <>
+        <SmartBackGesture onBack={handleSmartBackGesture} />
+        <AuthLayout 
+          title={getTitle()} 
+          subtitle={getSubtitle()}
+        >
+          {view === 'login' && (
+            <LoginForm 
+              onSwitchToSignup={() => navigateTo('signup')} 
+              onForgotPassword={() => navigateTo('forgot-password')} 
+              onSuccess={handleLoginSuccess} 
+            />
+          )}
+          {view === 'signup' && (
+            <SignupForm 
+              onSwitchToLogin={() => navigateTo('login')} 
+              onSuccess={handleLoginSuccess} 
+            />
+          )}
+          {view === 'forgot-password' && (
+            <ForgotPasswordForm 
+              onBackToLogin={() => navigateTo('login')} 
+            />
+          )}
+        </AuthLayout>
+      </>
     );
   }
 
@@ -383,62 +431,64 @@ function AppContent() {
 
   if (view === 'editor') {
     return (
-      <NoteEditor 
-        user={user}
-        note={editingNote} 
-        onBack={() => {
-          // Instead of setView, we go back in history if possible
-          // or just navigate to dashboard and push state
-          window.history.back();
-        }} 
-        onSave={(updatedNote) => {
-          setEditingNote(updatedNote);
-          sessionStorage.setItem('glick_notes_editing_note', JSON.stringify(updatedNote));
-          window.history.replaceState({ view: 'editor', editingNote: updatedNote }, '');
-        }}
-      />
+      <>
+        <SmartBackGesture onBack={handleSmartBackGesture} />
+        <NoteEditor 
+          user={user}
+          note={editingNote} 
+          onBack={() => navigateTo('dashboard')} 
+          onSave={(updatedNote) => {
+            setEditingNote(updatedNote);
+            sessionStorage.setItem('glick_notes_editing_note', JSON.stringify(updatedNote));
+            window.history.replaceState({ view: 'editor', editingNote: updatedNote }, '');
+          }}
+        />
+      </>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#f2f4f7] dark:bg-[#0b0f19] text-slate-800 dark:text-slate-100 flex flex-col md:flex-row transition-colors duration-200">
-      <Sidebar 
-        user={user} 
-        activeView={view} 
-        onViewChange={(v) => navigateTo(v)} 
-        selectedFolder={selectedFolder}
-        onFolderChange={(f) => setSelectedFolder(f)}
-        folderCounts={folderCounts}
-        onSignOut={handleInitiateSignOut}
-      />
-      
-      <main className="flex-1 overflow-y-auto pb-24 md:pb-0">
-        {view === 'dashboard' && (
-          <Dashboard 
-            user={user}
-            onEditNote={(note) => navigateTo('editor', note)}
-            onNewNote={() => {
-              const defaultFolder = (selectedFolder !== 'all' && selectedFolder !== 'pinned') ? selectedFolder : 'all';
-              navigateTo('editor', { folder: defaultFolder } as any);
-            }}
-            selectedFolder={selectedFolder}
-            onFolderChange={(f) => setSelectedFolder(f)}
-          />
-        )}
-        {view === 'settings' && (
-          <Settings user={user} onSignOut={handleInitiateSignOut} />
-        )}
-      </main>
+    <>
+      <SmartBackGesture onBack={handleSmartBackGesture} />
+      <div className="min-h-screen bg-[#f2f4f7] dark:bg-[#0b0f19] text-slate-800 dark:text-slate-100 flex flex-col md:flex-row transition-colors duration-200">
+        <Sidebar 
+          user={user} 
+          activeView={view} 
+          onViewChange={(v) => navigateTo(v)} 
+          selectedFolder={selectedFolder}
+          onFolderChange={(f) => setSelectedFolder(f)}
+          folderCounts={folderCounts}
+          onSignOut={handleInitiateSignOut}
+        />
+        
+        <main className="flex-1 overflow-y-auto pb-24 md:pb-0">
+          {view === 'dashboard' && (
+            <Dashboard 
+              user={user}
+              onEditNote={(note) => navigateTo('editor', note)}
+              onNewNote={() => {
+                const defaultFolder = (selectedFolder !== 'all' && selectedFolder !== 'pinned') ? selectedFolder : 'all';
+                navigateTo('editor', { folder: defaultFolder } as any);
+              }}
+              selectedFolder={selectedFolder}
+              onFolderChange={(f) => setSelectedFolder(f)}
+            />
+          )}
+          {view === 'settings' && (
+            <Settings user={user} onSignOut={handleInitiateSignOut} />
+          )}
+        </main>
 
-      <BottomNav 
-        activeView={view} 
-        onViewChange={(v) => navigateTo(v)} 
-        onNewNote={() => {
-          const defaultFolder = (selectedFolder !== 'all' && selectedFolder !== 'pinned') ? selectedFolder : 'all';
-          navigateTo('editor', { folder: defaultFolder } as any);
-        }} 
-      />
-    </div>
+        <BottomNav 
+          activeView={view} 
+          onViewChange={(v) => navigateTo(v)} 
+          onNewNote={() => {
+            const defaultFolder = (selectedFolder !== 'all' && selectedFolder !== 'pinned') ? selectedFolder : 'all';
+            navigateTo('editor', { folder: defaultFolder } as any);
+          }} 
+        />
+      </div>
+    </>
   );
 }
 

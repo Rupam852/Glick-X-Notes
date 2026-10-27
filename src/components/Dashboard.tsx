@@ -13,6 +13,7 @@ import { format } from 'date-fns';
 import { sound } from '../utils/sound';
 import { useToast } from '../contexts/ToastContext';
 import FolderDropdown from './FolderDropdown';
+import { useBackHandler } from '../utils/smartBackNavigation';
 
 const stripHtmlForPreview = (html: string) => {
   if (!html) return '';
@@ -147,6 +148,27 @@ export default function Dashboard({
   const [deleting, setDeleting] = useState(false);
   const [activeDropdownNoteId, setActiveDropdownNoteId] = useState<string | null>(null);
   const [isFabVisible, setIsFabVisible] = useState(true);
+
+  // 🛡️ Smart Back Handlers: close delete dialog, active menu, or clear filters on back gesture
+  useBackHandler(() => {
+    setNoteToDelete(null);
+    return true;
+  }, noteToDelete !== null);
+
+  useBackHandler(() => {
+    setActiveDropdownNoteId(null);
+    return true;
+  }, activeDropdownNoteId !== null);
+
+  useBackHandler(() => {
+    setSelectedTag(null);
+    return true;
+  }, selectedTag !== null);
+
+  useBackHandler(() => {
+    setSearch('');
+    return true;
+  }, search.trim() !== '');
 
   // Live auto-refresh relative time stamps every 30 seconds (Just now -> 1 min ago -> 2 min ago)
   const [, setTick] = useState(0);
@@ -904,7 +926,7 @@ export default function Dashboard({
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         transition={{ type: "spring", stiffness: 320, damping: 24 }}
-        className="fixed bottom-20 md:bottom-8 right-6 md:right-8 z-40 w-14 h-14 md:w-16 md:h-16 rounded-2xl md:rounded-3xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white border-2 border-white/25 dark:border-white/10 flex items-center justify-center cursor-pointer group"
+        className="hidden md:flex fixed md:bottom-8 md:right-8 z-40 w-16 h-16 rounded-3xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white border-2 border-white/25 dark:border-white/10 items-center justify-center cursor-pointer group shadow-xl"
         aria-label="Create New Note"
       >
         <Plus className="w-7 h-7 md:w-8 md:h-8 stroke-[2.5]" />
