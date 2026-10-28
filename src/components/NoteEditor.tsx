@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo, lazy, Suspense } from 'react';
 import { collection, doc, setDoc, deleteDoc, serverTimestamp, addDoc, query, where, getDocs, onSnapshot, Timestamp } from 'firebase/firestore';
 import { User as FirebaseUser } from 'firebase/auth';
 import { db, handleFirestoreError, OperationType } from '../firebase';
@@ -17,16 +17,16 @@ import { useToast } from '../contexts/ToastContext';
 import { format, formatDistanceToNow } from 'date-fns';
 import FolderDropdown from './FolderDropdown';
 import { useBackHandler } from '../utils/smartBackNavigation';
-import AIAssistantDrawer from './AIAssistantDrawer';
+const AIAssistantDrawer = lazy(() => import('./AIAssistantDrawer'));
 import SlashCommandMenu from './SlashCommandMenu';
-import ExportModal from './ExportModal';
+const ExportModal = lazy(() => import('./ExportModal'));
 import VoiceDictationModal from './VoiceDictationModal';
 import { voiceDictation, audioReader } from '../utils/audioTools';
 import { sound } from '../utils/sound';
 import { convertMarkdownBadgesAndLinksToHtml } from '../services/aiService';
-import MermaidModal from './MermaidModal';
-import MathFormulaModal from './MathFormulaModal';
-import DrawingModal from './DrawingModal';
+const MermaidModal = lazy(() => import('./MermaidModal'));
+const MathFormulaModal = lazy(() => import('./MathFormulaModal'));
+const DrawingModal = lazy(() => import('./DrawingModal'));
 import { 
   GitFork, Sigma, Printer, Indent, Outdent, CaseSensitive, Bookmark, 
   Columns as Columns2, Subscript, Superscript, BookOpen, Palette, Square,
@@ -7915,7 +7915,8 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         )}
       </AnimatePresence>
 
-      {/* 🤖 AI Assistant Drawer */}
+      <Suspense fallback={null}>
+        {/* 🤖 AI Assistant Drawer */}
       <AIAssistantDrawer
         isOpen={showAIDrawer}
         onClose={() => setShowAIDrawer(false)}
@@ -8051,6 +8052,8 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         onSaveDrawing={handleSaveDrawing}
         initialImageData={initialDrawingData}
       />
+
+</Suspense>
 
       {/* 🧘 Zen Mode Floating Exit Bar */}
       {zenMode && (
