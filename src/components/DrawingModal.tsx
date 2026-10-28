@@ -107,9 +107,17 @@ export default function DrawingModal({
   const [showShapeMenu, setShowShapeMenu] = useState(false);
   const [activeShapeCategory, setActiveShapeCategory] = useState<'shapes' | 'arrows' | 'callouts' | 'equation' | 'lines'>('shapes');
   const [showActionsMenu, setShowActionsMenu] = useState(false);
-  const [textInput, setTextInput] = useState('');
-  const [showTextModal, setShowTextModal] = useState(false);
-  const [pendingTextPos, setPendingTextPos] = useState<{ x: number; y: number } | null>(null);
+  // Inline On-Canvas Live Text Editing
+  const [editingTextState, setEditingTextState] = useState<{
+    id?: string;
+    x: number;
+    y: number;
+    text: string;
+    fontSize: number;
+    color: string;
+    rotation?: number;
+  } | null>(null);
+  const textInputRef = useRef<HTMLTextAreaElement | null>(null);
 
   // Vector Objects List
   const [objects, setObjects] = useState<CanvasObject[]>([]);
@@ -126,6 +134,15 @@ export default function DrawingModal({
   const dragStartMouseRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const initialObjectSnapshotRef = useRef<CanvasObject | null>(null);
   const activeDrawPointsRef = useRef<{ x: number; y: number }[]>([]);
+
+  // Auto-focus inline textarea when text tool activates
+  useEffect(() => {
+    if (editingTextState && textInputRef.current) {
+      textInputRef.current.focus();
+      const len = textInputRef.current.value.length;
+      textInputRef.current.setSelectionRange(len, len);
+    }
+  }, [editingTextState]);
 
   // Update history buttons state
   const updateHistoryState = () => {
@@ -172,7 +189,7 @@ export default function DrawingModal({
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (showTextModal) return;
+      if (editingTextState) return; // allow normal typing inside inline text editor
       if (e.key === 'Delete' || e.key === 'Backspace') {
         if (selectedId) {
           e.preventDefault();
@@ -193,7 +210,7 @@ export default function DrawingModal({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, selectedId, showTextModal]);
+  }, [isOpen, selectedId, editingTextState]);
 
   // Initial load: either image or empty canvas
   useEffect(() => {
@@ -615,9 +632,13 @@ export default function DrawingModal({
       }
     } else if (type === 'text') {
       ctx.fillStyle = stroke;
-      ctx.font = `bold ${obj?.fontSize || 20}px Outfit, sans-serif`;
+      const fSize = obj?.fontSize || 22;
+      ctx.font = `bold ${fSize}px Outfit, sans-serif`;
       ctx.textBaseline = 'top';
-      ctx.fillText(obj?.text || 'Text', 0, 0);
+      const lines = (obj?.text || 'Text').split('\n');
+      lines.forEach((line, idx) => {
+        ctx.fillText(line, 0, idx * (fSize * 1.3));
+      });
     }
   };
 
@@ -634,6 +655,9 @@ export default function DrawingModal({
 
     // Draw all objects in order
     objects.forEach(obj => {
+      // If currently being edited live in inline textarea, hide canvas render to avoid duplicate
+      if (editingTextState && obj.id === editingTextState.id) return;
+
       ctx.save();
       // Alpha for highlighter
       if (obj.type === 'highlighter') ctx.globalAlpha = 0.45;
@@ -782,12 +806,17 @@ export default function DrawingModal({
     isInteractingRef.current = true;
     dragStartMouseRef.current = { x, y };
 
-    // 1. Text Tool Click
+    // 1. Text Tool Click: Open live inline editor right at (x, y) with blinking cursor!
     if (activeTool === 'text') {
-      setPendingTextPos({ x, y });
-      setTextInput('');
-      setShowTextModal(true);
       isInteractingRef.current = false;
+      setEditingTextState({
+        x,
+        y,
+        text: '',
+        fontSize: 22,
+        color: strokeColor,
+        rotation: 0
+      });
       return;
     }
 
@@ -1087,41 +1116,90 @@ export default function DrawingModal({
     reader.readAsDataURL(file);
   };
 
-  // Text submit
-  const handleConfirmText = () => {
-    if (!textInput.trim() || !pendingTextPos) {
-      setShowTextModal(false);
+  // Commit live inline text directly into canvas objects
+  const commitInlineText = () => {
+    if (!editingTextState) return;
+    const trimmed = editingTextState.text.trim();
+    const current = editingTextState;
+    setEditingTextState(null);
+
+    if (!trimmed) {
+      if (current.id) {
+        const next = objects.filter(o => o.id !== current.id);
+        setObjects(next);
+        setSelectedId(null);
+        pushHistory(next);
+      }
+      setActiveTool('select');
       return;
     }
+
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
-    const fSize = 22;
-    let textW = 100;
+    const fSize = current.fontSize || 22;
+    let textW = 120;
+    let textH = fSize * 1.4;
+
     if (ctx) {
       ctx.font = `bold ${fSize}px Outfit, sans-serif`;
-      textW = Math.max(40, ctx.measureText(textInput).width + 10);
+      const lines = trimmed.split('\n');
+      const maxLineWidth = Math.max(...lines.map(l => ctx.measureText(l).width));
+      textW = Math.max(50, Math.round(maxLineWidth) + 14);
+      textH = Math.round(lines.length * fSize * 1.3);
     }
 
-    const newObj: CanvasObject = {
-      id: `text-${Date.now()}`,
-      type: 'text',
-      x: pendingTextPos.x,
-      y: pendingTextPos.y,
-      width: textW,
-      height: fSize * 1.4,
-      rotation: 0,
-      strokeColor,
-      strokeWidth: 1,
-      fillColor: 'transparent',
-      text: textInput,
-      fontSize: fSize
-    };
-    const next = [...objects, newObj];
-    setObjects(next);
-    setSelectedId(newObj.id);
+    if (current.id) {
+      const next = objects.map(o => o.id === current.id ? {
+        ...o,
+        text: trimmed,
+        width: textW,
+        height: textH,
+        strokeColor: current.color,
+        fontSize: fSize
+      } : o);
+      setObjects(next);
+      setSelectedId(current.id);
+      pushHistory(next);
+    } else {
+      const newObj: CanvasObject = {
+        id: `text-${Date.now()}`,
+        type: 'text',
+        x: current.x,
+        y: current.y,
+        width: textW,
+        height: textH,
+        rotation: 0,
+        strokeColor: current.color,
+        strokeWidth: 1,
+        fillColor: 'transparent',
+        text: trimmed,
+        fontSize: fSize
+      };
+      const next = [...objects, newObj];
+      setObjects(next);
+      setSelectedId(newObj.id);
+      pushHistory(next);
+    }
+
     setActiveTool('select');
-    setShowTextModal(false);
-    pushHistory(next);
+  };
+
+  // Double click on canvas to re-edit existing text inline
+  const handleCanvasDoubleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const { x, y } = getCanvasCoords(e);
+    const hit = findTopObjectAt(x, y);
+    if (hit && hit.obj.type === 'text') {
+      setSelectedId(hit.obj.id);
+      setEditingTextState({
+        id: hit.obj.id,
+        x: hit.obj.x,
+        y: hit.obj.y,
+        text: hit.obj.text || '',
+        fontSize: hit.obj.fontSize || 22,
+        color: hit.obj.strokeColor,
+        rotation: hit.obj.rotation
+      });
+    }
   };
 
   // "Save and close": Export to PNG data URL
@@ -1563,7 +1641,9 @@ export default function DrawingModal({
 
           {/* Border / Stroke Color Picker */}
           <div className="flex items-center gap-1 pl-2">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Border:</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              {objects.find(o => o.id === selectedId)?.type === 'text' ? 'Text Color:' : 'Border:'}
+            </span>
             <div className="flex items-center gap-1">
               {PRESET_COLORS.slice(0, 6).map(c => (
                 <button
@@ -1572,7 +1652,7 @@ export default function DrawingModal({
                   onClick={() => handleSelectStrokeColor(c)}
                   className={`w-5 h-5 rounded-full border border-black/15 transition-transform hover:scale-110 cursor-pointer ${strokeColor === c ? 'ring-2 ring-indigo-500 scale-105' : ''}`}
                   style={{ backgroundColor: c }}
-                  title={`Border Color: ${c}`}
+                  title={`Color: ${c}`}
                 />
               ))}
             </div>
@@ -1596,27 +1676,83 @@ export default function DrawingModal({
             ))}
           </div>
 
-          {/* Selected Shape Quick Action Bar */}
-          {selectedId && (
-            <div className="flex items-center gap-1 pl-2 border-l border-indigo-200 dark:border-indigo-800 ml-2 animate-in fade-in duration-150">
-              <button
-                type="button"
-                onClick={handleRotate90}
-                className="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 hover:bg-indigo-100 transition"
-                title="Rotate 90° Clockwise"
-              >
-                <RotateCw className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                onClick={handleDeleteSelected}
-                className="p-1.5 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition"
-                title="Delete Selected Shape (Del)"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-          )}
+          {/* Selected Shape / Text Quick Action Bar */}
+          {selectedId && (() => {
+            const selectedObj = objects.find(o => o.id === selectedId);
+            return (
+              <div className="flex items-center gap-1 pl-2 border-l border-indigo-200 dark:border-indigo-800 ml-2 animate-in fade-in duration-150">
+                {selectedObj?.type === 'text' && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingTextState({
+                          id: selectedObj.id,
+                          x: selectedObj.x,
+                          y: selectedObj.y,
+                          text: selectedObj.text || '',
+                          fontSize: selectedObj.fontSize || 22,
+                          color: selectedObj.strokeColor,
+                          rotation: selectedObj.rotation
+                        });
+                      }}
+                      className="flex items-center gap-1 px-2 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 hover:bg-indigo-100 text-xs font-bold transition cursor-pointer"
+                      title="Edit Text In-Place"
+                    >
+                      <Type className="w-3.5 h-3.5" />
+                      <span>Edit</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newSize = Math.max(12, (selectedObj.fontSize || 22) - 3);
+                        const next = objects.map(o => o.id === selectedId ? { ...o, fontSize: newSize, height: Math.round(((o.text || '').split('\n').length || 1) * newSize * 1.3) } : o);
+                        setObjects(next);
+                        pushHistory(next);
+                      }}
+                      className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 text-xs font-bold transition cursor-pointer"
+                      title="Smaller Font Size (A-)"
+                    >
+                      A-
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newSize = Math.min(80, (selectedObj.fontSize || 22) + 3);
+                        const next = objects.map(o => o.id === selectedId ? { ...o, fontSize: newSize, height: Math.round(((o.text || '').split('\n').length || 1) * newSize * 1.3) } : o);
+                        setObjects(next);
+                        pushHistory(next);
+                      }}
+                      className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 text-xs font-bold transition cursor-pointer"
+                      title="Larger Font Size (A+)"
+                    >
+                      A+
+                    </button>
+                    <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-0.5" />
+                  </>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleRotate90}
+                  className="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 hover:bg-indigo-100 transition cursor-pointer"
+                  title="Rotate 90° Clockwise"
+                >
+                  <RotateCw className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteSelected}
+                  className="p-1.5 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition cursor-pointer"
+                  title="Delete Selected Shape (Del)"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Checkerboard Canvas Workspace */}
@@ -1635,17 +1771,76 @@ export default function DrawingModal({
             backgroundPosition: '0 0, 0 12px, 12px -12px, -12px 0px'
           }}
         >
-          <canvas
-            ref={canvasRef}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onTouchStart={handleMouseDown}
-            onTouchMove={handleMouseMove}
-            onTouchEnd={handleMouseUp}
-            className={`shadow-xl bg-white/70 backdrop-blur-xs rounded-xl ${activeTool === 'select' ? 'cursor-default' : 'cursor-crosshair'}`}
-            style={{ touchAction: 'none' }}
-          />
+          {/* Relative wrapper holding canvas and exact-pixel inline text overlay */}
+          <div className="relative shadow-xl bg-white/70 backdrop-blur-xs rounded-xl overflow-visible">
+            <canvas
+              ref={canvasRef}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onTouchStart={handleMouseDown}
+              onTouchMove={handleMouseMove}
+              onTouchEnd={handleMouseUp}
+              onDoubleClick={handleCanvasDoubleClick}
+              className={`rounded-xl ${activeTool === 'select' ? 'cursor-default' : 'cursor-crosshair'}`}
+              style={{ touchAction: 'none' }}
+            />
+
+            {/* ✍️ Live On-Canvas Inline Text Input with Blinking Cursor */}
+            {editingTextState && (
+              <div
+                className="absolute z-50 pointer-events-auto"
+                style={{
+                  left: `${editingTextState.x}px`,
+                  top: `${editingTextState.y}px`,
+                  transform: editingTextState.rotation ? `rotate(${editingTextState.rotation}deg)` : undefined,
+                  transformOrigin: 'top left'
+                }}
+                onMouseDown={e => e.stopPropagation()}
+                onTouchStart={e => e.stopPropagation()}
+              >
+                <textarea
+                  ref={textInputRef}
+                  value={editingTextState.text}
+                  onChange={e => setEditingTextState(prev => prev ? { ...prev, text: e.target.value } : null)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      commitInlineText();
+                    } else if (e.key === 'Escape') {
+                      e.preventDefault();
+                      setEditingTextState(null);
+                      setActiveTool('select');
+                    }
+                  }}
+                  onBlur={commitInlineText}
+                  placeholder="Type text here..."
+                  rows={Math.max(1, (editingTextState.text.split('\n').length || 1))}
+                  className="outline-none resize-none overflow-hidden font-bold leading-tight"
+                  style={{
+                    fontSize: `${editingTextState.fontSize || 22}px`,
+                    color: editingTextState.color,
+                    fontFamily: 'Outfit, sans-serif',
+                    minWidth: '130px',
+                    maxWidth: `${Math.max(200, (canvasRef.current?.width || 800) - editingTextState.x - 20)}px`,
+                    background: 'rgba(255, 255, 255, 0.95)',
+                    border: '2px dashed #6366f1',
+                    borderRadius: '8px',
+                    padding: '3px 8px',
+                    boxShadow: '0 4px 20px rgba(99, 102, 241, 0.25)',
+                    caretColor: editingTextState.color
+                  }}
+                />
+                <div className="flex items-center gap-1.5 mt-1 px-1.5 py-0.5 text-[9px] font-bold text-slate-500 bg-white/95 dark:bg-slate-900/95 rounded-md shadow-xs border border-slate-200 dark:border-slate-800 w-fit select-none">
+                  <span>⏎ Enter: Done</span>
+                  <span>•</span>
+                  <span>Shift+Enter: New line</span>
+                  <span>•</span>
+                  <span>Esc: Cancel</span>
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Floating Canvas Helper Pill */}
           <div className="absolute bottom-3 left-4 bg-slate-900/80 backdrop-blur-md text-white text-[11px] font-medium px-3 py-1.5 rounded-full shadow-lg pointer-events-none flex items-center gap-2">
@@ -1653,52 +1848,16 @@ export default function DrawingModal({
             <span>
               {activeTool === 'select'
                 ? selectedId 
-                  ? '🎯 Shape selected: Drag center to move, drag corners to resize, drag top handle to rotate!'
-                  : '👆 Click any shape to select, move, resize or rotate'
-                : `✏️ Drawing mode: Drag to draw ${activeTool}`}
+                  ? objects.find(o => o.id === selectedId)?.type === 'text'
+                    ? '🎯 Text selected: Drag to move, rotate handle to angle, or double-click to edit text!'
+                    : '🎯 Shape selected: Drag center to move, drag corners to resize, drag top handle to rotate!'
+                  : '👆 Click any shape or text to select, move, resize or rotate'
+                : activeTool === 'text'
+                  ? '✍️ Click anywhere on canvas to type text live!'
+                  : `✏️ Drawing mode: Drag to draw ${activeTool}`}
             </span>
           </div>
         </div>
-
-        {/* Text Input Modal */}
-        {showTextModal && (
-          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 max-w-sm w-full shadow-2xl border border-slate-200 dark:border-slate-800 space-y-3">
-              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                <Type className="w-4 h-4 text-indigo-600" />
-                <span>Insert Text on Canvas</span>
-              </h3>
-              <input
-                type="text"
-                autoFocus
-                placeholder="Type word or label..."
-                value={textInput}
-                onChange={e => setTextInput(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') handleConfirmText();
-                  if (e.key === 'Escape') setShowTextModal(false);
-                }}
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowTextModal(false)}
-                  className="px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleConfirmText}
-                  className="px-4 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-500/20"
-                >
-                  Insert Text
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
       </div>
     </div>
