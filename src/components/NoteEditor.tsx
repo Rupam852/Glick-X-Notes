@@ -31,7 +31,7 @@ import {
   GitFork, Sigma, Printer, Indent, Outdent, CaseSensitive, Bookmark, 
   Columns as Columns2, Subscript, Superscript, BookOpen, Palette, Square,
   Pencil, RotateCcw, RotateCw, Shapes, Circle, Triangle, Star, ArrowRight,
-  MousePointer, Cloud, MessageSquare, ArrowLeftRight, Copy
+  MousePointer, Cloud, MessageSquare, ArrowLeftRight, Copy, Laptop
 } from 'lucide-react';
 
 interface NoteEditorProps {
@@ -431,6 +431,13 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     const isMobile = window.innerWidth < 768;
     const dismissed = sessionStorage.getItem('glick_dismiss_desktop_tip');
     return isMobile && !dismissed;
+  });
+  const [showDesktopModePrompt, setShowDesktopModePrompt] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const isMobileUser = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+    const isSmallViewport = window.innerWidth < 768;
+    const dismissed = sessionStorage.getItem('glick_dismiss_desktop_mode_prompt');
+    return isMobileUser && isSmallViewport && !dismissed;
   });
   
   // Slash Command Menu States
@@ -5319,6 +5326,84 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                 <p className="text-slate-500 dark:text-slate-400 font-medium">Drop files here to attach to this note</p>
               </div>
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 📱 Full-Screen Desktop Mode / PC Recommendation Modal */}
+      <AnimatePresence>
+        {showDesktopModePrompt && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[120] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 select-none"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.9, y: 20, opacity: 0 }}
+              className="relative max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 shadow-2xl border border-indigo-200 dark:border-indigo-900/60 flex flex-col items-center text-center gap-5"
+            >
+              {/* Glowing Icon */}
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/30 text-white shrink-0">
+                <Laptop className="w-8 h-8" />
+              </div>
+
+              {/* Title & Headline */}
+              <div className="space-y-2">
+                <span className="px-3 py-1 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 font-bold text-[11px] uppercase tracking-wider rounded-full border border-indigo-200 dark:border-indigo-800">
+                  Best Experience Recommendation
+                </span>
+                <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                  Please use PC or Desktop Mode
+                </h2>
+                <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                  Glick X Notes ke rich features (drawing canvas, tables, math formulas aur 1:1 cross-device sync) ke best experience ke liye kripya <strong>PC use karein</strong> ya mobile browser me <strong>"Desktop site"</strong> on karein.
+                </p>
+              </div>
+
+              {/* Guide Card */}
+              <div className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 rounded-2xl p-3.5 text-left text-xs space-y-2">
+                <p className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                  <span>📱</span> Chrome me kaise on karein:
+                </p>
+                <div className="space-y-1.5 text-slate-600 dark:text-slate-400">
+                  <p className="flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-600 font-bold flex items-center justify-center text-[10px] shrink-0">1</span>
+                    Top right me <strong>3 dots (⋮)</strong> par tap karein
+                  </p>
+                  <p className="flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-600 font-bold flex items-center justify-center text-[10px] shrink-0">2</span>
+                    <strong>"Desktop site"</strong> checkbox ko select karein
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="w-full flex flex-col gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDesktopModePrompt(false);
+                    sessionStorage.setItem('glick_dismiss_desktop_mode_prompt', 'true');
+                  }}
+                  className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-sm shadow-lg shadow-indigo-500/25 transition cursor-pointer"
+                >
+                  Understood / Got It 👍
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDesktopModePrompt(false);
+                    sessionStorage.setItem('glick_dismiss_desktop_mode_prompt', 'true');
+                  }}
+                  className="w-full py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition cursor-pointer"
+                >
+                  Continue on Mobile anyway →
+                </button>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
