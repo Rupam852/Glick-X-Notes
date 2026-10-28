@@ -107,9 +107,24 @@ export class VoiceDictation {
         console.warn('Speech recognition error:', error);
 
         // 'no-speech' is a normal silence timeout on phones and desktop.
+        // 'no-speech' is a normal silence timeout on phones and desktop.
         // We do NOT kill dictation on 'no-speech' if shouldKeepListening is true.
         if (error === 'no-speech' || error === 'aborted') {
           return;
+        }
+
+        // On mobile phones, audio hardware release takes 200-300ms.
+        // Retry smoothly if user wants to keep listening.
+        if (error === 'audio-capture') {
+          if (this.shouldKeepListening) {
+            clearTimeout(this.restartTimer);
+            this.restartTimer = setTimeout(() => {
+              if (this.shouldKeepListening) {
+                this.safeStart();
+              }
+            }, 350);
+            return;
+          }
         }
 
         if (error === 'not-allowed' || error === 'service-not-allowed') {
@@ -140,11 +155,13 @@ export class VoiceDictation {
         // If the user hasn't explicitly paused/stopped, we seamlessly restart!
         if (this.shouldKeepListening) {
           clearTimeout(this.restartTimer);
+          const isMobile = typeof navigator !== 'undefined' && /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
+          const restartDelay = isMobile ? 280 : 120;
           this.restartTimer = setTimeout(() => {
             if (this.shouldKeepListening) {
               this.safeStart();
             }
-          }, 75);
+          }, restartDelay);
         } else {
           if (this.onEndCb) this.onEndCb();
         }

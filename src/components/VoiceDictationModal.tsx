@@ -296,6 +296,14 @@ export default function VoiceDictationModal({
                   )}
                 </div>
               </div>
+
+              {/* Phone / Mobile Pro-Tip */}
+              <div className="p-2.5 rounded-xl bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/40 text-[10.5px] text-slate-500 dark:text-slate-400 flex items-start gap-2">
+                <span className="text-xs shrink-0">💡</span>
+                <span>
+                  <strong className="text-slate-700 dark:text-slate-300">Phone Tip:</strong> Mobile keyboard (Gboard) ke spacebar ke pass wale <strong>🎤 Mic</strong> icon se bhi aap note me direct offline & fast bol kar type kar sakte hain!
+                </span>
+              </div>
             </div>
 
             {/* Footer Controls */}
