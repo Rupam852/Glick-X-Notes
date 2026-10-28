@@ -725,43 +725,24 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         }
       });
 
-      // 4. Upgrade legacy image containers to have Windows-style resize handles and toolbar
+      // 4. Upgrade image containers to have Windows-style corner grip (3x3 dots)
       const images = root.querySelectorAll('.glick-image-container');
       images.forEach((container) => {
-        if (!container.querySelector('.glick-resize-handle')) {
-          const img = container.querySelector('img');
-          if (img) {
-            const innerDiv = img.parentElement;
-            if (innerDiv) {
-              innerDiv.className = 'glick-image-resizable';
-              if (!innerDiv.querySelector('.glick-image-toolbar')) {
-                const toolbar = document.createElement('div');
-                toolbar.className = 'glick-image-toolbar';
-                toolbar.setAttribute('style', 'position: absolute; top: 10px; left: 50%; transform: translateX(-50%); background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 3px 8px; display: flex; align-items: center; gap: 6px; z-index: 20;');
-                toolbar.innerHTML = `
-                  <button type="button" data-action="img-size" data-size="25%" style="color: #cbd5e1; font-size: 11px; font-weight: 600; background: transparent; border: none; cursor: pointer; padding: 2px 4px; border-radius: 4px;">25%</button>
-                  <button type="button" data-action="img-size" data-size="50%" style="color: #cbd5e1; font-size: 11px; font-weight: 600; background: transparent; border: none; cursor: pointer; padding: 2px 4px; border-radius: 4px;">50%</button>
-                  <button type="button" data-action="img-size" data-size="75%" style="color: #cbd5e1; font-size: 11px; font-weight: 600; background: transparent; border: none; cursor: pointer; padding: 2px 4px; border-radius: 4px;">75%</button>
-                  <button type="button" data-action="img-size" data-size="100%" style="color: #cbd5e1; font-size: 11px; font-weight: 600; background: transparent; border: none; cursor: pointer; padding: 2px 4px; border-radius: 4px;">100%</button>
-                  <span style="color: rgba(255,255,255,0.3); font-size: 11px;">|</span>
-                  <button type="button" data-action="delete-block" title="Remove Photo" style="color: #f87171; font-size: 11px; font-weight: 600; background: transparent; border: none; cursor: pointer; padding: 2px 4px;">✕</button>
-                `;
-                innerDiv.appendChild(toolbar);
-              }
-              const handleSE = document.createElement('div');
-              handleSE.className = 'glick-resize-handle handle-se';
-              handleSE.setAttribute('data-resize-target', 'image');
-              handleSE.setAttribute('style', 'position: absolute; right: -5px; bottom: -5px; width: 14px; height: 14px; background: #6366f1; border: 2px solid white; border-radius: 50%; cursor: se-resize; z-index: 15; box-shadow: 0 2px 6px rgba(0,0,0,0.3);');
-              handleSE.title = 'Drag corner to resize';
-              
-              const handleE = document.createElement('div');
-              handleE.className = 'glick-resize-handle handle-e';
-              handleE.setAttribute('data-resize-target', 'image');
-              handleE.setAttribute('style', 'position: absolute; right: -5px; top: 50%; transform: translateY(-50%); width: 8px; height: 26px; background: #6366f1; border: 2px solid white; border-radius: 4px; cursor: ew-resize; z-index: 15; box-shadow: 0 2px 6px rgba(0,0,0,0.3);');
-              handleE.title = 'Drag edge to resize';
+        const toolbar = container.querySelector('.glick-image-toolbar');
+        if (toolbar) toolbar.remove();
+        const handles = container.querySelectorAll('.glick-resize-handle');
+        handles.forEach(h => h.remove());
 
-              innerDiv.appendChild(handleSE);
-              innerDiv.appendChild(handleE);
+        const img = container.querySelector('img');
+        if (img) {
+          const innerDiv = img.parentElement;
+          if (innerDiv) {
+            innerDiv.className = 'glick-image-resizable';
+            if (!innerDiv.querySelector('.glick-corner-grip')) {
+              const grip = document.createElement('div');
+              grip.className = 'glick-corner-grip';
+              grip.title = 'Drag corner to resize';
+              innerDiv.appendChild(grip);
             }
           }
         }
@@ -2132,26 +2113,6 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       return;
     }
 
-    // 2.5 Image Quick Size Buttons Click ([25%], [50%], [75%], [100%])
-    const imgSizeBtn = target.closest('[data-action="img-size"]') as HTMLElement;
-    if (imgSizeBtn) {
-      e.preventDefault();
-      e.stopPropagation();
-      const size = imgSizeBtn.getAttribute('data-size');
-      const resizable = imgSizeBtn.closest('.glick-image-resizable') as HTMLElement;
-      if (resizable && size) {
-        resizable.style.width = size;
-        if (contentRef.current) {
-          const html = contentRef.current.innerHTML;
-          latestContent.current = html;
-          setBody(html);
-          pushToHistory(html);
-        }
-        showToast(`Image set to ${size}`, 'info');
-      }
-      return;
-    }
-
     // 3. Link click
     const anchor = target.closest('a');
     if (anchor) {
@@ -2160,89 +2121,115 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     }
   };
 
-  // 🪟 Windows-Style Edge and Corner Drag Resizing (for images & table column borders)
-  const handleEditorMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    const target = e.target as HTMLElement;
-
-    // A. Drag Handle for Image Resizing
-    if (target.classList?.contains('glick-resize-handle')) {
-      e.preventDefault();
-      e.stopPropagation();
-      const resizable = target.closest('.glick-image-resizable') as HTMLElement;
-      if (!resizable) return;
-
-      const startX = e.clientX;
-      const startWidth = resizable.getBoundingClientRect().width;
-      const editorWidth = contentRef.current?.clientWidth || 800;
-
-      const onMouseMove = (moveEvent: MouseEvent) => {
-        const deltaX = moveEvent.clientX - startX;
-        const newWidth = Math.max(120, Math.min(editorWidth, startWidth + deltaX));
-        resizable.style.width = `${Math.round(newWidth)}px`;
-      };
-
-      const onMouseUp = () => {
-        window.removeEventListener('mousemove', onMouseMove);
-        window.removeEventListener('mouseup', onMouseUp);
-        if (contentRef.current) {
-          const html = contentRef.current.innerHTML;
-          latestContent.current = html;
-          setBody(html);
-          pushToHistory(html);
-        }
-      };
-
-      window.addEventListener('mousemove', onMouseMove);
-      window.addEventListener('mouseup', onMouseUp);
-      return;
+  // 🪟 Windows-Style Universal Edge & Corner Detection Helper
+  const getResizeInfo = (target: HTMLElement, clientX: number, clientY: number) => {
+    // 1. Direct Corner Grip handle hover/click (.glick-corner-grip)
+    const grip = target.closest('.glick-corner-grip') as HTMLElement;
+    if (grip) {
+      const container = grip.closest('.glick-image-resizable, .glick-code-container, .glick-callout, details.glick-toggle, table') as HTMLElement;
+      if (container) {
+        return { type: 'corner', element: container };
+      }
     }
 
-    // B. Table Column Border Drag Resizing (Windows-style col-resize)
+    // 2. Table Cell Column or Row Border (Excel/Windows-style table resize)
     const cell = target.closest('th, td') as HTMLTableCellElement;
     if (cell && cell.parentElement?.closest('table')) {
       const rect = cell.getBoundingClientRect();
-      const isNearRightEdge = (rect.right - e.clientX) <= 8;
-      if (isNearRightEdge) {
-        e.preventDefault();
-        e.stopPropagation();
-        const startX = e.clientX;
-        const startWidth = rect.width;
-
-        const onMouseMove = (moveEvent: MouseEvent) => {
-          const deltaX = moveEvent.clientX - startX;
-          const newWidth = Math.max(45, startWidth + deltaX);
-          cell.style.width = `${Math.round(newWidth)}px`;
-          cell.style.minWidth = `${Math.round(newWidth)}px`;
-        };
-
-        const onMouseUp = () => {
-          window.removeEventListener('mousemove', onMouseMove);
-          window.removeEventListener('mouseup', onMouseUp);
-          if (contentRef.current) {
-            const html = contentRef.current.innerHTML;
-            latestContent.current = html;
-            setBody(html);
-            pushToHistory(html);
-          }
-        };
-
-        window.addEventListener('mousemove', onMouseMove);
-        window.addEventListener('mouseup', onMouseUp);
-        return;
-      }
+      const nearRight = (rect.right - clientX) <= 6 && (rect.right - clientX) >= -3;
+      const nearBottom = (rect.bottom - clientY) <= 6 && (rect.bottom - clientY) >= -3;
+      if (nearRight) return { type: 'col', element: cell };
+      if (nearBottom) return { type: 'row', element: cell.parentElement as HTMLTableRowElement };
     }
+
+    // 3. Block container edges & corners (Image, Code block, Callout, Toggle, Table)
+    const block = target.closest('.glick-image-resizable, .glick-code-container, .glick-callout, details.glick-toggle, table') as HTMLElement;
+    if (block) {
+      const rect = block.getBoundingClientRect();
+      const nearRight = (rect.right - clientX) <= 8 && (rect.right - clientX) >= -3;
+      const nearBottom = (rect.bottom - clientY) <= 8 && (rect.bottom - clientY) >= -3;
+
+      if (nearRight && nearBottom) return { type: 'corner', element: block };
+      if (nearRight) return { type: 'right', element: block };
+      if (nearBottom) return { type: 'bottom', element: block };
+    }
+
+    return null;
+  };
+
+  // 🪟 Windows-Style Edge and Corner Drag Resizing
+  const handleEditorMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    const info = getResizeInfo(target, e.clientX, e.clientY);
+    if (!info) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const el = info.element;
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const rect = el.getBoundingClientRect();
+    const startWidth = rect.width;
+    const startHeight = rect.height;
+    const maxAllowedWidth = contentRef.current?.clientWidth || 850;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const deltaX = moveEvent.clientX - startX;
+      const deltaY = moveEvent.clientY - startY;
+
+      if (info.type === 'col') {
+        const newWidth = Math.max(40, startWidth + deltaX);
+        el.style.width = `${Math.round(newWidth)}px`;
+        el.style.minWidth = `${Math.round(newWidth)}px`;
+      } else if (info.type === 'row') {
+        const newHeight = Math.max(26, startHeight + deltaY);
+        el.style.height = `${Math.round(newHeight)}px`;
+      } else if (info.type === 'right') {
+        const newWidth = Math.max(100, Math.min(maxAllowedWidth, startWidth + deltaX));
+        el.style.width = `${Math.round(newWidth)}px`;
+      } else if (info.type === 'bottom') {
+        const newHeight = Math.max(45, startHeight + deltaY);
+        el.style.height = `${Math.round(newHeight)}px`;
+      } else if (info.type === 'corner') {
+        const newWidth = Math.max(100, Math.min(maxAllowedWidth, startWidth + deltaX));
+        const newHeight = Math.max(45, startHeight + deltaY);
+        el.style.width = `${Math.round(newWidth)}px`;
+        if (!el.classList.contains('glick-image-resizable')) {
+          el.style.height = `${Math.round(newHeight)}px`;
+        }
+      }
+    };
+
+    const onMouseUp = () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      if (contentRef.current) {
+        const html = contentRef.current.innerHTML;
+        latestContent.current = html;
+        setBody(html);
+        pushToHistory(html);
+      }
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
   };
 
   const handleEditorMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
-    const cell = target.closest('th, td') as HTMLTableCellElement;
-    if (cell && cell.parentElement?.closest('table')) {
-      const rect = cell.getBoundingClientRect();
-      if ((rect.right - e.clientX) <= 8) {
-        cell.style.cursor = 'col-resize';
-      } else {
-        cell.style.cursor = '';
-      }
+    const info = getResizeInfo(target, e.clientX, e.clientY);
+    if (!info) {
+      target.style.cursor = '';
+      return;
+    }
+
+    if (info.type === 'col' || info.type === 'right') {
+      target.style.cursor = 'col-resize';
+    } else if (info.type === 'row' || info.type === 'bottom') {
+      target.style.cursor = 'row-resize';
+    } else if (info.type === 'corner') {
+      target.style.cursor = 'nwse-resize';
     }
   };
 
@@ -2977,7 +2964,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   const insertImageBase64 = (base64: string, altName: string = 'Photo') => {
     ensureSelectionInsideEditor(true);
     const nextLineId = `img-next-${Date.now()}`;
-    const html = `<div class="glick-block-wrapper glick-image-container" style="position: relative; margin: 16px 0; text-align: center; user-select: none;" contenteditable="false"><div class="glick-image-resizable" style="position: relative; display: inline-block; max-width: 100%; width: 100%;"><img src="${base64}" alt="${altName}" style="width: 100%; max-height: 520px; border-radius: 14px; object-fit: contain; box-shadow: 0 4px 16px rgba(15,23,42,0.12); display: block;" /><div class="glick-image-toolbar" style="position: absolute; top: 10px; left: 50%; transform: translateX(-50%); background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 3px 8px; display: flex; align-items: center; gap: 6px; z-index: 20;"><button type="button" data-action="img-size" data-size="25%" style="color: #cbd5e1; font-size: 11px; font-weight: 600; background: transparent; border: none; cursor: pointer; padding: 2px 4px; border-radius: 4px;">25%</button><button type="button" data-action="img-size" data-size="50%" style="color: #cbd5e1; font-size: 11px; font-weight: 600; background: transparent; border: none; cursor: pointer; padding: 2px 4px; border-radius: 4px;">50%</button><button type="button" data-action="img-size" data-size="75%" style="color: #cbd5e1; font-size: 11px; font-weight: 600; background: transparent; border: none; cursor: pointer; padding: 2px 4px; border-radius: 4px;">75%</button><button type="button" data-action="img-size" data-size="100%" style="color: #cbd5e1; font-size: 11px; font-weight: 600; background: transparent; border: none; cursor: pointer; padding: 2px 4px; border-radius: 4px;">100%</button><span style="color: rgba(255,255,255,0.3); font-size: 11px;">|</span><button type="button" data-action="delete-block" title="Remove Photo" style="color: #f87171; font-size: 11px; font-weight: 600; background: transparent; border: none; cursor: pointer; padding: 2px 4px;">✕</button></div><div class="glick-resize-handle handle-se" data-resize-target="image" style="position: absolute; right: -5px; bottom: -5px; width: 14px; height: 14px; background: #6366f1; border: 2px solid white; border-radius: 50%; cursor: se-resize; z-index: 15; box-shadow: 0 2px 6px rgba(0,0,0,0.3);" title="Drag corner to resize"></div><div class="glick-resize-handle handle-e" data-resize-target="image" style="position: absolute; right: -5px; top: 50%; transform: translateY(-50%); width: 8px; height: 26px; background: #6366f1; border: 2px solid white; border-radius: 4px; cursor: ew-resize; z-index: 15; box-shadow: 0 2px 6px rgba(0,0,0,0.3);" title="Drag edge to resize"></div></div></div><p id="${nextLineId}"><br/></p>`;
+    const html = `<div class="glick-block-wrapper glick-image-container" style="position: relative; margin: 16px 0; text-align: center; user-select: none;" contenteditable="false"><div class="glick-image-resizable" style="position: relative; display: inline-block; max-width: 100%;"><img src="${base64}" alt="${altName}" style="max-width: 100%; max-height: 520px; border-radius: 14px; object-fit: contain; box-shadow: 0 4px 16px rgba(15,23,42,0.12); display: block;" /><button type="button" data-action="delete-block" title="Remove Photo" style="position: absolute; top: 10px; right: 10px; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.25); color: white; border-radius: 8px; padding: 4px 10px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px; z-index: 10;">✕ Remove</button><div class="glick-corner-grip" title="Drag corner to resize"></div></div></div><p id="${nextLineId}"><br/></p>`;
 
     ensureSelectionInsideEditor(true);
     document.execCommand('insertHTML', false, html);
