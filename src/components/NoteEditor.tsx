@@ -31,7 +31,7 @@ import {
   GitFork, Sigma, Printer, Indent, Outdent, CaseSensitive, Bookmark, 
   Columns as Columns2, Subscript, Superscript, BookOpen, Palette, Square,
   Pencil, RotateCcw, RotateCw, Shapes, Circle, Triangle, Star, ArrowRight,
-  MousePointer, Cloud, MessageSquare, ArrowLeftRight, Copy, Laptop
+  MousePointer, Cloud, MessageSquare, ArrowLeftRight, Copy, Laptop, RefreshCw
 } from 'lucide-react';
 
 interface NoteEditorProps {
@@ -434,11 +434,16 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   });
   const [showDesktopModePrompt, setShowDesktopModePrompt] = useState(() => {
     if (typeof window === 'undefined') return false;
-    const isMobileUser = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
-    const isSmallViewport = window.innerWidth < 768;
-    const dismissed = sessionStorage.getItem('glick_dismiss_desktop_mode_prompt');
-    return isMobileUser && isSmallViewport && !dismissed;
+    return window.innerWidth < 768;
   });
+
+  useEffect(() => {
+    const handleResize = () => {
+      setShowDesktopModePrompt(window.innerWidth < 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   
   // Slash Command Menu States
   const [slashMenuOpen, setSlashMenuOpen] = useState(false);
@@ -1200,26 +1205,6 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
           const cleanHtml = contentRef.current.innerHTML;
           latestContent.current = cleanHtml;
           setBody(cleanHtml);
-        }
-      }
-
-      // ✂️ Trim any phantom gap: if drawing was saved on a taller mobile layout and is now floating far below text
-      if (loadedStrokes.length > 0 && contentRef.current) {
-        let minStrokeY = Infinity;
-        loadedStrokes.forEach(s => {
-          if (s.points) s.points.forEach(p => { if (p.y < minStrokeY) minStrokeY = p.y; });
-          if (s.shapeStart && s.shapeStart.y < minStrokeY) minStrokeY = s.shapeStart.y;
-          if (s.shapeEnd && s.shapeEnd.y < minStrokeY) minStrokeY = s.shapeEnd.y;
-        });
-        const contentBottom = contentRef.current.scrollHeight || 0;
-        if (isFinite(minStrokeY) && minStrokeY > contentBottom + 80) {
-          const shiftY = minStrokeY - (contentBottom + 20);
-          loadedStrokes = loadedStrokes.map(s => ({
-            ...s,
-            points: (s.points || []).map(p => ({ x: p.x, y: Math.max(0, Math.round(p.y - shiftY)) })),
-            shapeStart: s.shapeStart ? { x: s.shapeStart.x, y: Math.max(0, Math.round(s.shapeStart.y - shiftY)) } : undefined,
-            shapeEnd: s.shapeEnd ? { x: s.shapeEnd.x, y: Math.max(0, Math.round(s.shapeEnd.y - shiftY)) } : undefined
-          }));
         }
       }
 
@@ -2465,7 +2450,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
 
     // Render Bounding Box and Resize Handles for Selected Stroke
     if (selectedInkStrokeId) {
-      const selectedStroke = inkStrokes.find(s => s.id === selectedInkStrokeId);
+      const selectedStroke = inkStrokesRef.current.find(s => s.id === selectedInkStrokeId);
       if (selectedStroke) {
         const bounds = getStrokeBounds(selectedStroke);
         ctx.save();
@@ -2552,6 +2537,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     e.preventDefault();
     canvas.setPointerCapture(e.pointerId);
 
+    markLocalActivity();
     setShowInkShapeMenu(false);
 
     const rect = canvas.getBoundingClientRect();
@@ -2565,7 +2551,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
 
     if (inkTool === 'select') {
       if (selectedInkStrokeId) {
-        const selStroke = inkStrokes.find(s => s.id === selectedInkStrokeId);
+        const selStroke = inkStrokesRef.current.find(s => s.id === selectedInkStrokeId);
         if (selStroke) {
           const bounds = getStrokeBounds(selStroke);
           const handle = getHandleAt(bounds, x, y);
@@ -2662,6 +2648,8 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       const snap = dragSnapshotRef.current;
       const handle = dragHandleRef.current;
 
+      markLocalActivity();
+
       setInkStrokes(prev => prev.map(s => {
         if (s.id !== snap.id) return s;
         if (handle === 'body') {
@@ -2735,7 +2723,8 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     if (dragHandleRef.current) {
       dragHandleRef.current = null;
       dragSnapshotRef.current = null;
-      const nextHist = [...inkHistory.slice(0, inkHistoryIndex + 1), inkStrokes];
+      markLocalActivity();
+      const nextHist = [...inkHistory.slice(0, inkHistoryIndex + 1), inkStrokesRef.current];
       setInkHistory(nextHist);
       setInkHistoryIndex(nextHist.length - 1);
       return;
@@ -2759,6 +2748,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         const nextStrokes = [...inkStrokesRef.current, finished];
         inkStrokesRef.current = nextStrokes;
         setInkStrokes(nextStrokes);
+        markLocalActivity();
         const nextHist = [...inkHistory.slice(0, inkHistoryIndex + 1), nextStrokes];
         setInkHistory(nextHist);
         setInkHistoryIndex(nextHist.length - 1);
@@ -2826,6 +2816,8 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     if (isInkingMode) {
       setIsInkingMode(false);
       saveInkToNote(inkStrokesRef.current);
+      markLocalActivity();
+      handleSave();
       showToast('Ink drawings saved on note!', 'success');
     } else {
       // Purge any legacy DOM elements before entering draw mode so canvas sits cleanly on text
@@ -2957,7 +2949,9 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         const step = e.shiftKey ? 10 : 2;
         const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
         const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
-        setInkStrokes(prev => prev.map(s => {
+        markLocalActivity();
+
+      setInkStrokes(prev => prev.map(s => {
           if (s.id !== selectedInkStrokeId) return s;
           return {
             ...s,
@@ -4781,8 +4775,8 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         return;
       }
 
-      // If local device is actively typing, do not disrupt cursor or overwrite text mid-sentence
-      if (isTypingLocallyRef.current) return;
+      // If local device is actively typing or drawing, do not disrupt cursor or overwrite strokes mid-flow
+      if (isTypingLocallyRef.current || isInkingMode) return;
 
       // Cleanly synchronize remote changes to local device
       if (isTitleDifferent) setTitle(remoteTitle);
@@ -4792,8 +4786,13 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       if (isPaperStyleDifferent) setPaperStyle(remotePaperStyle);
       if (isPaperToneDifferent) setPaperTone(remotePaperTone);
       if (isInkDifferent) {
-        setInkStrokes(remoteInkStrokes);
-        inkStrokesRef.current = remoteInkStrokes;
+        const currentLocal = inkStrokesRef.current || [];
+        const lastSaved = lastSavedSnapshot.inkStrokes || [];
+        const hasUnsavedLocalInk = JSON.stringify(currentLocal) !== JSON.stringify(lastSaved);
+        if (!hasUnsavedLocalInk) {
+          setInkStrokes(remoteInkStrokes);
+          inkStrokesRef.current = remoteInkStrokes;
+        }
       }
 
       if (isBodyDifferent && contentRef.current) {
@@ -4821,7 +4820,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     });
 
     return () => unsubscribe();
-  }, [currentNoteId, user, title, tags, folder, color, paperStyle, paperTone, inkStrokes]);
+  }, [currentNoteId, user, title, tags, folder, color, paperStyle, paperTone, inkStrokes, isInkingMode, lastSavedSnapshot]);
 
   // Save Note Callback
   const handleSave = useCallback(async () => {
@@ -5330,14 +5329,14 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         )}
       </AnimatePresence>
 
-      {/* 📱 Full-Screen Desktop Mode / PC Recommendation Modal */}
+      {/* 📱 Full-Screen Desktop Mode Enforcement Modal for Phones */}
       <AnimatePresence>
         {showDesktopModePrompt && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[120] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 select-none"
+            className="fixed inset-0 z-[250] bg-slate-950/92 backdrop-blur-lg flex items-center justify-center p-4 select-none"
           >
             <motion.div
               initial={{ scale: 0.9, y: 20, opacity: 0 }}
@@ -5352,55 +5351,51 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
 
               {/* Title & Headline */}
               <div className="space-y-2">
-                <span className="px-3 py-1 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 font-bold text-[11px] uppercase tracking-wider rounded-full border border-indigo-200 dark:border-indigo-800">
-                  Best Experience Recommendation
+                <span className="px-3 py-1 bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 font-bold text-[11px] uppercase tracking-wider rounded-full border border-amber-200 dark:border-amber-800">
+                  Desktop Mode Required
                 </span>
                 <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-                  Please use PC or Desktop Mode
+                  Please Use PC or Desktop Site
                 </h2>
                 <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                  Glick X Notes ke rich features (drawing canvas, tables, math formulas aur 1:1 cross-device sync) ke best experience ke liye kripya <strong>PC use karein</strong> ya mobile browser me <strong>"Desktop site"</strong> on karein.
+                  Glick X Notes ke drawing canvas, visual cards aur 1:1 cross-device synchronization ke liye kripya <strong>PC use karein</strong> ya apne phone me <strong>"Desktop site"</strong> enable karein.
                 </p>
               </div>
 
               {/* Guide Card */}
               <div className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 rounded-2xl p-3.5 text-left text-xs space-y-2">
                 <p className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                  <span>📱</span> Chrome me kaise on karein:
+                  <span>📱</span> Phone browser me kaise on karein:
                 </p>
-                <div className="space-y-1.5 text-slate-600 dark:text-slate-400">
+                <div className="space-y-2 text-slate-600 dark:text-slate-400">
                   <p className="flex items-center gap-2">
                     <span className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-600 font-bold flex items-center justify-center text-[10px] shrink-0">1</span>
-                    Top right me <strong>3 dots (⋮)</strong> par tap karein
+                    Browser ke top-right me <strong>3 dots (⋮)</strong> par tap karein
                   </p>
                   <p className="flex items-center gap-2">
                     <span className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-600 font-bold flex items-center justify-center text-[10px] shrink-0">2</span>
-                    <strong>"Desktop site"</strong> checkbox ko select karein
+                    <strong>"Desktop site"</strong> checkbox par tick karein
                   </p>
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="w-full flex flex-col gap-2 pt-1">
+              <div className="w-full flex flex-col gap-2.5 pt-1">
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowDesktopModePrompt(false);
-                    sessionStorage.setItem('glick_dismiss_desktop_mode_prompt', 'true');
-                  }}
-                  className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-sm shadow-lg shadow-indigo-500/25 transition cursor-pointer"
+                  onClick={onBack}
+                  className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-sm shadow-lg shadow-indigo-500/25 transition cursor-pointer flex items-center justify-center gap-2"
                 >
-                  Understood / Got It 👍
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Return to Home Screen</span>
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowDesktopModePrompt(false);
-                    sessionStorage.setItem('glick_dismiss_desktop_mode_prompt', 'true');
-                  }}
-                  className="w-full py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition cursor-pointer"
+                  onClick={() => window.location.reload()}
+                  className="w-full py-2.5 px-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold text-xs transition cursor-pointer flex items-center justify-center gap-1.5"
                 >
-                  Continue on Mobile anyway →
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>I enabled Desktop Site (Reload)</span>
                 </button>
               </div>
             </motion.div>
@@ -7750,8 +7745,11 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                               onClick={() => {
                                 setInkColor(c.value);
                                 if (selectedInkStrokeId) {
-                                  setInkStrokes(prev => prev.map(s => s.id === selectedInkStrokeId ? { ...s, color: c.value } : s));
-                                  renderInkCanvas();
+                                  const updated = inkStrokesRef.current.map(s => s.id === selectedInkStrokeId ? { ...s, color: c.value } : s);
+                                  inkStrokesRef.current = updated;
+                                  setInkStrokes(updated);
+                                  markLocalActivity();
+                                  renderInkCanvas(updated);
                                 }
                               }}
                               className={`w-4 h-4 rounded-full border border-black/15 transition-transform hover:scale-125 cursor-pointer shrink-0 ${
@@ -7781,8 +7779,11 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                               onClick={() => {
                                 setInkWidth(t.w);
                                 if (selectedInkStrokeId) {
-                                  setInkStrokes(prev => prev.map(s => s.id === selectedInkStrokeId ? { ...s, width: t.w } : s));
-                                  renderInkCanvas();
+                                  const updated = inkStrokesRef.current.map(s => s.id === selectedInkStrokeId ? { ...s, width: t.w } : s);
+                                  inkStrokesRef.current = updated;
+                                  setInkStrokes(updated);
+                                  markLocalActivity();
+                                  renderInkCanvas(updated);
                                 }
                               }}
                               className={`w-6 h-6 flex items-center justify-center rounded-lg transition cursor-pointer shrink-0 ${
@@ -7807,7 +7808,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                           <button
                             type="button"
                             onClick={() => {
-                              const target = inkStrokes.find(s => s.id === selectedInkStrokeId);
+                              const target = inkStrokesRef.current.find(s => s.id === selectedInkStrokeId);
                               if (target) {
                                 const dup: InkStroke = {
                                   ...JSON.parse(JSON.stringify(target)),
@@ -7816,13 +7817,15 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                                   shapeEnd: target.shapeEnd ? { x: target.shapeEnd.x + 24, y: target.shapeEnd.y + 24 } : undefined,
                                   points: target.points.map(p => ({ x: p.x + 24, y: p.y + 24 }))
                                 };
-                                const nextStrokes = [...inkStrokes, dup];
+                                const nextStrokes = [...inkStrokesRef.current, dup];
+                                inkStrokesRef.current = nextStrokes;
                                 setInkStrokes(nextStrokes);
                                 setSelectedInkStrokeId(dup.id);
+                                markLocalActivity();
                                 const nextHist = [...inkHistory.slice(0, inkHistoryIndex + 1), nextStrokes];
                                 setInkHistory(nextHist);
                                 setInkHistoryIndex(nextHist.length - 1);
-                                renderInkCanvas();
+                                renderInkCanvas(nextStrokes);
                               }
                             }}
                             className="p-1.5 text-slate-600 dark:text-slate-300 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-white dark:hover:bg-slate-800 rounded-lg transition cursor-pointer"
@@ -7833,13 +7836,15 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                           <button
                             type="button"
                             onClick={() => {
-                              const nextStrokes = inkStrokes.filter(s => s.id !== selectedInkStrokeId);
+                              const nextStrokes = inkStrokesRef.current.filter(s => s.id !== selectedInkStrokeId);
+                              inkStrokesRef.current = nextStrokes;
                               setInkStrokes(nextStrokes);
                               setSelectedInkStrokeId(null);
+                              markLocalActivity();
                               const nextHist = [...inkHistory.slice(0, inkHistoryIndex + 1), nextStrokes];
                               setInkHistory(nextHist);
                               setInkHistoryIndex(nextHist.length - 1);
-                              renderInkCanvas();
+                              renderInkCanvas(nextStrokes);
                             }}
                             className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition cursor-pointer"
                             title="Delete shape"
