@@ -1,14 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Sparkles, X, FileText, Check, Copy, Wand2, MessageSquare, 
-  Send, Loader2, ArrowRight, Tag, HelpCircle, RefreshCw, Plus
+  Send, Loader2, ArrowRight, Tag, HelpCircle, RefreshCw, Plus, Mic, MicOff
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   aiSummarizeNote, aiPolishText, aiPolishHtml, aiSuggestTitleAndTags, aiAskAboutNote,
-  formatAITextToEditorHtml, sanitizeAIText
+  aiNoteAgentChat, formatAITextToEditorHtml, sanitizeAIText
 } from '../services/aiService';
+import { VoiceDictation } from '../utils/audioTools';
 import { useToast } from '../contexts/ToastContext';
+
+interface AgentChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  action?: 'replace_content' | 'append_content' | 'update_title' | 'none';
+  actionContent?: string;
+  newTitle?: string;
+  applied?: boolean;
+}
 
 interface AIAssistantDrawerProps {
   isOpen: boolean;
@@ -54,7 +65,7 @@ export default function AIAssistantDrawer({
   const hasSelection = Boolean((selectedHtml && selectedHtml.trim()) || (selectedText && selectedText.trim()));
   const [polishScope, setPolishScope] = useState<'selection' | 'full'>('full');
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (hasSelection) {
       setPolishScope('selection');
     } else {
@@ -65,12 +76,68 @@ export default function AIAssistantDrawer({
   const [loadingMeta, setLoadingMeta] = useState(false);
   const [suggestedMeta, setSuggestedMeta] = useState<{ title: string; tags: string[] } | null>(null);
 
-  // Chat State
-  const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([
-    { role: 'assistant', content: 'Hi! Ask me anything about your current note, ideas, or action items.' }
+  // AI Agent Chat State
+  const [chatMessages, setChatMessages] = useState<AgentChatMessage[]>([
+    { 
+      id: 'welcome',
+      role: 'assistant', 
+      content: 'Hi! Main aapka AI Note Agent hoon. Aap mujhse is note ke baare me sawaal puch sakte hain, ya bol kar / likh kar is note ko modify, edit ya naye sections add karne ko keh sakte hain.' 
+    }
   ]);
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
+
+  // Voice Dictation (Speech-to-Text) for AI Chat
+  const [isListening, setIsListening] = useState(false);
+  const dictationRef = useRef<VoiceDictation | null>(null);
+
+  useEffect(() => {
+    dictationRef.current = new VoiceDictation();
+    return () => {
+      dictationRef.current?.stop();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen && isListening) {
+      dictationRef.current?.stop();
+      setIsListening(false);
+    }
+  }, [isOpen, isListening]);
+
+  const toggleVoiceInput = () => {
+    if (!dictationRef.current) return;
+    if (isListening) {
+      dictationRef.current.stop();
+      setIsListening(false);
+      showToast('Mic stopped', 'info');
+    } else {
+      const base = chatInput.trim();
+      const started = dictationRef.current.start(
+        (transcript) => {
+          if (transcript) {
+            setChatInput(base ? `${base} ${transcript}` : transcript);
+          }
+        },
+        (err) => {
+          console.warn('Voice dictation error:', err);
+          setIsListening(false);
+          showToast('Mic error: ' + err, 'error');
+        },
+        () => {
+          setIsListening(false);
+        },
+        'en-IN'
+      );
+
+      if (started) {
+        setIsListening(true);
+        showToast('Listening... Bolna shuru karein!', 'success');
+      } else {
+        showToast('Speech recognition not supported in this browser', 'error');
+      }
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -147,29 +214,76 @@ export default function AIAssistantDrawer({
     }
   };
 
-  // 4. Chat about note
-  const handleSendMessage = async (e?: React.FormEvent) => {
+  // 4. AI Agent Chat & Note Operations
+  const handleSendMessage = async (e?: React.FormEvent, customPrompt?: string) => {
     if (e) e.preventDefault();
-    if (!chatInput.trim() || chatLoading) return;
+    const userQ = (customPrompt || chatInput).trim();
+    if (!userQ || chatLoading) return;
 
-    const userQ = chatInput.trim();
+    if (isListening) {
+      dictationRef.current?.stop();
+      setIsListening(false);
+    }
+
     setChatInput('');
-    const newHistory = [...chatMessages, { role: 'user' as const, content: userQ }];
+    const userMsg: AgentChatMessage = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: userQ
+    };
+    const newHistory = [...chatMessages, userMsg];
     setChatMessages(newHistory);
     setChatLoading(true);
 
     try {
-      const reply = await aiAskAboutNote(noteText, userQ, chatMessages);
-      setChatMessages([...newHistory, { role: 'assistant', content: reply }]);
+      const result = await aiNoteAgentChat(
+        noteTitle,
+        noteHtml || '',
+        noteText || '',
+        userQ,
+        chatMessages.map(m => ({ role: m.role, content: m.content }))
+      );
+
+      const assistantMsg: AgentChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: result.reply,
+        action: result.action,
+        actionContent: result.content,
+        newTitle: result.newTitle,
+        applied: false
+      };
+
+      setChatMessages([...newHistory, assistantMsg]);
     } catch (err: any) {
-      showToast(err.message || 'All AI models failed to respond', 'error');
+      showToast(err.message || 'AI Agent failed to respond', 'error');
       setChatMessages([
         ...newHistory, 
-        { role: 'assistant', content: `⚠️ ${err.message || 'Could not answer question. Please check AI settings.'}` }
+        { 
+          id: (Date.now() + 1).toString(),
+          role: 'assistant', 
+          content: `⚠️ ${err.message || 'Could not process request. Please check AI API settings.'}`,
+          action: 'none'
+        }
       ]);
     } finally {
       setChatLoading(false);
     }
+  };
+
+  const handleApplyAgentAction = (msg: AgentChatMessage) => {
+    if (msg.action === 'replace_content' && msg.actionContent && onReplaceContent) {
+      onReplaceContent(msg.actionContent);
+      showToast('Note updated with AI modifications (styles & snippets preserved)!', 'success');
+    } else if (msg.action === 'append_content' && msg.actionContent) {
+      onInsertText(msg.actionContent);
+      showToast('Appended new section to your note!', 'success');
+    } else if (msg.action === 'update_title' && msg.newTitle) {
+      onApplyTitle(msg.newTitle);
+      showToast(`Updated note title to "${msg.newTitle}"!`, 'success');
+    }
+
+    setChatMessages(prev => prev.map(m => m.id === msg.id ? { ...m, applied: true } : m));
   };
 
   return (
@@ -441,48 +555,151 @@ export default function AIAssistantDrawer({
           </div>
         )}
 
-        {/* TAB 2: CHAT WITH NOTE */}
+        {/* TAB 2: AI NOTE AGENT CHAT */}
         {activeTab === 'chat' && (
           <div className="flex-1 flex flex-col h-full overflow-hidden">
             {/* Messages list */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              {chatMessages.map((msg, idx) => (
+            <div className="flex-1 overflow-y-auto p-4 space-y-3.5">
+              {chatMessages.map((msg) => (
                 <div 
-                  key={idx}
+                  key={msg.id}
                   className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
                 >
                   <div 
-                    className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed ${
+                    className={`max-w-[92%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed ${
                       msg.role === 'user'
-                        ? 'bg-indigo-600 text-white rounded-tr-xs'
-                        : 'bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 border border-slate-200/80 dark:border-slate-800 rounded-tl-xs'
+                        ? 'bg-indigo-600 text-white rounded-tr-xs shadow-xs'
+                        : 'bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 border border-slate-200/80 dark:border-slate-800 rounded-tl-xs space-y-2'
                     }`}
                   >
-                    {msg.content}
+                    <p className="whitespace-pre-wrap">{msg.content}</p>
+
+                    {/* ⚡ Interactive Agent Action Card */}
+                    {msg.action && msg.action !== 'none' && (
+                      <div className="mt-2 p-2.5 rounded-xl bg-white dark:bg-slate-950 border border-indigo-200/90 dark:border-indigo-900/60 space-y-2 shadow-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide flex items-center gap-1">
+                            <Sparkles className="w-3 h-3" />
+                            {msg.action === 'replace_content' && 'Proposed Note Modification'}
+                            {msg.action === 'append_content' && 'New Section to Add'}
+                            {msg.action === 'update_title' && 'Proposed Note Title'}
+                          </span>
+                          {msg.applied && (
+                            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded-md flex items-center gap-1">
+                              <Check className="w-2.5 h-2.5" /> Applied
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Rendered HTML Preview */}
+                        {msg.actionContent && (
+                          <div 
+                            className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-[11px] text-slate-700 dark:text-slate-300 max-h-36 overflow-y-auto leading-relaxed"
+                            dangerouslySetInnerHTML={{ __html: msg.actionContent }}
+                          />
+                        )}
+
+                        {msg.action === 'update_title' && msg.newTitle && (
+                          <p className="font-bold text-slate-900 dark:text-white text-xs bg-slate-50 dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
+                            "{msg.newTitle}"
+                          </p>
+                        )}
+
+                        {/* 1-Click Apply Button */}
+                        {!msg.applied ? (
+                          <button
+                            type="button"
+                            onClick={() => handleApplyAgentAction(msg)}
+                            className="w-full py-1.5 px-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold rounded-lg flex items-center justify-center gap-1.5 text-xs shadow-xs transition cursor-pointer"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                            {msg.action === 'replace_content' ? 'Apply Changes to Note' : msg.action === 'append_content' ? 'Append to Note' : 'Update Note Title'}
+                          </button>
+                        ) : (
+                          <div className="w-full py-1 text-center text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                            ✓ Note successfully updated by AI Agent
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
               {chatLoading && (
-                <div className="flex items-center gap-2 text-xs text-indigo-500 p-2">
+                <div className="flex items-center gap-2 text-xs text-indigo-500 p-2 bg-indigo-50/50 dark:bg-indigo-950/30 rounded-xl w-fit border border-indigo-200/50 dark:border-indigo-900/40">
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  Analyzing note...
+                  AI Agent is reading & preparing modifications...
                 </div>
               )}
             </div>
 
-            {/* Input Bar */}
-            <form onSubmit={handleSendMessage} className="p-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/60 flex items-center gap-2">
+            {/* Quick Action Chips */}
+            <div className="px-3 pt-2 pb-1.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar border-t border-slate-100 dark:border-slate-800 bg-white/70 dark:bg-slate-950/40">
+              {[
+                '✨ Fix grammar & bold key points',
+                '➕ Add Conclusion',
+                '📊 Add 3x3 Table',
+                '📋 3 Action Items',
+                '🏷️ Better Title'
+              ].map((chip, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => handleSendMessage(undefined, chip)}
+                  disabled={chatLoading}
+                  className="shrink-0 text-[10px] font-semibold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950/60 dark:hover:text-indigo-400 transition cursor-pointer border border-slate-200/60 dark:border-slate-800"
+                >
+                  {chip}
+                </button>
+              ))}
+            </div>
+
+            {/* Listening Banner if Speech Recognition is active */}
+            {isListening && (
+              <div className="px-3 py-1.5 bg-rose-500/10 border-t border-rose-500/20 text-rose-600 dark:text-rose-400 text-[11px] font-bold flex items-center justify-between animate-pulse">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+                  <span>Listening... Bolna shuru karein (Hindi ya English)</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={toggleVoiceInput}
+                  className="text-[10px] uppercase underline cursor-pointer hover:text-rose-700"
+                >
+                  Done
+                </button>
+              </div>
+            )}
+
+            {/* Input Bar with Voice Mic */}
+            <form onSubmit={handleSendMessage} className="p-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 flex items-center gap-2">
+              {/* Microphone Button (Speech-to-Text) */}
+              <button
+                type="button"
+                onClick={toggleVoiceInput}
+                className={`p-2 rounded-xl transition cursor-pointer shrink-0 ${
+                  isListening
+                    ? 'bg-rose-600 text-white animate-pulse shadow-md shadow-rose-500/30'
+                    : 'bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 shadow-2xs'
+                }`}
+                title={isListening ? 'Stop Listening' : 'Speak to AI Agent (Bol kar batayein)'}
+              >
+                {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+              </button>
+
               <input
                 type="text"
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
-                placeholder="Ask about this note..."
+                placeholder={isListening ? 'Listening to your voice...' : 'Ask question or instruct to edit note (text or mic)...'}
                 className="flex-1 px-3 py-2 text-xs bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-indigo-500"
               />
+
               <button
                 type="submit"
                 disabled={chatLoading || !chatInput.trim()}
-                className="p-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl transition cursor-pointer"
+                className="p-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl transition cursor-pointer shrink-0 shadow-2xs"
+                title="Send instruction to AI Agent"
               >
                 <Send className="w-3.5 h-3.5" />
               </button>

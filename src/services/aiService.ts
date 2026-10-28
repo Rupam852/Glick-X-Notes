@@ -535,3 +535,96 @@ export async function aiAskAboutNote(noteText: string, question: string, history
   );
   return sanitizeAIText(res.text);
 }
+
+export interface AIAgentChatResult {
+  reply: string;
+  action: 'replace_content' | 'append_content' | 'update_title' | 'none';
+  content?: string;
+  newTitle?: string;
+}
+
+/**
+ * 5. AI Note Agent:
+ * Can answer questions AND directly modify, format, append to, or rewrite
+ * the specific note based on conversational text or voice instructions.
+ */
+export async function aiNoteAgentChat(
+  noteTitle: string,
+  noteHtml: string,
+  noteText: string,
+  userMessage: string,
+  history: { role: string; content: string }[] = []
+): Promise<AIAgentChatResult> {
+  const noteContext = noteHtml || noteText || 'Empty Note';
+
+  const prompt = `You are an intelligent AI Note Agent for "Glick X Notes".
+You can answer questions AND directly modify, update, append to, or format the user's note based on their conversational instructions (in English, Hindi, or Hinglish).
+
+CURRENT NOTE TITLE:
+"${noteTitle || 'Untitled'}"
+
+CURRENT NOTE CONTENT (HTML):
+"""
+${noteContext}
+"""
+
+USER INSTRUCTION / QUESTION:
+"${userMessage}"
+
+${history.length > 0 ? `RECENT CHAT HISTORY:\n${history.slice(-4).map(h => `${h.role === 'user' ? 'User' : 'Assistant'}: ${h.content}`).join('\n')}\n` : ''}
+
+CRITICAL AGENT RULES:
+1. DETERMINE THE ACTION TYPE:
+   - "none": User asked a purely informational question or requested advice without wanting to change the note.
+   - "replace_content": User asked to edit, fix, rewrite, polish, simplify, format (add bold, colors, list styling), or restructure the note content. Provide the full new rich HTML in "content". Preserve all existing bold tags (<b>, <strong>), tables, toggles, and images.
+   - "append_content": User asked to add something new (e.g., "add conclusion", "add table", "add 3 action items", "add toggle section"). Provide the new rich HTML snippet in "content".
+   - "update_title": User asked to rename or change the note title. Provide "newTitle".
+
+2. FORMATTING IN "content":
+   - Use clean, standard HTML tags: <p>, <b>, <strong>, <i>, <u>, <ul>, <ol>, <li>, <table>, <tr>, <td>, <th>, <details>, <summary>, <blockquote>.
+   - Do NOT wrap in markdown code blocks (\`\`\`html).
+   - Do NOT output raw markdown asterisks (*, **) or hashes (#).
+
+3. RESPONSE FORMAT:
+Respond ONLY with a valid JSON object (no markdown code blocks, no text before or after):
+{
+  "reply": "Conversational reply in the user's language (English/Hindi/Hinglish) explaining what was done or answering their question",
+  "action": "none" | "replace_content" | "append_content" | "update_title",
+  "content": "Rich HTML content if action is replace_content or append_content, else empty string",
+  "newTitle": "New title if action is update_title, else empty string"
+}`;
+
+  const res = await executeAICompletion(
+    prompt,
+    'You are an expert AI Note Agent. Output ONLY a valid JSON object with keys "reply", "action", "content", "newTitle".'
+  );
+
+  try {
+    const cleanJson = res.text.replace(/```json/gi, '').replace(/```/g, '').trim();
+    const parsed = JSON.parse(cleanJson);
+
+    let content = parsed.content ? String(parsed.content).trim() : '';
+    if (content) {
+      content = content.replace(/^```(?:html)?\s*\n?/i, '').replace(/\n?```$/i, '').trim();
+      const bodyMatch = content.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+      if (bodyMatch) content = bodyMatch[1].trim();
+      content = content.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+    }
+
+    const action = ['replace_content', 'append_content', 'update_title', 'none'].includes(parsed.action) 
+      ? parsed.action 
+      : 'none';
+
+    return {
+      reply: sanitizeAIText(parsed.reply || res.text),
+      action: action as any,
+      content: content || undefined,
+      newTitle: parsed.newTitle ? sanitizeAIText(parsed.newTitle) : undefined
+    };
+  } catch (e) {
+    return {
+      reply: sanitizeAIText(res.text),
+      action: 'none'
+    };
+  }
+}
