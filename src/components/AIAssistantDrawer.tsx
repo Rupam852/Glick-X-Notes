@@ -1,12 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Sparkles, X, FileText, Check, Copy, Wand2, MessageSquare, 
-  Send, Loader2, ArrowRight, Tag, HelpCircle, RefreshCw, Plus, Mic, MicOff
+  Send, Loader2, ArrowRight, Tag, HelpCircle, RefreshCw, Plus, Mic, MicOff,
+  BarChart3, ListChecks, Zap, AlertCircle, CheckCircle2, TrendingUp, Lightbulb
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   aiSummarizeNote, aiPolishText, aiPolishHtml, aiSuggestTitleAndTags, aiAskAboutNote,
-  aiNoteAgentChat, formatAITextToEditorHtml, sanitizeAIText
+  aiNoteAgentChat, aiAnalyzeAndSuperchargeNote, aiGenerateTakeawaysCallout,
+  aiGenerateActionChecklist, NoteAuditResult, formatAITextToEditorHtml, sanitizeAIText
 } from '../services/aiService';
 import { VoiceDictation } from '../utils/audioTools';
 import { useToast } from '../contexts/ToastContext';
@@ -61,6 +63,12 @@ export default function AIAssistantDrawer({
   const [selectedTone, setSelectedTone] = useState<'professional' | 'casual' | 'concise'>('professional');
   const [loadingPolish, setLoadingPolish] = useState(false);
   const [polishResult, setPolishResult] = useState<string | null>(null);
+
+  // Deep Note Audit & Supercharge State
+  const [loadingAudit, setLoadingAudit] = useState(false);
+  const [auditResult, setAuditResult] = useState<NoteAuditResult | null>(null);
+  const [loadingTakeaways, setLoadingTakeaways] = useState(false);
+  const [loadingActionChecklist, setLoadingActionChecklist] = useState(false);
 
   const hasSelection = Boolean((selectedHtml && selectedHtml.trim()) || (selectedText && selectedText.trim()));
   const [polishScope, setPolishScope] = useState<'selection' | 'full'>('full');
@@ -214,6 +222,61 @@ export default function AIAssistantDrawer({
     }
   };
 
+  // 4. Deep Note Audit & Executive Supercharge
+  const handleRunAudit = async () => {
+    if (!noteText.trim()) {
+      showToast('Note is empty! Write some content first.', 'error');
+      return;
+    }
+    setLoadingAudit(true);
+    setAuditResult(null);
+    try {
+      const res = await aiAnalyzeAndSuperchargeNote(noteTitle, noteHtml || '', noteText);
+      setAuditResult(res);
+      showToast(`Audit complete! Score: ${res.score}/100 (${res.scoreLabel})`, 'success');
+    } catch (err: any) {
+      showToast(err.message || 'Deep Audit failed', 'error');
+    } finally {
+      setLoadingAudit(false);
+    }
+  };
+
+  // 5. Insert Key Takeaways Callout Card
+  const handleInsertTakeaways = async () => {
+    if (!noteText.trim()) {
+      showToast('Note is empty!', 'error');
+      return;
+    }
+    setLoadingTakeaways(true);
+    try {
+      const html = await aiGenerateTakeawaysCallout(noteTitle, noteText);
+      onInsertText(html);
+      showToast('Inserted Key Takeaways Callout into note!', 'success');
+    } catch (err: any) {
+      showToast(err.message || 'Failed to generate takeaways', 'error');
+    } finally {
+      setLoadingTakeaways(false);
+    }
+  };
+
+  // 6. Insert Action Items Checklist
+  const handleInsertChecklist = async () => {
+    if (!noteText.trim()) {
+      showToast('Note is empty!', 'error');
+      return;
+    }
+    setLoadingActionChecklist(true);
+    try {
+      const html = await aiGenerateActionChecklist(noteTitle, noteText);
+      onInsertText(html);
+      showToast('Inserted Action Items Checklist into note!', 'success');
+    } catch (err: any) {
+      showToast(err.message || 'Failed to generate checklist', 'error');
+    } finally {
+      setLoadingActionChecklist(false);
+    }
+  };
+
   // 4. AI Agent Chat & Note Operations
   const handleSendMessage = async (e?: React.FormEvent, customPrompt?: string) => {
     if (e) e.preventDefault();
@@ -337,11 +400,157 @@ export default function AIAssistantDrawer({
           </button>
         </div>
 
-        {/* TAB 1: AI TOOLS */}
+        {/* TAB 1: AI TOOLS & DEEP NOTE INTELLIGENCE */}
         {activeTab === 'tools' && (
-          <div className="flex-1 overflow-y-auto p-4 space-y-5">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
             
-            {/* TOOL 1: AUTO TITLE & TAGS */}
+            {/* 🌟 HERO: DEEP NOTE AUDIT & 1-CLICK SUPERCHARGER */}
+            <div className="p-4 rounded-2xl border border-indigo-200/80 dark:border-indigo-900/60 bg-gradient-to-br from-indigo-50/70 via-purple-50/40 to-white dark:from-[#11192e] dark:via-[#0e1628] dark:to-slate-950 space-y-3.5 shadow-xs">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+                    <Zap className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-900 dark:text-white">Deep Note Audit & Intelligence</h4>
+                    <p className="text-[10px] text-slate-500">Quality score, gap analysis & 1-click upgrade</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleRunAudit}
+                  disabled={loadingAudit}
+                  className="px-3 py-1.5 text-xs font-bold bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl transition flex items-center gap-1.5 shadow-sm cursor-pointer"
+                >
+                  {loadingAudit ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                  {auditResult ? 'Re-Audit' : 'Audit Note'}
+                </button>
+              </div>
+
+              {/* AUDIT REPORT */}
+              {auditResult && (
+                <div className="p-3.5 rounded-xl bg-white dark:bg-slate-950 border border-indigo-100 dark:border-indigo-900/50 space-y-3 animate-in fade-in duration-200">
+                  {/* Score & Badge */}
+                  <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 dark:border-slate-800">
+                    <div className="flex items-center gap-2.5">
+                      <div className={`w-10 h-10 rounded-xl flex flex-col items-center justify-center font-black text-xs shadow-xs ${
+                        auditResult.score >= 85 
+                          ? 'bg-emerald-500 text-white' 
+                          : auditResult.score >= 70 
+                          ? 'bg-indigo-600 text-white' 
+                          : 'bg-amber-500 text-white'
+                      }`}>
+                        <span>{auditResult.score}</span>
+                        <span className="text-[7px] font-bold opacity-80 uppercase leading-none">/ 100</span>
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Note Quality</span>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300">
+                            {auditResult.scoreLabel}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-400">Analysis of clarity, structure & actionability</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Improvements & Strengths */}
+                  <div className="space-y-2 text-xs">
+                    {auditResult.improvements.length > 0 && (
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                          <Lightbulb className="w-3 h-3" /> Gaps & Recommended Fixes:
+                        </span>
+                        <ul className="space-y-1 pl-1">
+                          {auditResult.improvements.map((imp, idx) => (
+                            <li key={idx} className="text-[11px] text-slate-600 dark:text-slate-300 flex items-start gap-1.5">
+                              <span className="text-amber-500 font-bold shrink-0">•</span>
+                              <span>{imp}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {auditResult.strengths.length > 0 && (
+                      <div className="space-y-1 pt-1.5 border-t border-slate-100 dark:border-slate-900">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" /> Note Strengths:
+                        </span>
+                        <ul className="space-y-1 pl-1">
+                          {auditResult.strengths.map((str, idx) => (
+                            <li key={idx} className="text-[11px] text-slate-600 dark:text-slate-300 flex items-start gap-1.5">
+                              <span className="text-emerald-500 font-bold shrink-0">✓</span>
+                              <span>{str}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 1-Click Supercharge Upgrade Button */}
+                  {auditResult.enhancedHtml && onReplaceContent && (
+                    <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-2">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="font-bold text-slate-700 dark:text-slate-300">Supercharged Executive Layout</span>
+                        <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold">Ready to apply</span>
+                      </div>
+                      <div 
+                        className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 max-h-36 overflow-y-auto text-[11px] text-slate-700 dark:text-slate-300 leading-relaxed"
+                        dangerouslySetInnerHTML={{ __html: auditResult.enhancedHtml }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onReplaceContent(auditResult.enhancedHtml!);
+                          showToast('Note supercharged with executive structure!', 'success');
+                        }}
+                        className="w-full py-2 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-700 hover:to-pink-700 text-white font-bold rounded-xl flex items-center justify-center gap-1.5 text-xs shadow-md shadow-indigo-500/20 cursor-pointer transition"
+                      >
+                        <Zap className="w-3.5 h-3.5" />
+                        Apply Supercharged Layout to Note
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* ⚡ SMART 1-CLICK SOLUTIONS GRID */}
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1">Quick Smart Enhancements</span>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={handleInsertTakeaways}
+                  disabled={loadingTakeaways}
+                  className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 hover:border-indigo-400 dark:hover:border-indigo-600 transition flex flex-col items-start gap-1.5 text-left group cursor-pointer shadow-2xs"
+                >
+                  <div className="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 group-hover:scale-105 transition">
+                    {loadingTakeaways ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Lightbulb className="w-3.5 h-3.5" />}
+                  </div>
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Key Takeaways</span>
+                  <span className="text-[10px] text-slate-400 leading-tight">Embed styled highlights callout box</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleInsertChecklist}
+                  disabled={loadingActionChecklist}
+                  className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 hover:border-emerald-400 dark:hover:border-emerald-600 transition flex flex-col items-start gap-1.5 text-left group cursor-pointer shadow-2xs"
+                >
+                  <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 group-hover:scale-105 transition">
+                    {loadingActionChecklist ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ListChecks className="w-3.5 h-3.5" />}
+                  </div>
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Action Checklist</span>
+                  <span className="text-[10px] text-slate-400 leading-tight">Extract & append task checklist</span>
+                </button>
+              </div>
+            </div>
+
+            {/* SMART TITLE & TAGS */}
             <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -351,7 +560,7 @@ export default function AIAssistantDrawer({
                 <button
                   onClick={handleSuggestMeta}
                   disabled={loadingMeta}
-                  className="px-2.5 py-1 text-xs font-semibold bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition flex items-center gap-1 shadow-xs"
+                  className="px-2.5 py-1 text-xs font-semibold bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition flex items-center gap-1 shadow-xs cursor-pointer"
                 >
                   {loadingMeta ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
                   Suggest
@@ -382,55 +591,11 @@ export default function AIAssistantDrawer({
                       onApplyTags(suggestedMeta.tags);
                       showToast('Applied title and tags to your note!', 'success');
                     }}
-                    className="w-full py-1.5 mt-1 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-md flex items-center justify-center gap-1 text-[11px]"
+                    className="w-full py-1.5 mt-1 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-md flex items-center justify-center gap-1 text-[11px] cursor-pointer"
                   >
                     <Check className="w-3 h-3" />
                     Apply to Note
                   </button>
-                </div>
-              )}
-            </div>
-
-            {/* TOOL 2: SUMMARY & BULLET POINTS */}
-            <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-indigo-500" />
-                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Summary & Key Points</span>
-                </div>
-                <button
-                  onClick={handleSummarize}
-                  disabled={loadingSummary}
-                  className="px-2.5 py-1 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition flex items-center gap-1 shadow-xs"
-                >
-                  {loadingSummary ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-                  Summarize
-                </button>
-              </div>
-
-              {summaryResult && (
-                <div className="p-3 rounded-lg bg-white dark:bg-slate-950 border border-indigo-200 dark:border-indigo-900/50 space-y-2 text-xs">
-                  <div className="text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto">
-                    {summaryResult}
-                  </div>
-                  <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                    <button
-                      onClick={() => handleCopy(summaryResult, 'Summary')}
-                      className="flex-1 py-1 px-2 border border-slate-200 dark:border-slate-800 rounded-md text-[11px] font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 flex items-center justify-center gap-1"
-                    >
-                      <Copy className="w-3 h-3" /> Copy
-                    </button>
-                    <button
-                      onClick={() => {
-                        const summaryHtml = `<div style="margin-top: 16px; margin-bottom: 16px; padding: 14px 16px; border-radius: 12px; background: rgba(99, 102, 241, 0.08); border-left: 4px solid #6366f1;"><p style="font-weight: 700; color: #6366f1; margin-bottom: 6px;">📝 AI Summary</p>${formatAITextToEditorHtml(summaryResult)}</div>`;
-                        onInsertText(summaryHtml);
-                        showToast('Inserted summary into note!', 'success');
-                      }}
-                      className="flex-1 py-1 px-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-[11px] font-semibold flex items-center justify-center gap-1"
-                    >
-                      <Plus className="w-3 h-3" /> Append to Note
-                    </button>
-                  </div>
                 </div>
               )}
             </div>

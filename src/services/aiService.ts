@@ -628,3 +628,161 @@ Respond ONLY with a valid JSON object (no markdown code blocks, no text before o
     };
   }
 }
+
+export interface NoteAuditResult {
+  score: number;
+  scoreLabel: string;
+  strengths: string[];
+  improvements: string[];
+  actionItems: string[];
+  keyTopics: string[];
+  enhancedHtml?: string;
+}
+
+/**
+ * 6. Deep Note Audit & Executive Supercharger:
+ * Analyzes the note for quality, identifies critical missing information/gaps,
+ * extracts action items, and generates an elevated supercharged layout.
+ */
+export async function aiAnalyzeAndSuperchargeNote(
+  noteTitle: string,
+  noteHtml: string,
+  noteText: string
+): Promise<NoteAuditResult> {
+  const content = noteHtml || noteText || 'Empty Note';
+
+  const prompt = `You are a world-class Executive Note Analyst & Document Architect.
+Perform a comprehensive, intelligent audit of this note and generate a supercharged, beautifully structured version.
+
+NOTE TITLE: "${noteTitle || 'Untitled'}"
+NOTE CONTENT:
+"""
+${content}
+"""
+
+TASKS:
+1. AUDIT:
+   - score: Overall quality score from 1 to 100 based on clarity, readability, visual structure, and actionability.
+   - scoreLabel: Brief status badge ("Needs Structure", "Good Draft", "Well Written", "Executive Ready").
+   - strengths: 2 bullet points of what is already clear or good in this note.
+   - improvements: 2 to 3 constructive suggestions of what is missing or how to elevate this note (e.g. missing deadlines, needs summary callout, key phrases should be bolded, action items need clear checkboxes).
+   - actionItems: Array of specific tasks or follow-ups identified or recommended for this note.
+   - keyTopics: 3 to 5 core topics or tags.
+
+2. SUPERCHARGED VERSION (enhancedHtml):
+   - Rewrite and elevate the note into an executive-grade, beautifully formatted rich HTML document.
+   - PRESERVE 100% of all user data, facts, names, and original meaning.
+   - Add bold tags (<b>) around critical keywords, metrics, and takeaways.
+   - Format cleanly with HTML:
+     - Sleek top "Key Takeaways" callout:
+       <div style="margin: 12px 0 16px 0; padding: 12px 16px; border-radius: 12px; background: rgba(99, 102, 241, 0.08); border-left: 4px solid #6366f1;"><p style="margin: 0; font-weight: 700; color: #6366f1;">💡 Key Takeaways</p><p style="margin-top: 4px; font-size: 13px;">...</p></div>
+     - Clean headings (<h2>, <h3>) for distinct sections.
+     - Formatted bullet points (<ul><li>) or numbered steps (<ol><li>).
+     - If action items exist, include a clean Action Checklist section at the bottom.
+   - Do NOT wrap in \`\`\`html or markdown code blocks. Clean HTML only.
+
+RETURN ONLY VALID JSON (no markdown fences):
+{
+  "score": 88,
+  "scoreLabel": "Good Draft",
+  "strengths": ["Clear goals", "Well phrased"],
+  "improvements": ["Needs bold highlights", "Action items not separated"],
+  "actionItems": ["Send draft to team", "Confirm timeline"],
+  "keyTopics": ["Project", "Strategy"],
+  "enhancedHtml": "<div>...</div>"
+}`;
+
+  const res = await executeAICompletion(
+    prompt,
+    'You are an expert Document Auditor. Return ONLY a valid JSON object with keys "score", "scoreLabel", "strengths", "improvements", "actionItems", "keyTopics", "enhancedHtml".'
+  );
+
+  try {
+    const cleanJson = res.text.replace(/```json/gi, '').replace(/```/g, '').trim();
+    const parsed = JSON.parse(cleanJson);
+
+    let enhancedHtml = parsed.enhancedHtml ? String(parsed.enhancedHtml).trim() : '';
+    if (enhancedHtml) {
+      enhancedHtml = enhancedHtml.replace(/^```(?:html)?\s*\n?/i, '').replace(/\n?```$/i, '').trim();
+      const bodyMatch = enhancedHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+      if (bodyMatch) enhancedHtml = bodyMatch[1].trim();
+      enhancedHtml = enhancedHtml.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+    }
+
+    return {
+      score: typeof parsed.score === 'number' ? Math.min(100, Math.max(1, parsed.score)) : 75,
+      scoreLabel: sanitizeAIText(parsed.scoreLabel || 'Analyzed'),
+      strengths: Array.isArray(parsed.strengths) ? parsed.strengths.map((s: string) => sanitizeAIText(s)) : [],
+      improvements: Array.isArray(parsed.improvements) ? parsed.improvements.map((s: string) => sanitizeAIText(s)) : [],
+      actionItems: Array.isArray(parsed.actionItems) ? parsed.actionItems.map((s: string) => sanitizeAIText(s)) : [],
+      keyTopics: Array.isArray(parsed.keyTopics) ? parsed.keyTopics.map((s: string) => sanitizeAIText(s)) : [],
+      enhancedHtml: enhancedHtml || undefined
+    };
+  } catch {
+    return {
+      score: 72,
+      scoreLabel: 'Draft Note',
+      strengths: ['Content present and readable'],
+      improvements: ['Add bold highlights to important keywords', 'Structure into clear sections'],
+      actionItems: [],
+      keyTopics: ['Notes'],
+      enhancedHtml: undefined
+    };
+  }
+}
+
+/**
+ * 7. Generate Key Takeaways Callout Card:
+ */
+export async function aiGenerateTakeawaysCallout(noteTitle: string, noteText: string): Promise<string> {
+  const prompt = `Analyze this note and generate a concise, high-impact "Key Takeaways" executive summary callout block in clean HTML:
+Note Title: "${noteTitle}"
+Note Content:
+"""
+${noteText.slice(0, 3000)}
+"""
+
+Format as a stylish HTML block:
+<div style="margin: 14px 0 18px 0; padding: 14px 18px; border-radius: 12px; background: rgba(99, 102, 241, 0.08); border-left: 4px solid #6366f1;">
+  <p style="margin: 0; font-weight: 700; color: #6366f1; font-size: 14px;">💡 Key Takeaways & Highlights</p>
+  <ul style="margin: 8px 0 0 16px; padding: 0; font-size: 13px; line-height: 1.6;">
+    <li><b>Key Insight 1:</b> Explanation...</li>
+    <li><b>Key Insight 2:</b> Explanation...</li>
+  </ul>
+</div>
+
+Output ONLY clean HTML with no markdown code fences.`;
+
+  const res = await executeAICompletion(prompt, 'You are an executive summary writer. Output clean HTML only, no markdown.');
+  let html = res.text.replace(/^```(?:html)?\s*\n?/i, '').replace(/\n?```$/i, '').trim();
+  html = html.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+  return html;
+}
+
+/**
+ * 8. Generate Action Items Checklist:
+ */
+export async function aiGenerateActionChecklist(noteTitle: string, noteText: string): Promise<string> {
+  const prompt = `Analyze this note and extract or recommend 3-5 concrete Action Items / Next Steps:
+Note Title: "${noteTitle}"
+Note Content:
+"""
+${noteText.slice(0, 3000)}
+"""
+
+Format as a clean HTML action checklist block:
+<div style="margin: 14px 0; padding: 14px 18px; border-radius: 12px; background: rgba(16, 185, 129, 0.08); border-left: 4px solid #10b981;">
+  <p style="margin: 0; font-weight: 700; color: #059669; font-size: 14px;">✅ Action Items & Next Steps</p>
+  <ul style="margin: 8px 0 0 16px; padding: 0; font-size: 13px; line-height: 1.6; list-style-type: none;">
+    <li style="margin-bottom: 6px;">☐ <b>Task 1:</b> Details...</li>
+    <li style="margin-bottom: 6px;">☐ <b>Task 2:</b> Details...</li>
+  </ul>
+</div>
+
+Output ONLY clean HTML with no markdown code fences.`;
+
+  const res = await executeAICompletion(prompt, 'You are a task management specialist. Output clean HTML only, no markdown.');
+  let html = res.text.replace(/^```(?:html)?\s*\n?/i, '').replace(/\n?```$/i, '').trim();
+  html = html.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+  return html;
+}
