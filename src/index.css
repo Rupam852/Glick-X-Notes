@@ -813,3 +813,143 @@ details.glick-toggle[open] > summary .glick-toggle-arrow {
 .glick-floating-inking-bar {
   max-width: calc(100vw - 16px) !important;
 }
+
+
+/* =========================================================================
+   📱 Robust Block Isolation & Mobile Snippet Overflow Prevention
+   ========================================================================= */
+
+/* Ensure all blocks and snippet wrappers clear sibling text and never overlap */
+.glick-block-wrapper,
+.glick-callout,
+.glick-diagram-container,
+.glick-code-container,
+.glick-toggle,
+.glick-math-container,
+.glick-shape-container {
+  display: block !important;
+  clear: both !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  position: relative !important;
+  margin-top: 14px !important;
+  margin-bottom: 14px !important;
+  overflow: visible !important;
+}
+
+/* Callout specific flex layout */
+.glick-callout {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: flex-start !important;
+  gap: 10px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+.glick-callout > div {
+  flex: 1 1 0% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow-wrap: break-word !important;
+  word-break: break-word !important;
+}
+
+/* Text and list items inside callouts and editor must wrap and clear */
+.editor-content p,
+.editor-content li,
+.editor-content ul,
+.editor-content ol {
+  overflow-wrap: break-word !important;
+  word-break: break-word !important;
+  box-sizing: border-box !important;
+}
+
+.editor-content li {
+  line-height: 1.6 !important;
+  margin-bottom: 4px !important;
+}
+
+/* If a diagram or block is placed inside a list item, force it to render as a distinct block */
+.editor-content li > .glick-block-wrapper,
+.editor-content li > .glick-diagram-container,
+.editor-content li > .glick-callout,
+.editor-content li > .glick-code-container,
+.editor-content li > div {
+  display: block !important;
+  clear: both !important;
+  margin: 10px 0 !important;
+  width: 100% !important;
+}
+
+/* Mermaid / Flowchart Diagram container & SVG mobile styling */
+.glick-diagram-container {
+  overflow: hidden !important;
+  border-radius: 14px !important;
+  width: 100% !important;
+}
+
+.glick-diagram-render {
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  max-width: 100% !important;
+  display: flex !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+}
+
+.glick-diagram-render svg {
+  max-width: 100% !important;
+  height: auto !important;
+  display: block !important;
+}
+
+/* 📱 Mobile Specific Fixes (< 640px) */
+@media (max-width: 640px) {
+  .editor-content {
+    font-size: 15px !important;
+    line-height: 1.65 !important;
+    overflow-x: hidden !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+  }
+
+  .editor-content table {
+    display: block !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    max-width: 100% !important;
+    margin: 1rem 0 !important;
+    border-collapse: collapse !important;
+  }
+
+  .editor-content th,
+  .editor-content td {
+    padding: 8px 10px !important;
+    font-size: 13px !important;
+    min-width: 70px !important;
+    word-break: break-word !important;
+  }
+
+  .glick-callout {
+    padding: 10px 12px !important;
+    gap: 8px !important;
+    font-size: 13px !important;
+    margin: 10px 0 !important;
+  }
+
+  .glick-callout span[contenteditable="false"] {
+    font-size: 16px !important;
+  }
+
+  .glick-diagram-render {
+    padding: 10px !important;
+  }
+
+  /* Prevent any absolute or floated element from bleeding out */
+  .editor-content * {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+}

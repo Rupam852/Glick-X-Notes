@@ -648,11 +648,16 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         if (el.classList?.contains('glick-block-wrapper') ||
             el.classList?.contains('glick-callout') ||
             el.classList?.contains('glick-code-container') ||
+            el.classList?.contains('glick-diagram-container') ||
+            el.classList?.contains('glick-math-container') ||
             el.classList?.contains('glick-image-container') ||
             el.classList?.contains('glick-toggle') ||
             el.nodeName === 'PRE' ||
             el.nodeName === 'DETAILS' ||
-            el.nodeName === 'TABLE') {
+            el.nodeName === 'TABLE' ||
+            el.nodeName === 'LI' ||
+            el.nodeName === 'UL' ||
+            el.nodeName === 'OL') {
           foundBlock = el;
         }
       }
@@ -664,9 +669,12 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       while (curr.parentElement && curr.parentElement !== contentRef.current) {
         if (curr.parentElement.classList?.contains('glick-block-wrapper') ||
             curr.parentElement.classList?.contains('glick-code-container') ||
+            curr.parentElement.classList?.contains('glick-diagram-container') ||
             curr.parentElement.classList?.contains('glick-toggle') ||
             curr.parentElement.nodeName === 'DETAILS' ||
-            curr.parentElement.nodeName === 'TABLE') {
+            curr.parentElement.nodeName === 'TABLE' ||
+            curr.parentElement.nodeName === 'UL' ||
+            curr.parentElement.nodeName === 'OL') {
           curr = curr.parentElement;
         } else {
           break;
@@ -1035,6 +1043,16 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
             deleteBtn.textContent = '✕';
             summary.appendChild(deleteBtn);
           }
+        }
+      });
+
+      // 3.5 Hoist any blocks or diagrams mistakenly nested inside list items (prevents mobile text overlapping)
+      const nestedBlocksInLi = root.querySelectorAll('li > .glick-block-wrapper, li > .glick-diagram-container, li > .glick-callout, li > .glick-code-container, li > table, li > details');
+      nestedBlocksInLi.forEach((block) => {
+        const li = block.closest('li');
+        const list = li?.closest('ul, ol');
+        if (li && list && list.parentNode) {
+          list.parentNode.insertBefore(block, list.nextSibling);
         }
       });
 
