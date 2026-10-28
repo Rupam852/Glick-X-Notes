@@ -28,7 +28,7 @@ import MathFormulaModal from './MathFormulaModal';
 import DrawingModal from './DrawingModal';
 import { 
   GitFork, Sigma, Printer, Indent, Outdent, CaseSensitive, Bookmark, 
-  Columns as Columns2, Subscript, Superscript, BookOpen, Palette 
+  Columns as Columns2, Subscript, Superscript, BookOpen, Palette, Square 
 } from 'lucide-react';
 
 interface NoteEditorProps {
@@ -229,7 +229,8 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   const [slashMenuPos, setSlashMenuPos] = useState({ top: 0, left: 0 });
   const [slashQuery, setSlashQuery] = useState('');
 
-  const [activePopup, setActivePopup] = useState<'text' | 'paragraph' | 'table' | 'tableActions' | 'link' | 'highlighter' | 'divider' | 'columns' | null>(null);
+  const [activePopup, setActivePopup] = useState<'text' | 'paragraph' | 'table' | 'tableActions' | 'link' | 'highlighter' | 'divider' | 'columns' | 'shape' | null>(null);
+  const [editingShapeEl, setEditingShapeEl] = useState<HTMLElement | null>(null);
   const [isA4Mode, setIsA4Mode] = useState(false);
   const [currentLineSpacing, setCurrentLineSpacing] = useState('1.6');
 
@@ -257,7 +258,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     { name: 'Rose Blush', value: '#fbcfe8', colorName: 'Rose' }
   ];
 
-  const togglePopup = (popupName: 'text' | 'paragraph' | 'table' | 'tableActions' | 'link' | 'highlighter' | 'divider' | 'columns' | null) => {
+  const togglePopup = (popupName: 'text' | 'paragraph' | 'table' | 'tableActions' | 'link' | 'highlighter' | 'divider' | 'columns' | 'shape' | null) => {
     setActivePopup(current => {
       const next = current === popupName ? null : popupName;
       if (next) {
@@ -2008,6 +2009,136 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     }
   };
 
+  // --- IN-DOCUMENT SHAPES & TEXT BOXES (MS WORD STYLE) ---
+  const handleInsertShape = (presetType: string = 'rounded') => {
+    ensureSelectionInsideEditor(true);
+    const focusId = `shape-focus-${Date.now()}`;
+    let fill = '#f8fafc';
+    let border = '#6366f1';
+    let bWidth = '2px';
+    let bStyle = 'solid';
+    let bRadius = '14px';
+    let title = 'SHAPE / TEXT BOX';
+    let defaultText = 'Type your notes or ideas inside this shape...';
+
+    if (presetType === 'sticky') {
+      fill = '#fef9c3';
+      border = '#facc15';
+      title = '📌 STICKY NOTE';
+      defaultText = 'Write a quick memo, reminder or key takeaway here...';
+    } else if (presetType === 'mint') {
+      fill = 'rgba(16, 185, 129, 0.08)';
+      border = '#10b981';
+      title = '🎯 GOAL / MILESTONE';
+      defaultText = 'Key project target, objective or completion criteria...';
+    } else if (presetType === 'rose') {
+      fill = 'rgba(244, 63, 94, 0.08)';
+      border = '#f43f5e';
+      title = '⚠️ IMPORTANT NOTICE';
+      defaultText = 'Crucial point, warning, or deadline to keep in mind...';
+    } else if (presetType === 'lavender') {
+      fill = 'rgba(139, 92, 246, 0.08)';
+      border = '#8b5cf6';
+      title = '💡 INSIGHT / CONCEPT';
+      defaultText = 'Key concept explanation, creative thought or summary...';
+    } else if (presetType === 'dashed') {
+      fill = 'transparent';
+      border = '#94a3b8';
+      bStyle = 'dashed';
+      title = '⬚ DRAFT BOX';
+      defaultText = 'Temporary scratchpad or draft section...';
+    } else if (presetType === 'pill') {
+      fill = '#f1f5f9';
+      border = '#4f46e5';
+      bRadius = '28px';
+      title = '🏷️ PILL BADGE';
+      defaultText = 'Status badge or category summary card...';
+    }
+
+    const shapeHtml = `
+      <div class="glick-block-wrapper glick-shape-container glick-image-resizable" data-shape-type="${presetType}" style="margin: 16px 0; position: relative; max-width: 100%;">
+        <div contenteditable="false" class="glick-shape-header" style="display: flex; align-items: center; justify-content: space-between; padding: 4px 10px; background: rgba(99,102,241,0.06); border-radius: ${bRadius} ${bRadius} 0 0; border: 1px solid ${border}; border-bottom: none; user-select: none;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span style="font-size: 11px; font-weight: 700; color: ${border}; font-family: monospace; letter-spacing: 0.5px;">${title}</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <button type="button" data-action="style-shape" title="Edit Fill, Border & Corner Styles" style="background: rgba(99,102,241,0.12); border: 1px solid rgba(99,102,241,0.25); color: #4f46e5; font-size: 11px; padding: 2px 8px; border-radius: 6px; cursor: pointer; font-weight: 600;">🎨 Style</button>
+            <button type="button" data-action="delete-block" title="Delete Shape" style="background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.25); color: #ef4444; font-size: 11px; padding: 2px 8px; border-radius: 6px; cursor: pointer; font-weight: 600;">✕ Delete</button>
+          </div>
+        </div>
+        <div class="glick-shape-body" style="padding: 16px 20px; background: ${fill}; border: ${bWidth} ${bStyle} ${border}; border-radius: 0 0 ${bRadius} ${bRadius}; min-height: 60px; color: inherit; font-size: 14px; line-height: 1.6; outline: none; position: relative;">
+          <p id="${focusId}">${defaultText}</p>
+          <div class="glick-corner-grip" title="Drag to resize shape" style="position: absolute; right: 4px; bottom: 4px; width: 14px; height: 14px; cursor: nwse-resize; opacity: 0.6;"></div>
+        </div>
+      </div>
+      <p><br/></p>
+    `;
+
+    document.execCommand('insertHTML', false, shapeHtml);
+    if (contentRef.current) {
+      const target = contentRef.current.querySelector(`#${focusId}`);
+      if (target) {
+        target.removeAttribute('id');
+        const range = document.createRange();
+        range.selectNodeContents(target);
+        const sel = window.getSelection();
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+        contentRef.current.focus();
+        savedSelectionRef.current = saveSelection(contentRef.current);
+      }
+      const h = contentRef.current.innerHTML;
+      latestContent.current = h;
+      setBody(h);
+      pushToHistory(h);
+    }
+    togglePopup(null);
+    showToast('Shape box inserted into note!', 'success');
+  };
+
+  const handleApplyShapeStyle = (updates: {
+    fill?: string;
+    borderColor?: string;
+    borderWidth?: string;
+    borderStyle?: string;
+    borderRadius?: string;
+  }) => {
+    if (!editingShapeEl) return;
+    const body = editingShapeEl.querySelector('.glick-shape-body') as HTMLElement;
+    const header = editingShapeEl.querySelector('.glick-shape-header') as HTMLElement;
+    if (!body) return;
+
+    if (updates.fill !== undefined) {
+      body.style.backgroundColor = updates.fill;
+    }
+    if (updates.borderColor !== undefined) {
+      body.style.borderColor = updates.borderColor;
+      if (header) {
+        header.style.borderColor = updates.borderColor;
+      }
+    }
+    if (updates.borderWidth !== undefined) {
+      body.style.borderWidth = updates.borderWidth;
+    }
+    if (updates.borderStyle !== undefined) {
+      body.style.borderStyle = updates.borderStyle;
+    }
+    if (updates.borderRadius !== undefined) {
+      body.style.borderRadius = `0 0 ${updates.borderRadius} ${updates.borderRadius}`;
+      if (header) {
+        header.style.borderRadius = `${updates.borderRadius} ${updates.borderRadius} 0 0`;
+      }
+    }
+
+    if (contentRef.current) {
+      const html = contentRef.current.innerHTML;
+      latestContent.current = html;
+      setBody(html);
+      pushToHistory(html);
+    }
+    showToast('Shape style updated!', 'success');
+  };
+
   const handleExecuteSlashCommand = (cmdId: string) => {
     setSlashMenuOpen(false);
     
@@ -2084,6 +2215,9 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         break;
       case 'draw':
         handleOpenDrawingModal();
+        break;
+      case 'shape':
+        togglePopup('shape');
         break;
       case 'divider':
         togglePopup('divider');
@@ -2700,6 +2834,19 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       return;
     }
 
+    // 4c. Shape / Text box style editor
+    const styleShapeBtn = target.closest('[data-action="style-shape"]') as HTMLElement;
+    if (styleShapeBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      const container = styleShapeBtn.closest('.glick-shape-container') as HTMLElement;
+      if (container) {
+        setEditingShapeEl(container);
+        togglePopup('shape');
+      }
+      return;
+    }
+
     // 5. Link click
     const anchor = target.closest('a');
     if (anchor) {
@@ -2713,7 +2860,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     // 1. Direct Corner Grip handle hover/click (.glick-corner-grip)
     const grip = target.closest('.glick-corner-grip') as HTMLElement;
     if (grip) {
-      const container = grip.closest('.glick-image-resizable, .glick-code-container, .glick-callout, details.glick-toggle, table') as HTMLElement;
+      const container = grip.closest('.glick-image-resizable, .glick-code-container, .glick-callout, details.glick-toggle, table, .glick-shape-container') as HTMLElement;
       if (container) {
         return { type: 'corner', element: container };
       }
@@ -2729,8 +2876,8 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       if (nearBottom) return { type: 'row', element: cell.parentElement as HTMLTableRowElement };
     }
 
-    // 3. Block container edges & corners (Image, Code block, Callout, Toggle, Table)
-    const block = target.closest('.glick-image-resizable, .glick-code-container, .glick-callout, details.glick-toggle, table') as HTMLElement;
+    // 3. Block container edges & corners (Image, Code block, Callout, Toggle, Table, Shape)
+    const block = target.closest('.glick-image-resizable, .glick-code-container, .glick-callout, details.glick-toggle, table, .glick-shape-container') as HTMLElement;
     if (block) {
       const rect = block.getBoundingClientRect();
       const nearRight = (rect.right - clientX) <= 8 && (rect.right - clientX) >= -3;
@@ -4337,6 +4484,20 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
             <Lightbulb className="w-5 h-5" />
           </button>
 
+          {/* ▢ In-Document Shape / Text Box (MS Word style) */}
+          <button 
+            type="button"
+            onMouseDown={handleButtonMouseDown} 
+            onClick={() => {
+              setEditingShapeEl(null);
+              togglePopup(activePopup === 'shape' ? null : 'shape');
+            }} 
+            className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-all ${activePopup === 'shape' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} 
+            title="Insert Shape / Text Box / Sticky Note (MS Word style)"
+          >
+            <Square className="w-5 h-5" />
+          </button>
+
           {/* Code Block Inserter */}
           <button 
             type="button"
@@ -5079,6 +5240,193 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                     <span className="text-[10px] text-slate-400">Triple comparison cards</span>
                   </button>
                 </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ▢ In-Document Shape / Text Box Popup (MS Word Style) */}
+          {activePopup === 'shape' && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 absolute top-full left-0 w-full z-30 shadow-xl p-4">
+              <div className="max-w-3xl mx-auto space-y-4">
+                
+                {/* Header title */}
+                <div className="flex items-center justify-between pb-1 border-b border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-2">
+                    <Square className="w-4 h-4 text-indigo-600" />
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
+                      {editingShapeEl ? '🎨 Edit Shape & Text Box Styles (Live)' : '▢ Insert Shape / Text Box (MS Word Style)'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setEditingShapeEl(null); togglePopup(null); }}
+                    className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-bold"
+                  >
+                    ✕ Close
+                  </button>
+                </div>
+
+                {/* IF EDITING AN EXISTING SHAPE: Show Live Styler Controls */}
+                {editingShapeEl ? (
+                  <div className="space-y-3.5 bg-slate-50 dark:bg-slate-800/50 p-3.5 rounded-2xl border border-indigo-100 dark:border-indigo-950">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400">
+                        Editing Selected Shape • Live Changes
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => { setEditingShapeEl(null); togglePopup(null); }}
+                        className="px-3 py-1 rounded-lg bg-indigo-600 text-white font-bold text-xs"
+                      >
+                        ✓ Done Styling
+                      </button>
+                    </div>
+
+                    {/* Fill Color */}
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Fill Color (Background)</p>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {[
+                          { name: 'Transparent', value: 'transparent', label: '⊘' },
+                          { name: 'White', value: '#ffffff' },
+                          { name: 'Slate Light', value: '#f8fafc' },
+                          { name: 'Lemon Yellow', value: '#fef9c3' },
+                          { name: 'Mint Green', value: '#dcfce7' },
+                          { name: 'Ice Blue', value: '#e0f2fe' },
+                          { name: 'Soft Lavender', value: '#f3e8ff' },
+                          { name: 'Peach', value: '#ffedd5' },
+                          { name: 'Rose', value: '#ffe4e6' },
+                          { name: 'Indigo Soft', value: 'rgba(99, 102, 241, 0.08)' },
+                          { name: 'Dark Slate', value: '#0f172a' }
+                        ].map(c => (
+                          <button
+                            key={c.value}
+                            type="button"
+                            onClick={() => handleApplyShapeStyle({ fill: c.value })}
+                            className="w-7 h-7 rounded-lg border border-black/15 flex items-center justify-center font-bold text-xs shadow-xs hover:scale-110 transition cursor-pointer"
+                            style={{ backgroundColor: c.value === 'transparent' ? '#ffffff' : c.value, color: c.value === '#0f172a' ? '#ffffff' : '#334155' }}
+                            title={c.name}
+                          >
+                            {c.label || ''}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Border Color */}
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Border Color</p>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {[
+                          { name: 'None', value: 'transparent', label: '⊘' },
+                          { name: 'Indigo', value: '#6366f1' },
+                          { name: 'Emerald', value: '#10b981' },
+                          { name: 'Amber', value: '#f59e0b' },
+                          { name: 'Rose', value: '#f43f5e' },
+                          { name: 'Sky', value: '#0ea5e9' },
+                          { name: 'Purple', value: '#8b5cf6' },
+                          { name: 'Slate', value: '#94a3b8' },
+                          { name: 'Black', value: '#000000' }
+                        ].map(c => (
+                          <button
+                            key={c.value}
+                            type="button"
+                            onClick={() => handleApplyShapeStyle({ borderColor: c.value })}
+                            className="w-6 h-6 rounded-full border border-black/20 flex items-center justify-center text-[10px] font-bold shadow-xs hover:scale-110 transition cursor-pointer"
+                            style={{ backgroundColor: c.value === 'transparent' ? '#ffffff' : c.value }}
+                            title={c.name}
+                          >
+                            {c.label || ''}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Border Style & Corner Roundness */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                      <div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Border Thickness & Style</p>
+                        <div className="flex items-center gap-1.5">
+                          {['1px', '2px', '3px', '4px'].map(th => (
+                            <button
+                              key={th}
+                              type="button"
+                              onClick={() => handleApplyShapeStyle({ borderWidth: th })}
+                              className="px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition"
+                            >
+                              {th}
+                            </button>
+                          ))}
+                          <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1" />
+                          {['solid', 'dashed', 'dotted'].map(st => (
+                            <button
+                              key={st}
+                              type="button"
+                              onClick={() => handleApplyShapeStyle({ borderStyle: st })}
+                              className="px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold capitalize hover:bg-slate-200 dark:hover:bg-slate-700 transition"
+                            >
+                              {st}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Corner Roundness</p>
+                        <div className="flex items-center gap-1.5">
+                          {[
+                            { label: 'Square (0px)', value: '0px' },
+                            { label: 'Subtle (8px)', value: '8px' },
+                            { label: 'Rounded (16px)', value: '16px' },
+                            { label: 'Pill (28px)', value: '28px' }
+                          ].map(rd => (
+                            <button
+                              key={rd.value}
+                              type="button"
+                              onClick={() => handleApplyShapeStyle({ borderRadius: rd.value })}
+                              className="px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition"
+                            >
+                              {rd.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  /* IF INSERTING NEW SHAPE: Show Preset Cards */
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                      Choose Shape Style to Insert into Note
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                      {[
+                        { id: 'rounded', title: 'Rounded Box', desc: 'Card with border', bg: '#f8fafc', border: '#6366f1', radius: '12px' },
+                        { id: 'sticky', title: 'Sticky Note', desc: 'Yellow memo note', bg: '#fef9c3', border: '#facc15', radius: '8px' },
+                        { id: 'mint', title: 'Mint Goal Card', desc: 'Green target box', bg: '#f0fdf4', border: '#10b981', radius: '12px' },
+                        { id: 'rose', title: 'Rose Notice', desc: 'Pink alert box', bg: '#fff1f2', border: '#f43f5e', radius: '12px' },
+                        { id: 'lavender', title: 'Lavender Concept', desc: 'Creative idea box', bg: '#faf5ff', border: '#8b5cf6', radius: '16px' },
+                        { id: 'pill', title: 'Pill Badge', desc: 'Curved tag badge', bg: '#f1f5f9', border: '#4f46e5', radius: '28px' },
+                        { id: 'dashed', title: 'Draft Dashed', desc: 'Transparent frame', bg: 'transparent', border: '#94a3b8', radius: '10px', style: 'dashed' }
+                      ].map(preset => (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onMouseDown={handleButtonMouseDown}
+                          onClick={() => handleInsertShape(preset.id)}
+                          className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-indigo-500 text-left transition hover:scale-102 cursor-pointer flex flex-col justify-between h-24 shadow-xs"
+                          style={{ backgroundColor: preset.bg === 'transparent' ? 'transparent' : preset.bg }}
+                        >
+                          <div className="flex items-center justify-between w-full">
+                            <span className="text-xs font-bold text-slate-800 dark:text-slate-900">{preset.title}</span>
+                            <div className="w-3.5 h-3.5 rounded" style={{ border: `2px ${preset.style || 'solid'} ${preset.border}` }} />
+                          </div>
+                          <span className="text-[10px] text-slate-500 font-medium">{preset.desc}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </motion.div>
           )}

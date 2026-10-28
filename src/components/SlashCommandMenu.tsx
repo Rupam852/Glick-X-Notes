@@ -3,7 +3,7 @@ import {
   CheckSquare, Heading1, Heading2, Heading3, Code, 
   Lightbulb, AlertTriangle, Target, ChevronRight, Table, 
   Sparkles, Quote, List, Image as ImageIcon, GitFork, Sigma, Minus,
-  Bookmark, Columns as Columns2, FileText, Palette
+  Bookmark, Columns as Columns2, FileText, Palette, Square
 } from 'lucide-react';
 
 export interface SlashCommandItem {
@@ -153,6 +153,13 @@ export default function SlashCommandMenu({
       desc: 'Freehand sketch, shapes, arrows, callouts & text',
       icon: <Palette className="w-4 h-4 text-pink-500" />,
       keywords: ['draw', 'drawing', 'canvas', 'sketch', 'doodle', 'docs', 'paint', 'shape', 'art']
+    },
+    {
+      id: 'shape',
+      label: 'Insert Shape / Text Box (MS Word style)',
+      desc: 'Sticky note, rounded card, pill badge, or framed box',
+      icon: <Square className="w-4 h-4 text-emerald-500" />,
+      keywords: ['shape', 'box', 'sticky', 'textbox', 'card', 'badge', 'frame', 'word']
     },
     {
       id: 'divider',
