@@ -31,7 +31,7 @@ import {
   GitFork, Sigma, Printer, Indent, Outdent, CaseSensitive, Bookmark, 
   Columns as Columns2, Subscript, Superscript, BookOpen, Palette, Square,
   Pencil, RotateCcw, RotateCw, Shapes, Circle, Triangle, Star, ArrowRight,
-  MousePointer, Cloud, MessageSquare, ArrowLeftRight, Copy, Laptop, RefreshCw
+  MousePointer, Cloud, MessageSquare, ArrowLeftRight, Copy, Laptop, RefreshCw, PanelLeft
 } from 'lucide-react';
 
 interface NoteEditorProps {
@@ -572,7 +572,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   };
 
   const [showFindReplace, setShowFindReplace] = useState(false);
-  const [focusMode, setFocusMode] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(320);
   const [isResizing, setIsResizing] = useState(false);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
@@ -596,6 +596,11 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   const [matchCount, setMatchCount] = useState(0);
 
   // 🛡️ Smart Back Handlers: close open modals, sheets, and popups on back gesture without leaving editor
+  useBackHandler(() => {
+    setShowSidebar(false);
+    return true;
+  }, showSidebar);
+
   useBackHandler(() => {
     setViewingAttachment(null);
     return true;
@@ -5643,14 +5648,19 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
               {zenMode ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
             </button>
 
-            {/* Distraction-free Focus Toggle (Desktop/Tablet sidebar toggler) */}
+            {/* Note Details Drawer Toggle (Overlay over sheet, never shrinks the sheet!) */}
             <button
               type="button"
-              onClick={() => setFocusMode(prev => !prev)}
-              className={`hidden md:inline-flex px-2.5 md:px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer shrink-0 ${focusMode ? 'bg-indigo-600 border-indigo-500 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-900 border-slate-250 dark:border-slate-800 text-slate-600 dark:text-slate-350 hover:bg-slate-200 dark:hover:bg-slate-800'}`}
-              title={focusMode ? "Exit Focus Mode" : "Enter Focus Mode"}
+              onClick={() => setShowSidebar(prev => !prev)}
+              className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer shrink-0 ${
+                showSidebar 
+                  ? 'bg-indigo-600 border-indigo-500 text-white shadow-md' 
+                  : 'bg-slate-100 dark:bg-slate-900 border-slate-250 dark:border-slate-800 text-slate-600 dark:text-slate-350 hover:bg-slate-200 dark:hover:bg-slate-800'
+              }`}
+              title={showSidebar ? "Close Note Details" : "Open Note Details & Info"}
             >
-              {focusMode ? "Focused" : "Focus"}
+              <PanelLeft className="w-4 h-4" />
+              <span>Details</span>
             </button>
 
             {currentNoteId && (
@@ -7257,14 +7267,45 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
 
       <div className="note-editor-layout flex-1 flex flex-row overflow-hidden relative">
         
-        {/* REDESIGNED LEFT SIDEBAR (with drag-to-resize support) */}
-        {!focusMode && (
-          <div 
-            className="note-editor-sidebar hidden md:flex flex-col border-r border-slate-150 dark:border-slate-800 overflow-y-auto select-none bg-slate-50/60 dark:bg-slate-900/40 relative group/sidebar no-print"
-            style={{ width: `${sidebarWidth}px` }}
-          >
-            {/* Note details card */}
-            <div className="p-5 space-y-6">
+        {/* 📋 Note Details & Attachments Overlay Drawer (Slides on top of sheet; NEVER shrinks the sheet!) */}
+        <AnimatePresence>
+          {showSidebar && (
+            <>
+              {/* Soft blur backdrop */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setShowSidebar(false)}
+                className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-[2px] transition-opacity cursor-pointer"
+              />
+
+              {/* Floating Slide-in Drawer Panel */}
+              <motion.div
+                initial={{ x: '-100%', opacity: 0.6 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: '-100%', opacity: 0 }}
+                transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+                className="fixed top-0 left-0 bottom-0 z-55 w-[330px] max-w-[85vw] bg-white dark:bg-slate-900 shadow-2xl border-r border-slate-200 dark:border-slate-800 flex flex-col select-none overflow-hidden"
+              >
+                {/* Drawer Header with Title & Close (X) icon */}
+                <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200/80 dark:border-slate-800 shrink-0 bg-slate-50/50 dark:bg-slate-900/50">
+                  <h3 className="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-indigo-500" />
+                    <span>Note Details</span>
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setShowSidebar(false)}
+                    className="p-1.5 rounded-xl hover:bg-slate-200/60 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition cursor-pointer"
+                    title="Close Details (Esc)"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Scrollable details, attachments and info */}
+                <div className="flex-1 overflow-y-auto p-5 space-y-6">
               <div>
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
                   <FileText className="w-4 h-4" /> Note Details
@@ -7414,15 +7455,11 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                   </div>
                 </div>
               </div>
-            </div>
-
-            {/* Resize handle bar */}
-            <div 
-              onMouseDown={startResizing}
-              className="absolute top-0 right-0 w-1.5 h-full cursor-col-resize group-hover/sidebar:bg-indigo-500/20 active:bg-indigo-600 transition-colors"
-            />
-          </div>
-        )}
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
 
         {/* Content Pane with Eye-Care Paper Document Canvas */}
         <div className={`note-editor-content-pane flex-1 flex flex-col ${isA4Mode ? 'bg-[#cbd5e1] dark:bg-[#030712]' : 'bg-[#f2f4f7] dark:bg-[#0b0f19]'} overflow-hidden relative transition-colors`}>
