@@ -229,7 +229,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   const [slashMenuPos, setSlashMenuPos] = useState({ top: 0, left: 0 });
   const [slashQuery, setSlashQuery] = useState('');
 
-  const [activePopup, setActivePopup] = useState<'text' | 'paragraph' | 'table' | 'tableActions' | 'link' | 'highlighter' | 'divider' | 'columns' | 'shape' | null>(null);
+  const [activePopup, setActivePopup] = useState<'text' | 'paragraph' | 'table' | 'tableActions' | 'link' | 'highlighter' | 'divider' | 'columns' | 'shape' | 'insert' | null>(null);
   const [editingShapeEl, setEditingShapeEl] = useState<HTMLElement | null>(null);
   const [isA4Mode, setIsA4Mode] = useState(false);
   const [currentLineSpacing, setCurrentLineSpacing] = useState('1.6');
@@ -258,7 +258,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     { name: 'Rose Blush', value: '#fbcfe8', colorName: 'Rose' }
   ];
 
-  const togglePopup = (popupName: 'text' | 'paragraph' | 'table' | 'tableActions' | 'link' | 'highlighter' | 'divider' | 'columns' | 'shape' | null) => {
+  const togglePopup = (popupName: 'text' | 'paragraph' | 'table' | 'tableActions' | 'link' | 'highlighter' | 'divider' | 'columns' | 'shape' | 'insert' | null) => {
     setActivePopup(current => {
       const next = current === popupName ? null : popupName;
       if (next) {
@@ -4456,8 +4456,8 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
 
           <div className="w-px h-5 bg-slate-250 dark:bg-slate-800 mx-1 shrink-0" />
 
-          {/* Action Popups toggler links */}
-          <button onMouseDown={handleButtonMouseDown} onClick={() => togglePopup('link')} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-colors ${activePopup === 'link' || selectedLinkUrl ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Insert link">
+          {/* Quick Essentials: Link, Checklist, Photo, Table */}
+          <button onMouseDown={handleButtonMouseDown} onClick={() => togglePopup('link')} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-colors ${activePopup === 'link' || selectedLinkUrl ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Insert web link">
             <Link className="w-5 h-5" />
           </button>
 
@@ -4465,114 +4465,29 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
             <CheckSquare className="w-5 h-5" />
           </button>
           
-          <button onMouseDown={handleButtonMouseDown} onClick={() => document.getElementById('image-upload')?.click()} className="p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all" title="Attach file">
+          <button onMouseDown={handleButtonMouseDown} onClick={() => document.getElementById('image-upload')?.click()} className="p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all" title="Attach image / photo">
             <ImageIcon className="w-5 h-5" />
           </button>
           
-          <button onMouseDown={handleButtonMouseDown} onClick={handleTable} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-all ${activeFormats.isInsideTable || activePopup === 'table' || activePopup === 'tableActions' ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Table options">
+          <button onMouseDown={handleButtonMouseDown} onClick={handleTable} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-all ${activeFormats.isInsideTable || activePopup === 'table' || activePopup === 'tableActions' ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Data Table">
             <Table className="w-5 h-5" />
           </button>
-          
-          {/* Callout Box Inserter */}
-          <button 
-            type="button"
-            onMouseDown={handleButtonMouseDown} 
-            onClick={() => togglePopup(activePopup === ('callout' as any) ? null : ('callout' as any))} 
-            className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-all ${activePopup === ('callout' as any) ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} 
-            title="Insert Callout / Alert Box"
-          >
-            <Lightbulb className="w-5 h-5" />
-          </button>
 
-          {/* ▢ In-Document Shape / Text Box (MS Word style) */}
+          {/* ✨ Smart "＋ Insert" Dropdown Button (Groups Drawings, Shapes, Diagrams, Math, Code, Callout, Columns) */}
           <button 
             type="button"
             onMouseDown={handleButtonMouseDown} 
-            onClick={() => {
-              setEditingShapeEl(null);
-              togglePopup(activePopup === 'shape' ? null : 'shape');
-            }} 
-            className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-all ${activePopup === 'shape' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} 
-            title="Insert Shape / Text Box / Sticky Note (MS Word style)"
+            onClick={() => togglePopup(activePopup === 'insert' ? null : 'insert')} 
+            className={`px-3 py-1.5 h-9 rounded-xl flex items-center gap-1.5 shrink-0 font-bold text-xs transition-all cursor-pointer ${
+              activePopup === 'insert' 
+                ? 'bg-indigo-600 text-white shadow-md' 
+                : 'bg-indigo-50/90 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200/70 dark:border-indigo-800 hover:bg-indigo-100 dark:hover:bg-indigo-900/60'
+            }`} 
+            title="Insert Rich Blocks (Drawing, Shapes, Flowcharts, Math, Code, Callout, Columns)"
           >
-            <Square className="w-5 h-5" />
-          </button>
-
-          {/* Code Block Inserter */}
-          <button 
-            type="button"
-            onMouseDown={handleButtonMouseDown} 
-            onClick={handleInsertCodeBlock} 
-            className="p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all" 
-            title="Insert Code Snippet Block"
-          >
-            <CodeIcon className="w-5 h-5" />
-          </button>
-
-          {/* Collapsible Toggle List Inserter */}
-          <button 
-            type="button"
-            onMouseDown={handleButtonMouseDown} 
-            onClick={handleInsertToggle} 
-            className="p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all" 
-            title="Insert Collapsible Toggle List"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </button>
-
-          {/* 📊 Mermaid Flowchart & Mindmap Visualizer */}
-          <button 
-            type="button"
-            onMouseDown={handleButtonMouseDown} 
-            onClick={() => handleOpenMermaidModal()} 
-            className="p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-indigo-600 transition-all" 
-            title="Insert Mermaid Flowchart / Mindmap (🔀)"
-          >
-            <GitFork className="w-5 h-5" />
-          </button>
-
-          {/* ∑ LaTeX / Math Formula Editor */}
-          <button 
-            type="button"
-            onMouseDown={handleButtonMouseDown} 
-            onClick={() => handleOpenMathModal()} 
-            className="p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-indigo-600 transition-all font-serif font-black text-base" 
-            title="Insert LaTeX / Math Formula (∑)"
-          >
-            ∑
-          </button>
-
-          {/* 🎨 Google Docs style Drawing / Canvas */}
-          <button 
-            type="button"
-            onMouseDown={handleButtonMouseDown} 
-            onClick={() => handleOpenDrawingModal()} 
-            className="p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-pink-600 transition-all" 
-            title="Insert Drawing / Doodle Canvas (Google Docs style)"
-          >
-            <Palette className="w-5 h-5" />
-          </button>
-
-          {/* ⎯ Aesthetic Decorative Divider */}
-          <button 
-            type="button"
-            onMouseDown={handleButtonMouseDown} 
-            onClick={() => togglePopup(activePopup === 'divider' ? null : 'divider')} 
-            className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-all ${activePopup === 'divider' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} 
-            title="Insert Aesthetic Divider (⎯)"
-          >
-            <Minus className="w-5 h-5" />
-          </button>
-
-          {/* ⚖️ Multi-Column Split Layout */}
-          <button 
-            type="button"
-            onMouseDown={handleButtonMouseDown} 
-            onClick={() => togglePopup(activePopup === 'columns' ? null : 'columns')} 
-            className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-all ${activePopup === 'columns' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} 
-            title="Multi-Column Split Layout (⚖️)"
-          >
-            <Columns2 className="w-5 h-5" />
+            <Plus className="w-4 h-4" />
+            <span>Insert</span>
+            <ChevronDown className="w-3 h-3 opacity-60" />
           </button>
 
           <div className="w-px h-5 bg-slate-250 dark:bg-slate-800 mx-1 shrink-0" />
@@ -5427,6 +5342,258 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                     </div>
                   </div>
                 )}
+              </div>
+            </motion.div>
+          )}
+
+          {/* ✨ Modern Consolidated "Insert" Popover Menu */}
+          {activePopup === 'insert' && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden border-t border-slate-100 dark:border-slate-800 bg-white/98 dark:bg-slate-900/98 backdrop-blur-md absolute top-full left-0 w-full z-30 shadow-2xl"
+            >
+              <div className="p-4 max-w-5xl mx-auto">
+                <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-150 dark:border-slate-800">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-xs">
+                      ＋
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                        Insert Rich Media & Elements
+                      </h4>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                        Select an element to add to your note at cursor position
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActivePopup(null)}
+                    className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs flex items-center gap-1 cursor-pointer transition"
+                  >
+                    <X className="w-4 h-4" />
+                    <span>Close</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {/* Category 1: Visual & Drawings */}
+                  <div className="bg-slate-50/70 dark:bg-slate-800/40 p-3 rounded-2xl border border-slate-200/60 dark:border-slate-700/50 flex flex-col gap-2">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 px-1">
+                      <span>🎨</span> Visual & Interactive
+                    </p>
+
+                    <button
+                      type="button"
+                      onMouseDown={handleButtonMouseDown}
+                      onClick={() => { setActivePopup(null); handleOpenDrawingModal(); }}
+                      className="group flex items-start gap-3 p-2.5 rounded-xl hover:bg-white dark:hover:bg-slate-800 transition text-left cursor-pointer border border-transparent hover:border-slate-200 dark:hover:border-slate-700 shadow-xs hover:shadow-sm"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-pink-50 dark:bg-pink-950/40 text-pink-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+                        <Palette className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-pink-600 dark:group-hover:text-pink-400 flex items-center gap-1">
+                          Drawing Canvas
+                        </span>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                          Google Docs style doodle & sketch pad
+                        </p>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onMouseDown={handleButtonMouseDown}
+                      onClick={() => { setActivePopup(null); handleOpenMermaidModal(); }}
+                      className="group flex items-start gap-3 p-2.5 rounded-xl hover:bg-white dark:hover:bg-slate-800 transition text-left cursor-pointer border border-transparent hover:border-slate-200 dark:hover:border-slate-700 shadow-xs hover:shadow-sm"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+                        <GitFork className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 flex items-center gap-1">
+                          Flowchart & Mindmap
+                        </span>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                          Interactive Mermaid diagram visualizer
+                        </p>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onMouseDown={handleButtonMouseDown}
+                      onClick={() => { setActivePopup(null); handleOpenMathModal(); }}
+                      className="group flex items-start gap-3 p-2.5 rounded-xl hover:bg-white dark:hover:bg-slate-800 transition text-left cursor-pointer border border-transparent hover:border-slate-200 dark:hover:border-slate-700 shadow-xs hover:shadow-sm"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-950/40 text-purple-600 font-serif font-black text-sm flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+                        ∑
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-purple-600 dark:group-hover:text-purple-400 flex items-center gap-1">
+                          LaTeX Math Formula
+                        </span>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                          Equations, fractions & math symbols
+                        </p>
+                      </div>
+                    </button>
+                  </div>
+
+                  {/* Category 2: Cards & Boxes */}
+                  <div className="bg-slate-50/70 dark:bg-slate-800/40 p-3 rounded-2xl border border-slate-200/60 dark:border-slate-700/50 flex flex-col gap-2">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 px-1">
+                      <span>📦</span> Cards, Shapes & Snippets
+                    </p>
+
+                    <button
+                      type="button"
+                      onMouseDown={handleButtonMouseDown}
+                      onClick={() => {
+                        setEditingShapeEl(null);
+                        setActivePopup('shape');
+                      }}
+                      className="group flex items-start gap-3 p-2.5 rounded-xl hover:bg-white dark:hover:bg-slate-800 transition text-left cursor-pointer border border-transparent hover:border-slate-200 dark:hover:border-slate-700 shadow-xs hover:shadow-sm"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+                        <Square className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-amber-600 dark:group-hover:text-amber-400 flex items-center gap-1">
+                          Shape & Sticky Note
+                        </span>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                          MS Word text boxes, memo cards, borders
+                        </p>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onMouseDown={handleButtonMouseDown}
+                      onClick={() => setActivePopup('callout' as any)}
+                      className="group flex items-start gap-3 p-2.5 rounded-xl hover:bg-white dark:hover:bg-slate-800 transition text-left cursor-pointer border border-transparent hover:border-slate-200 dark:hover:border-slate-700 shadow-xs hover:shadow-sm"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+                        <Lightbulb className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 flex items-center gap-1">
+                          Callout / Alert Box
+                        </span>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                          Notion-style tip, warning & target boxes
+                        </p>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onMouseDown={handleButtonMouseDown}
+                      onClick={() => { setActivePopup(null); handleInsertCodeBlock(); }}
+                      className="group flex items-start gap-3 p-2.5 rounded-xl hover:bg-white dark:hover:bg-slate-800 transition text-left cursor-pointer border border-transparent hover:border-slate-200 dark:hover:border-slate-700 shadow-xs hover:shadow-sm"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+                        <CodeIcon className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 flex items-center gap-1">
+                          Code Snippet Block
+                        </span>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                          Syntax highlighted dark code container
+                        </p>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onMouseDown={handleButtonMouseDown}
+                      onClick={() => { setActivePopup(null); handleInsertToggle(); }}
+                      className="group flex items-start gap-3 p-2.5 rounded-xl hover:bg-white dark:hover:bg-slate-800 transition text-left cursor-pointer border border-transparent hover:border-slate-200 dark:hover:border-slate-700 shadow-xs hover:shadow-sm"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-cyan-50 dark:bg-cyan-950/40 text-cyan-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+                        <ChevronRight className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-cyan-600 dark:group-hover:text-cyan-400 flex items-center gap-1">
+                          Collapsible Toggle
+                        </span>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                          Expandable accordion for collapsible notes
+                        </p>
+                      </div>
+                    </button>
+                  </div>
+
+                  {/* Category 3: Layout & Structure */}
+                  <div className="bg-slate-50/70 dark:bg-slate-800/40 p-3 rounded-2xl border border-slate-200/60 dark:border-slate-700/50 flex flex-col gap-2">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 px-1">
+                      <span>📐</span> Layout & Structure
+                    </p>
+
+                    <button
+                      type="button"
+                      onMouseDown={handleButtonMouseDown}
+                      onClick={() => setActivePopup('columns')}
+                      className="group flex items-start gap-3 p-2.5 rounded-xl hover:bg-white dark:hover:bg-slate-800 transition text-left cursor-pointer border border-transparent hover:border-slate-200 dark:hover:border-slate-700 shadow-xs hover:shadow-sm"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-violet-50 dark:bg-violet-950/40 text-violet-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+                        <Columns2 className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-violet-600 dark:group-hover:text-violet-400 flex items-center gap-1">
+                          Multi-Column Split
+                        </span>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                          2-column or 3-column side-by-side layout
+                        </p>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onMouseDown={handleButtonMouseDown}
+                      onClick={() => setActivePopup('divider')}
+                      className="group flex items-start gap-3 p-2.5 rounded-xl hover:bg-white dark:hover:bg-slate-800 transition text-left cursor-pointer border border-transparent hover:border-slate-200 dark:hover:border-slate-700 shadow-xs hover:shadow-sm"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+                        <Minus className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 flex items-center gap-1">
+                          Aesthetic Divider
+                        </span>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                          Gradient lines, dots, stars separator
+                        </p>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onMouseDown={handleButtonMouseDown}
+                      onClick={() => { setActivePopup(null); handleInsertPageBreak(); }}
+                      className="group flex items-start gap-3 p-2.5 rounded-xl hover:bg-white dark:hover:bg-slate-800 transition text-left cursor-pointer border border-transparent hover:border-slate-200 dark:hover:border-slate-700 shadow-xs hover:shadow-sm"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-950/40 text-teal-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+                        <FileText className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-teal-600 dark:group-hover:text-teal-400 flex items-center gap-1">
+                          A4 Page Break
+                        </span>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                          Insert page separation (Ctrl+Enter)
+                        </p>
+                      </div>
+                    </button>
+                  </div>
+                </div>
               </div>
             </motion.div>
           )}
