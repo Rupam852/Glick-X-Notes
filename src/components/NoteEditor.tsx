@@ -20,6 +20,7 @@ import { useBackHandler } from '../utils/smartBackNavigation';
 import AIAssistantDrawer from './AIAssistantDrawer';
 import SlashCommandMenu from './SlashCommandMenu';
 import ExportModal from './ExportModal';
+import VoiceDictationModal from './VoiceDictationModal';
 import { voiceDictation, audioReader } from '../utils/audioTools';
 
 interface NoteEditorProps {
@@ -174,6 +175,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   // --- NEW FEATURES STATES ---
   const [showAIDrawer, setShowAIDrawer] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showVoiceModal, setShowVoiceModal] = useState(false);
   const [isDictating, setIsDictating] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [zenMode, setZenMode] = useState(false);
@@ -268,6 +270,11 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     setShowFontSizeMenu(false);
     return true;
   }, showFontMenu || showFontSizeMenu);
+
+  useBackHandler(() => {
+    setShowVoiceModal(false);
+    return true;
+  }, showVoiceModal);
 
   // Auto-sync Font Stepper
   useEffect(() => {
@@ -1272,43 +1279,27 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   // --- AUDIO TOOLS (DICTATION & READER) ---
   const toggleVoiceDictation = () => {
     if (!voiceDictation.isSupported()) {
-      showToast('Speech Recognition not supported in this browser. Try Chrome/Edge.', 'error');
+      showToast('Speech Recognition not supported in this browser. Try Chrome, Edge, or Brave.', 'error');
       return;
     }
+    savedSelectionRef.current = saveSelection();
+    setShowVoiceModal(true);
+  };
 
-    if (isDictating) {
-      voiceDictation.stop();
-      setIsDictating(false);
-      showToast('Voice dictation stopped', 'info');
-    } else {
-      savedSelectionRef.current = saveSelection();
-      const started = voiceDictation.start(
-        (transcript, isFinal) => {
-          if (isFinal && transcript.trim()) {
-            restoreSelection(savedSelectionRef.current);
-            document.execCommand('insertText', false, ' ' + transcript.trim());
-            if (contentRef.current) {
-              const h = contentRef.current.innerHTML;
-              latestContent.current = h;
-              setBody(h);
-              pushToHistory(h);
-            }
-            savedSelectionRef.current = saveSelection();
-          }
-        },
-        (error) => {
-          showToast(`Microphone error: ${error}`, 'error');
-          setIsDictating(false);
-        },
-        () => {
-          setIsDictating(false);
-        }
-      );
-      if (started) {
-        setIsDictating(true);
-        showToast('🎙️ Dictation active: Speak now in English or Hindi', 'success');
-      }
+  const handleApplyVoiceText = (textToInsert: string) => {
+    if (!textToInsert.trim()) return;
+    if (savedSelectionRef.current) {
+      restoreSelection(savedSelectionRef.current);
     }
+    document.execCommand('insertText', false, textToInsert.trim() + ' ');
+    if (contentRef.current) {
+      const h = contentRef.current.innerHTML;
+      latestContent.current = h;
+      setBody(h);
+      pushToHistory(h);
+      contentRef.current.focus();
+    }
+    showToast('Voice text added to note!', 'success');
   };
 
   const toggleAudioReader = () => {
@@ -2828,13 +2819,13 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
               type="button"
               onClick={toggleVoiceDictation}
               className={`p-1.5 md:p-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer shrink-0 ${
-                isDictating 
+                showVoiceModal 
                   ? 'bg-rose-600 border-rose-500 text-white shadow-md animate-pulse' 
                   : 'bg-slate-100 dark:bg-slate-900 border-slate-250 dark:border-slate-800 text-slate-600 dark:text-slate-350 hover:bg-slate-200 dark:hover:bg-slate-800'
               }`}
-              title={isDictating ? "Stop Voice Dictation (Recording...)" : "Start Voice Dictation (Speech-to-Text)"}
+              title="Voice Dictation (Speech-to-Text Modal)"
             >
-              {isDictating ? <Mic className="w-4 h-4 animate-bounce" /> : <Mic className="w-4 h-4" />}
+              <Mic className="w-4 h-4" />
             </button>
 
             {/* Audio Reader (Text-to-Speech) */}
@@ -3873,6 +3864,13 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         noteText={extractTextFromHtml(body)}
         tags={tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : []}
         createdAt={lastSaved || new Date()}
+      />
+
+      {/* 🎙️ Voice Dictation Speech-to-Text Modal */}
+      <VoiceDictationModal
+        isOpen={showVoiceModal}
+        onClose={() => setShowVoiceModal(false)}
+        onApply={handleApplyVoiceText}
       />
 
       {/* 🧘 Zen Mode Floating Exit Bar */}

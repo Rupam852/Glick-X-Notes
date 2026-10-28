@@ -50,6 +50,12 @@ export class VoiceDictation {
     return !!this.recognition;
   }
 
+  public setLanguage(lang: string): void {
+    if (this.recognition) {
+      this.recognition.lang = lang;
+    }
+  }
+
   public start(
     onResult: (text: string, isFinal: boolean) => void,
     onError?: (error: string) => void,
