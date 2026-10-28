@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { collection, doc, setDoc, deleteDoc, serverTimestamp, addDoc, query, where, getDocs, onSnapshot, Timestamp } from 'firebase/firestore';
 import { User as FirebaseUser } from 'firebase/auth';
 import { db, handleFirestoreError, OperationType } from '../firebase';
-import { Note, Attachment } from '../types';
+import { Note, Attachment, PaperStyle, PaperTone } from '../types';
 import { 
   ArrowLeft, Save, Trash2, Paperclip, X, Download, FileText, Image as ImageIcon, Plus, Tag, Check, 
   Bold, Italic, List, ListOrdered, Link, Heading1, Heading2, Heading3, Quote, Undo, Redo, UploadCloud, 
@@ -355,7 +355,9 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     body: note?.body || '',
     tags: note?.tags?.join(', ') || '',
     folder: note?.folder || 'all',
-    color: note?.color || COLORS[0].value
+    color: note?.color || COLORS[0].value,
+    paperStyle: (note?.paperStyle as PaperStyle) || 'plain',
+    paperTone: (note?.paperTone as PaperTone) || 'default'
   });
 
   const [activeFormats, setActiveFormats] = useState({
@@ -428,6 +430,10 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   const [activePopup, setActivePopup] = useState<'text' | 'paragraph' | 'table' | 'tableActions' | 'link' | 'highlighter' | 'divider' | 'columns' | 'shape' | 'insert' | null>(null);
   const [editingShapeEl, setEditingShapeEl] = useState<HTMLElement | null>(null);
   const [isA4Mode, setIsA4Mode] = useState(false);
+  const [paperStyle, setPaperStyle] = useState<PaperStyle>(() => (note?.paperStyle as PaperStyle) || 'plain');
+  const [paperTone, setPaperTone] = useState<PaperTone>(() => (note?.paperTone as PaperTone) || 'default');
+  const [showPaperMenu, setShowPaperMenu] = useState(false);
+  const paperMenuRef = useRef<HTMLDivElement | null>(null);
   const [currentLineSpacing, setCurrentLineSpacing] = useState('1.6');
 
   // Mermaid Flowchart & Math Formula States
@@ -595,6 +601,9 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       }
       if (popupRef.current && !popupRef.current.contains(event.target as Node)) {
         setActivePopup(null);
+      }
+      if (paperMenuRef.current && !paperMenuRef.current.contains(event.target as Node)) {
+        setShowPaperMenu(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -4590,6 +4599,8 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       color,
       folder: folder || 'all',
       pinned: note?.pinned || false,
+      paperStyle: paperStyle || 'plain',
+      paperTone: paperTone || 'default',
       updatedAt: serverTimestamp(),
       ...(isNewNote ? { createdAt: serverTimestamp() } : {})
     };
@@ -4598,7 +4609,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       await setDoc(doc(db, 'notes', noteId), noteData, { merge: true });
       const now = new Date();
       setLastSaved(now);
-      setLastSavedSnapshot({ title: finalTitle, body: currentBody, tags, folder, color });
+      setLastSavedSnapshot({ title: finalTitle, body: currentBody, tags, folder, color, paperStyle, paperTone });
       
       if (onSave) {
         onSave({
@@ -4610,6 +4621,8 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
           color,
           folder: folder || 'all',
           pinned: note?.pinned || false,
+          paperStyle: paperStyle || 'plain',
+          paperTone: paperTone || 'default',
           createdAt: note?.createdAt || Timestamp.fromDate(now),
           updatedAt: Timestamp.fromDate(now)
         });
@@ -4625,7 +4638,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     } finally {
       setSaving(false);
     }
-  }, [currentNoteId, title, tags, folder, color, user, showToast, onSave, note]);
+  }, [currentNoteId, title, tags, folder, color, paperStyle, paperTone, user, showToast, onSave, note]);
 
   // Unsaved Changes check
   const hasUnsavedChanges = useMemo(() => {
@@ -4635,9 +4648,11 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       currentBody !== lastSavedSnapshot.body ||
       tags !== lastSavedSnapshot.tags ||
       folder !== lastSavedSnapshot.folder ||
-      color !== lastSavedSnapshot.color
+      color !== lastSavedSnapshot.color ||
+      paperStyle !== lastSavedSnapshot.paperStyle ||
+      paperTone !== lastSavedSnapshot.paperTone
     );
-  }, [title, body, tags, folder, color, lastSavedSnapshot]);
+  }, [title, body, tags, folder, color, paperStyle, paperTone, lastSavedSnapshot]);
 
   // Auto-save debounced effect
   useEffect(() => {
@@ -5543,6 +5558,111 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
             <BookOpen className="w-4 h-4" />
             <span className="hidden xl:inline text-[11px]">A4 View</span>
           </button>
+
+          {/* 📜 Paper Styles & Texture Picker */}
+          <div className="relative shrink-0" ref={paperMenuRef}>
+            <button
+              type="button"
+              onMouseDown={handleButtonMouseDown}
+              onClick={() => setShowPaperMenu(prev => !prev)}
+              className={`p-1.5 h-9 px-2.5 flex items-center gap-1.5 rounded-xl shrink-0 text-xs font-bold transition-all cursor-pointer ${
+                paperStyle !== 'plain' || paperTone !== 'default'
+                  ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-800 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'
+              }`}
+              title="Paper Styles & Stationery (Lined, Dot Grid, Math Grid, Cornell, Vintage)"
+            >
+              <Palette className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+              <span className="hidden xl:inline text-[11px]">
+                {paperStyle === 'plain' ? 'Paper' : 
+                 paperStyle === 'lined' ? 'Lined' :
+                 paperStyle === 'dot' ? 'Dot Grid' :
+                 paperStyle === 'grid' ? 'Grid' :
+                 paperStyle === 'cornell' ? 'Cornell' : 'Vintage'}
+              </span>
+              <ChevronDown className="w-3 h-3 text-slate-400 opacity-70" />
+            </button>
+
+            <AnimatePresence>
+              {showPaperMenu && (
+                <motion.div
+                  initial={{ opacity: 0, y: 5, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 5, scale: 0.95 }}
+                  className="absolute right-0 top-full mt-1.5 w-64 z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-2xl space-y-3"
+                  style={{ boxShadow: '0 20px 40px -10px rgba(0,0,0,0.3), 0 0 0 1px rgba(0,0,0,0.08)' }}
+                >
+                  {/* Pattern Template Section */}
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Paper Templates</p>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {[
+                        { id: 'plain', label: 'Plain Paper', desc: 'Clean white sheet', icon: '📄' },
+                        { id: 'lined', label: 'College Ruled', desc: 'Ruled with margin', icon: '📝' },
+                        { id: 'dot', label: 'Dot Grid', desc: 'Bullet journal matrix', icon: '⠂⠂' },
+                        { id: 'grid', label: 'Math / Grid', desc: 'Engineering graph', icon: '▦' },
+                        { id: 'cornell', label: 'Cornell Notes', desc: 'Study cues & summary', icon: '🎓' },
+                        { id: 'vintage', label: 'Vintage Kraft', desc: 'Warm parchment grain', icon: '📜' }
+                      ].map(p => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => {
+                            setPaperStyle(p.id as PaperStyle);
+                            sound.playPop();
+                          }}
+                          className={`p-2 rounded-xl text-left border transition-all cursor-pointer flex flex-col justify-between ${
+                            paperStyle === p.id
+                              ? 'bg-indigo-50 border-indigo-400 text-indigo-700 dark:bg-indigo-950/60 dark:border-indigo-600 dark:text-indigo-300 font-bold shadow-xs'
+                              : 'border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-700 dark:text-slate-300'
+                          }`}
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm">{p.icon}</span>
+                            <span className="text-xs font-semibold leading-tight">{p.label}</span>
+                          </div>
+                          <span className="text-[9px] text-slate-400 dark:text-slate-500 mt-1 line-clamp-1">{p.desc}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Paper Tone Section */}
+                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Paper Color Tone</p>
+                    <div className="flex items-center justify-between gap-1">
+                      {[
+                        { id: 'default', label: 'Default', bg: '#fafbfc' },
+                        { id: 'warm', label: 'Warm Eye-Care', bg: '#fcf9f2' },
+                        { id: 'cream', label: 'Cream', bg: '#fbf6ec' },
+                        { id: 'sage', label: 'Sage Green', bg: '#f2f7f2' },
+                        { id: 'sepia', label: 'Sepia', bg: '#f4ecdc' },
+                        { id: 'dark', label: 'Midnight Slate', bg: '#0d131f' },
+                      ].map(t => (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => {
+                            setPaperTone(t.id as PaperTone);
+                            sound.playPop();
+                          }}
+                          className={`w-7 h-7 rounded-full border border-black/20 transition-transform hover:scale-115 cursor-pointer relative flex items-center justify-center ${
+                            paperTone === t.id ? 'ring-2 ring-indigo-500 ring-offset-2 scale-105' : ''
+                          }`}
+                          style={{ backgroundColor: t.bg }}
+                          title={t.label}
+                        >
+                          {paperTone === t.id && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 dark:bg-white" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
           {/* 🖨️ Print / Save as PDF */}
           <button 
@@ -7324,7 +7444,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
             </AnimatePresence>
 
             {/* Eye-Care Warm Paper Document Sheet */}
-            <div className={`note-paper-sheet ${isA4Mode ? 'a4-page-mode' : 'max-w-4xl mx-auto bg-[#fafbfc] dark:bg-[#111726] rounded-2xl md:rounded-3xl border border-slate-200/70 dark:border-slate-800/80 shadow-[0_2px_16px_rgba(15,23,42,0.03)] p-4 sm:p-6 md:p-8 lg:p-10 min-h-[calc(100vh-140px)]'} transition-all`}>
+            <div className={`note-paper-sheet ${isA4Mode ? 'a4-page-mode' : 'max-w-4xl mx-auto bg-[#fafbfc] dark:bg-[#111726] rounded-2xl md:rounded-3xl border border-slate-200/70 dark:border-slate-800/80 shadow-[0_2px_16px_rgba(15,23,42,0.03)] p-4 sm:p-6 md:p-8 lg:p-10 min-h-[calc(100vh-140px)]'} paper-style-${paperStyle} ${paperTone !== 'default' ? `paper-tone-${paperTone}` : ''} transition-all`}>
               
               {/* Clean print title */}
               <h1 className="note-print-title hidden font-black text-3xl pb-2 mb-4 border-b-2 border-slate-300 text-slate-900">

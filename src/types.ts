@@ -20,7 +20,12 @@ export interface Note {
   pinned?: boolean;
   folder?: string;
   previewImage?: string;
+  paperStyle?: PaperStyle;
+  paperTone?: PaperTone;
 }
+
+export type PaperStyle = 'plain' | 'lined' | 'dot' | 'grid' | 'cornell' | 'vintage';
+export type PaperTone = 'default' | 'warm' | 'cream' | 'sage' | 'sepia' | 'dark';
 
 export interface Attachment {
   id: string;
