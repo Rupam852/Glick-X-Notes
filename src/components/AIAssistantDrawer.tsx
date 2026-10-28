@@ -5,7 +5,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  aiSummarizeNote, aiPolishText, aiSuggestTitleAndTags, aiAskAboutNote 
+  aiSummarizeNote, aiPolishText, aiSuggestTitleAndTags, aiAskAboutNote,
+  formatAITextToEditorHtml, sanitizeAIText
 } from '../services/aiService';
 import { useToast } from '../contexts/ToastContext';
 
@@ -277,7 +278,8 @@ export default function AIAssistantDrawer({
                     </button>
                     <button
                       onClick={() => {
-                        onInsertText(`\n\n### 📝 AI Summary\n${summaryResult}\n\n`);
+                        const summaryHtml = `<div style="margin-top: 16px; margin-bottom: 16px; padding: 14px 16px; border-radius: 12px; background: rgba(99, 102, 241, 0.08); border-left: 4px solid #6366f1;"><p style="font-weight: 700; color: #6366f1; margin-bottom: 6px;">📝 AI Summary</p>${formatAITextToEditorHtml(summaryResult)}</div>`;
+                        onInsertText(summaryHtml);
                         showToast('Inserted summary into note!', 'success');
                       }}
                       className="flex-1 py-1 px-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-[11px] font-semibold flex items-center justify-center gap-1"
@@ -338,9 +340,9 @@ export default function AIAssistantDrawer({
                     {onReplaceContent && (
                       <button
                         onClick={() => {
-                          const html = polishResult.replace(/\n\n/g, '<p></p>').replace(/\n/g, '<br/>');
+                          const html = formatAITextToEditorHtml(polishResult);
                           onReplaceContent(html);
-                          showToast('Replaced note with polished version!', 'success');
+                          showToast('Replaced note with clean polished version!', 'success');
                         }}
                         className="flex-1 py-1 px-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-[11px] font-semibold flex items-center justify-center gap-1"
                       >

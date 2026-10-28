@@ -282,55 +282,139 @@ export async function executeAICompletion(prompt: string, systemInstruction?: st
   throw new Error(`All Gemini models failed!\n${failureDetails.join('\n')}`);
 }
 
+/**
+ * Strips raw markdown code symbols (*, #, ---, **, etc.) and conversational meta headers
+ * to produce clean, professional, human-readable text.
+ */
+export function sanitizeAIText(raw: string): string {
+  if (!raw) return '';
+  let text = raw;
+
+  // Remove markdown code fences if wrapped
+  text = text.replace(/```(?:markdown|text)?\n([\s\S]*?)```/gi, '$1');
+
+  // Remove generic AI conversational meta headers like "**Note 1**", "**Note 6**", "### Note:", "Here is the polished version:"
+  text = text.replace(/^\s*(?:\*{1,2}|#{1,4}\s*)?(?:Note\s*\d+|Here is the polished version|Here is the summary|Here is the rewrite)[:\s*-]*(?:\*{1,2})?\s*\n+/gim, '');
+
+  // Clean Markdown Headings: "### Title" -> "Title"
+  text = text.replace(/^[ \t]*#{1,6}[ \t]+([^\n]+)/gm, '$1');
+
+  // Clean Markdown Horizontal Rules: "---" or "***" or "___" -> ""
+  text = text.replace(/^[ \t]*[-*_]{3,}[ \t]*$/gm, '');
+
+  // Convert Markdown bullet lists (* or -) into clean unicode bullets (• )
+  text = text.replace(/^[ \t]*[*+-][ \t]+/gm, '• ');
+
+  // Clean bold/italic asterisks: "**bold**" -> "bold", "*italic*" -> "italic"
+  text = text.replace(/\*\*([^*]+)\*\*/g, '$1');
+  text = text.replace(/\*([^*\n]+)\*/g, '$1');
+
+  // Clean double-dashes used as separators: " -- " -> " - "
+  text = text.replace(/[ \t]+--[ \t]+/g, ' - ');
+
+  // Remove excessive consecutive newlines
+  text = text.replace(/\n{3,}/g, '\n\n');
+
+  return text.trim();
+}
+
+/**
+ * Converts sanitized plain text into clean, rich HTML for the Note Editor.
+ * Renders bullet lines as proper <ul><li> and paragraphs as <p>, avoiding any raw markdown.
+ */
+export function formatAITextToEditorHtml(text: string): string {
+  if (!text) return '';
+  const clean = sanitizeAIText(text);
+  const lines = clean.split('\n');
+  let html = '';
+  let inList = false;
+
+  for (let line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      if (inList) { html += '</ul>'; inList = false; }
+      continue;
+    }
+
+    if (trimmed.startsWith('• ')) {
+      if (!inList) { html += '<ul style="list-style-type: disc; margin-left: 20px; margin-bottom: 8px;">'; inList = true; }
+      const itemContent = trimmed.slice(2).trim();
+      html += `<li>${itemContent}</li>`;
+    } else {
+      if (inList) { html += '</ul>'; inList = false; }
+      html += `<p style="margin-bottom: 8px;">${trimmed}</p>`;
+    }
+  }
+  if (inList) { html += '</ul>'; }
+  return html;
+}
+
 // 1. AI Summary
 export async function aiSummarizeNote(noteText: string): Promise<string> {
-  const prompt = `Please analyze the following note content and produce a concise summary with:
+  const prompt = `Analyze this note and provide a clear, clean summary:
 1. A brief 2-sentence overview
-2. 3 to 5 key bullet points
-3. Action items (if any exist in the text)
+2. 3 to 5 key bullet points using the bullet symbol '• ' (do NOT use asterisks '*')
+3. Action items (if any exist in the note)
+
+FORMATTING RULES:
+- Do NOT use markdown symbols like '#', '##', '###', '---', or bold asterisks '**'.
+- Do NOT write introductory phrases like '**Note X**' or 'Here is the summary'.
+- Output clean, polished natural text.
 
 Note Content:
 """
 ${noteText}
 """`;
 
-  const res = await executeAICompletion(prompt, 'You are an intelligent note-taking assistant. Format your response cleanly using markdown.');
-  return res.text;
+  const res = await executeAICompletion(
+    prompt, 
+    'You are a professional note-taking editor. Write in clean plain text with no markdown symbols (*, #, ---, **).'
+  );
+  return sanitizeAIText(res.text);
 }
 
 // 2. Grammar & Tone Polisher
 export async function aiPolishText(noteText: string, tone: 'professional' | 'casual' | 'concise'): Promise<string> {
-  const prompt = `Rewrite the following note text in a ${tone.toUpperCase()} tone. Fix any spelling, punctuation, and grammar mistakes while preserving all core facts, links, and meaning.
+  const prompt = `Rewrite and polish the following note text in a ${tone.toUpperCase()} tone. Fix all spelling, punctuation, and grammar mistakes while preserving all core facts and meaning.
+
+CRITICAL FORMATTING RULES:
+- Do NOT output markdown code symbols: NO asterisks ('*', '**'), NO hashes ('#', '##', '###'), and NO horizontal rules ('---').
+- Do NOT add any meta headers like '**Note 1**' or 'Here is the polished version'.
+- If creating list items, start lines with '• ' (NOT '*' or '-').
+- Return ONLY the clean, polished text ready to read.
 
 Note Content:
 """
 ${noteText}
 """`;
 
-  const res = await executeAICompletion(prompt, `You are an expert editor. Rewrite the text cleanly in a ${tone} tone without conversational filler.`);
-  return res.text;
+  const res = await executeAICompletion(
+    prompt, 
+    `You are an expert editor. Rewrite text cleanly in a ${tone} tone. Never use markdown symbols like *, #, or --.`
+  );
+  return sanitizeAIText(res.text);
 }
 
 // 3. Smart Title & Tag Suggestion
 export async function aiSuggestTitleAndTags(noteText: string): Promise<{ title: string; tags: string[] }> {
   const prompt = `Analyze this note and suggest:
-1. One concise, engaging title (maximum 6 words)
-2. Up to 4 relevant tags (lowercase, single-word or hyphenated, e.g., "ideas", "meeting-notes", "project")
+1. One concise, engaging title (maximum 6 words, no quotes or symbols)
+2. Up to 4 relevant tags (lowercase single words, e.g., "ideas", "meeting", "project")
 
-Return your response in pure JSON format with keys "title" and "tags":
-{"title": "...", "tags": ["tag1", "tag2"]}
+Return your response in pure JSON format:
+{"title": "Clean Note Title", "tags": ["tag1", "tag2"]}
 
 Note Content:
 """
 ${noteText.slice(0, 2000)}
 """`;
 
-  const res = await executeAICompletion(prompt, 'You are a metadata assistant. Output ONLY valid JSON, with no markdown code fences or other text.');
+  const res = await executeAICompletion(prompt, 'You are a metadata assistant. Output ONLY valid JSON, with no markdown code fences or symbols.');
   try {
     const cleanJson = res.text.replace(/```json/gi, '').replace(/```/g, '').trim();
     const parsed = JSON.parse(cleanJson);
     return {
-      title: parsed.title || 'Untitled Note',
+      title: sanitizeAIText(parsed.title || 'Untitled Note'),
       tags: Array.isArray(parsed.tags) ? parsed.tags.map((t: string) => t.toLowerCase().replace(/[^a-z0-9_-]/g, '')) : []
     };
   } catch {
@@ -347,8 +431,11 @@ export async function aiAskAboutNote(noteText: string, question: string, history
   if (history.length > 0) {
     promptContext += `Conversation History:\n` + history.map(h => `${h.role === 'user' ? 'User' : 'Assistant'}: ${h.content}`).join('\n') + '\n\n';
   }
-  promptContext += `User Question: ${question}\n\nAnswer helpfully and concisely using the note context:`;
+  promptContext += `User Question: ${question}\n\nAnswer helpfully and concisely using the note context. Do NOT use markdown symbols like '#', '##', '---', or asterisks '**'. Use clean plain text and '• ' for bullets:`;
 
-  const res = await executeAICompletion(promptContext, 'You are a helpful AI assistant answering questions about the user\'s current note. Be clear, accurate, and concise.');
-  return res.text;
+  const res = await executeAICompletion(
+    promptContext, 
+    'You are a helpful AI assistant. Answer clearly in clean text without markdown code symbols (*, #, ---).'
+  );
+  return sanitizeAIText(res.text);
 }
