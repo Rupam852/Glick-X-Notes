@@ -6880,98 +6880,98 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                   initial={{ opacity: 0, y: -20, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                  className="glick-floating-inking-bar no-print sticky top-2 z-50 mx-auto w-fit max-w-[98%] mb-4 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-purple-300 dark:border-purple-800 shadow-2xl shadow-purple-500/15 rounded-2xl p-1.5 sm:p-2 flex flex-nowrap items-center gap-1 sm:gap-1.5 select-none overflow-x-auto no-scrollbar"
+                  className="glick-floating-inking-bar no-print sticky top-2 z-50 mx-auto w-fit max-w-[98%] mb-4 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-purple-300 dark:border-purple-800 shadow-2xl shadow-purple-500/15 rounded-2xl p-1 sm:p-1.5 flex flex-nowrap items-center gap-1 select-none overflow-x-auto no-scrollbar"
                 >
                   {/* Tool Selector */}
-                  <div className="flex items-center gap-0.5 sm:gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl shrink-0">
+                  <div className="flex items-center gap-0.5 sm:gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 sm:p-1 rounded-xl shrink-0">
                     {/* Select / Move / Resize Tool */}
                     <button
                       type="button"
                       onClick={() => { setInkTool('select'); setShowInkShapeMenu(false); }}
-                      className={`px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold transition cursor-pointer ${
+                      className={`px-2 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold transition cursor-pointer shrink-0 ${
                         inkTool === 'select'
                           ? 'bg-purple-600 text-white shadow-xs'
                           : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                       }`}
                       title="Select Tool (Click to select, drag to move, drag handles to resize)"
                     >
-                      <MousePointer className="w-3.5 h-3.5" />
-                      <span>Select</span>
+                      <MousePointer className="w-3.5 h-3.5 shrink-0" />
+                      <span className="hidden sm:inline">Select</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => { setInkTool('pen'); setShowInkShapeMenu(false); }}
-                      className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold transition cursor-pointer ${
+                      className={`px-2 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold transition cursor-pointer shrink-0 ${
                         inkTool === 'pen'
                           ? 'bg-purple-600 text-white shadow-xs'
                           : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                       }`}
                       title="Pen Tool (Crisp solid ink)"
                     >
-                      <Pencil className="w-3.5 h-3.5" />
-                      <span>Pen</span>
+                      <Pencil className="w-3.5 h-3.5 shrink-0" />
+                      <span className="hidden sm:inline">Pen</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => { setInkTool('highlighter'); setShowInkShapeMenu(false); }}
-                      className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold transition cursor-pointer ${
+                      className={`px-2 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold transition cursor-pointer shrink-0 ${
                         inkTool === 'highlighter'
                           ? 'bg-amber-400 text-slate-900 shadow-xs'
                           : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                       }`}
                       title="Highlighter Tool (Fluorescent transparent highlight)"
                     >
-                      <Highlighter className="w-3.5 h-3.5" />
-                      <span>Highlight</span>
+                      <Highlighter className="w-3.5 h-3.5 shrink-0" />
+                      <span className="hidden md:inline">Highlight</span>
                     </button>
 
                     {/* Text Tool */}
                     <button
                       type="button"
                       onClick={() => { setInkTool('text'); setShowInkShapeMenu(false); }}
-                      className={`px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold transition cursor-pointer ${
+                      className={`px-2 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold transition cursor-pointer shrink-0 ${
                         inkTool === 'text'
                           ? 'bg-purple-600 text-white shadow-xs'
                           : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                       }`}
                       title="Text Tool (Click anywhere on note to add editable text)"
                     >
-                      <Type className="w-3.5 h-3.5" />
-                      <span>Text</span>
+                      <Type className="w-3.5 h-3.5 shrink-0" />
+                      <span className="hidden sm:inline">Text</span>
                     </button>
 
                     {/* Categorized Shapes Dropdown Selector */}
-                    <div className="relative">
+                    <div className="relative shrink-0">
                       <button
                         type="button"
                         onClick={() => setShowInkShapeMenu(prev => !prev)}
-                        className={`px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold transition cursor-pointer ${
+                        className={`px-2 py-1.5 rounded-lg flex items-center gap-1 text-xs font-bold transition cursor-pointer ${
                           isInkShapeTool(inkTool)
                             ? 'bg-purple-600 text-white shadow-xs'
                             : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                         }`}
                         title="Draw Shapes (Lines, Arrows, Rectangles, Circle, Triangle, Star, Heart, Cloud, Speech Bubble)"
                       >
-                        <Shapes className="w-3.5 h-3.5" />
-                        <span>
+                        <Shapes className="w-3.5 h-3.5 shrink-0" />
+                        <span className="hidden md:inline">
                           {inkTool === 'line' ? 'Line' :
                            inkTool === 'arrow' ? 'Arrow' :
-                           inkTool === 'doubleArrow' ? '2-Way Arrow' :
-                           inkTool === 'rect' ? 'Rectangle' :
-                           inkTool === 'roundedRect' ? 'Round Rect' :
+                           inkTool === 'doubleArrow' ? '2-Way' :
+                           inkTool === 'rect' ? 'Box' :
+                           inkTool === 'roundedRect' ? 'Round' :
                            inkTool === 'circle' ? 'Circle' :
                            inkTool === 'triangle' ? 'Triangle' :
                            inkTool === 'diamond' ? 'Diamond' :
-                           inkTool === 'parallelogram' ? 'Parallelogram' :
+                           inkTool === 'parallelogram' ? 'Skew' :
                            inkTool === 'star' ? 'Star' :
                            inkTool === 'heart' ? 'Heart' :
                            inkTool === 'cloud' ? 'Cloud' :
-                           inkTool === 'calloutRect' ? 'Square Callout' :
-                           inkTool === 'calloutRounded' ? 'Rounded Callout' : 'Shapes'}
+                           inkTool === 'calloutRect' ? 'Callout' :
+                           inkTool === 'calloutRounded' ? 'Cloud Callout' : 'Shapes'}
                         </span>
-                        <ChevronDown className="w-3 h-3 opacity-70" />
+                        <ChevronDown className="w-3 h-3 opacity-70 shrink-0" />
                       </button>
 
                       {showInkShapeMenu && (
@@ -7087,15 +7087,15 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                     <button
                       type="button"
                       onClick={() => { setInkTool('eraser'); setShowInkShapeMenu(false); }}
-                      className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold transition cursor-pointer ${
+                      className={`px-2 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold transition cursor-pointer shrink-0 ${
                         inkTool === 'eraser'
                           ? 'bg-rose-500 text-white shadow-xs'
                           : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                       }`}
                       title="Realistic Eraser Tool (Touch any stroke or shape to erase with round ring cursor)"
                     >
-                      <Eraser className="w-3.5 h-3.5" />
-                      <span>Eraser</span>
+                      <Eraser className="w-3.5 h-3.5 shrink-0" />
+                      <span className="hidden sm:inline">Eraser</span>
                     </button>
                   </div>
 
@@ -7155,7 +7155,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                                 renderInkCanvas();
                               }
                             }}
-                            className={`w-5 h-5 rounded-full border border-black/15 transition-transform hover:scale-125 cursor-pointer shrink-0 ${
+                            className={`w-4.5 h-4.5 rounded-full border border-black/15 transition-transform hover:scale-125 cursor-pointer shrink-0 ${
                               inkColor === c.value ? 'ring-2 ring-purple-500 scale-110' : ''
                             }`}
                             style={{ backgroundColor: c.value }}
@@ -7172,9 +7172,9 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                       <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-0.5 shrink-0" />
                       <div className="flex items-center gap-0.5 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl shrink-0">
                         {[
-                          { label: 'Fine', w: 2 },
-                          { label: 'Medium', w: 4 },
-                          { label: 'Bold', w: 7 }
+                          { label: 'Fine', w: 2, dotClass: 'w-1 h-1' },
+                          { label: 'Medium', w: 4, dotClass: 'w-2 h-2' },
+                          { label: 'Bold', w: 7, dotClass: 'w-3 h-3' }
                         ].map(t => (
                           <button
                             key={t.w}
@@ -7186,14 +7186,14 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                                 renderInkCanvas();
                               }
                             }}
-                            className={`px-2 py-1 rounded-lg text-[10px] font-bold transition cursor-pointer shrink-0 ${
+                            className={`w-6 h-6 flex items-center justify-center rounded-lg transition cursor-pointer shrink-0 ${
                               inkWidth === t.w
                                 ? 'bg-white dark:bg-slate-700 text-purple-600 dark:text-purple-400 shadow-xs'
                                 : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
                             }`}
-                            title={`${t.label} thickness`}
+                            title={`${t.label} stroke thickness (${t.w}px)`}
                           >
-                            {t.label}
+                            <span className={`rounded-full bg-current ${t.dotClass}`} />
                           </button>
                         ))}
                       </div>
