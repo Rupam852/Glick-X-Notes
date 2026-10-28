@@ -319,12 +319,92 @@ export function sanitizeAIText(raw: string): string {
 }
 
 /**
+ * Automatically detects and converts raw markdown badges, images, and links
+ * into proper HTML <a> and <img> tags so they render visually instead of as raw markdown text.
+ */
+export function convertMarkdownBadgesAndLinksToHtml(html: string): string {
+  if (!html) return '';
+
+  // Protect pre/code blocks from conversion so code snippets aren't mutated
+  const codeBlocks: string[] = [];
+  let protectedHtml = html.replace(/<pre[\s\S]*?<\/pre>/gi, (match) => {
+    codeBlocks.push(match);
+    return `<!--__GLICK_CODE_BLOCK_${codeBlocks.length - 1}__-->`;
+  });
+
+  // 1. Linked image badges: [![alt](img_url)](link_url)
+  // Handles cases where link is on next line or separated by </p><p> or whitespace
+  protectedHtml = protectedHtml.replace(
+    /\[!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)\](?:\s*|<\/p>\s*<p[^>]*>|<br\s*\/?>)*\((https?:\/\/[^)\s]+)\)/gi,
+    (_match, alt, imgUrl, linkUrl) => {
+      const cleanAlt = (alt || 'Badge').trim();
+      const cleanImg = imgUrl.trim();
+      const cleanLink = linkUrl.trim();
+      return `<a href="${cleanLink}" target="_blank" rel="noopener noreferrer" style="display: inline-block; vertical-align: middle; margin: 3px 4px; text-decoration: none;"><img src="${cleanImg}" alt="${cleanAlt}" style="display: inline-block; vertical-align: middle; border-radius: 4px; max-height: 24px;" /></a>`;
+    }
+  );
+
+  // 2. Standalone badges / images in [![alt](img_url)]
+  protectedHtml = protectedHtml.replace(
+    /\[!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)\]/gi,
+    (_match, alt, imgUrl) => {
+      const cleanAlt = (alt || 'Badge').trim();
+      const cleanImg = imgUrl.trim();
+      return `<img src="${cleanImg}" alt="${cleanAlt}" style="display: inline-block; vertical-align: middle; margin: 3px 4px; border-radius: 4px; max-height: 24px;" />`;
+    }
+  );
+
+  // 3. Regular markdown images: ![alt](img_url)
+  protectedHtml = protectedHtml.replace(
+    /!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)/gi,
+    (_match, alt, imgUrl) => {
+      const cleanAlt = (alt || 'Image').trim();
+      const cleanImg = imgUrl.trim();
+      const isBadge = cleanImg.includes('shields.io') || cleanImg.includes('/badge/');
+      if (isBadge) {
+        return `<img src="${cleanImg}" alt="${cleanAlt}" style="display: inline-block; vertical-align: middle; margin: 3px 4px; border-radius: 4px; max-height: 24px;" />`;
+      }
+      return `<img src="${cleanImg}" alt="${cleanAlt}" style="max-width: 100%; border-radius: 8px; margin: 6px 0; display: inline-block; vertical-align: middle;" />`;
+    }
+  );
+
+  // 4. Regular markdown links: [text](link_url)
+  protectedHtml = protectedHtml.replace(
+    /(^|[^!])\[([^\]\n]+)\](?:\s*|<\/p>\s*<p[^>]*>|<br\s*\/?>)*\((https?:\/\/[^)\s]+)\)/gi,
+    (_match, prefix, text, linkUrl) => {
+      const cleanText = text.trim();
+      const cleanLink = linkUrl.trim();
+      return `${prefix}<a href="${cleanLink}" target="_blank" rel="noopener noreferrer" style="color: #4f46e5; text-decoration: underline; font-weight: 500;">${cleanText}</a>`;
+    }
+  );
+
+  // 5. Convert markdown bold **text** to <b>text</b>
+  protectedHtml = protectedHtml.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+
+  // 6. Convert markdown headings inside <p> tags
+  protectedHtml = protectedHtml.replace(/<p[^>]*>\s*###\s+([^<]+)<\/p>/gi, '<h3 style="font-size: 1.25rem; font-weight: 700; margin: 12px 0 6px;">$1</h3>');
+  protectedHtml = protectedHtml.replace(/<p[^>]*>\s*##\s+([^<]+)<\/p>/gi, '<h2 style="font-size: 1.45rem; font-weight: 800; margin: 14px 0 8px;">$1</h2>');
+  protectedHtml = protectedHtml.replace(/<p[^>]*>\s*#\s+([^<]+)<\/p>/gi, '<h1 style="font-size: 1.75rem; font-weight: 900; margin: 16px 0 10px;">$1</h1>');
+
+  // Clean empty paragraphs leftover from split lines
+  protectedHtml = protectedHtml.replace(/<p[^>]*>\s*<\/p>/gi, '');
+
+  // Restore code blocks
+  for (let i = 0; i < codeBlocks.length; i++) {
+    protectedHtml = protectedHtml.replace(`<!--__GLICK_CODE_BLOCK_${i}__-->`, codeBlocks[i]);
+  }
+
+  return protectedHtml;
+}
+
+/**
  * Converts sanitized plain text into clean, rich HTML for the Note Editor.
  * Renders bullet lines as proper <ul><li> and paragraphs as <p>, avoiding any raw markdown.
  */
 export function formatAITextToEditorHtml(text: string): string {
   if (!text) return '';
-  const clean = sanitizeAIText(text);
+  const converted = convertMarkdownBadgesAndLinksToHtml(text);
+  const clean = sanitizeAIText(converted);
   const lines = clean.split('\n');
   let html = '';
   let inList = false;
@@ -346,7 +426,7 @@ export function formatAITextToEditorHtml(text: string): string {
     }
   }
   if (inList) { html += '</ul>'; }
-  return html;
+  return convertMarkdownBadgesAndLinksToHtml(html);
 }
 
 // 1. AI Summary
@@ -457,8 +537,8 @@ ${protectedHtml}`;
     polished = bodyMatch[1].trim();
   }
 
-  // Convert any accidental markdown formatting into proper HTML
-  polished = polished.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+  // Convert any accidental markdown formatting, badges, or links into proper HTML
+  polished = convertMarkdownBadgesAndLinksToHtml(polished);
   polished = polished.replace(/(^|[^\*])\*([^*\n]+)\*([^\*]|$)/g, '$1<i>$2</i>$3');
 
   // Restore protected tokens
@@ -652,7 +732,13 @@ CRITICAL AGENT RULES:
    - When asked for a Callout box:
      <div class="glick-block-wrapper glick-callout" style="margin: 12px 0; padding: 12px 16px; border-radius: 12px; background: rgba(99, 102, 241, 0.08); border-left: 4px solid #6366f1;"><p style="margin: 0; font-weight: 700; color: #6366f1;">💡 Important Note</p><p style="margin-top: 4px;">...</p></div>
 
-3. RESPONSE FORMAT:
+3. FORMATTING RESTRICTIONS:
+   - Output clean HTML ONLY.
+   - NEVER output markdown image or badge syntax like [![Python](...)](...) or ![alt](...). If including badges or images, use real HTML: <a href="url" target="_blank" rel="noopener noreferrer"><img src="badge_url" alt="alt" style="display:inline-block; vertical-align:middle; margin:2px;" /></a>.
+   - NEVER output markdown links like [text](url). Use <a href="url" target="_blank">text</a>.
+   - NEVER output markdown headings like "### Title". Use <h3>Title</h3>.
+
+4. RESPONSE FORMAT:
 Respond ONLY with a valid JSON object:
 {
   "reply": "Conversational reply in the user's language (English/Hindi/Hinglish) explaining what was done or answering their question",
@@ -673,7 +759,7 @@ Respond ONLY with a valid JSON object:
       content = content.replace(/^```(?:html)?\s*\n?/i, '').replace(/\n?```$/i, '').trim();
       const bodyMatch = content.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
       if (bodyMatch) content = bodyMatch[1].trim();
-      content = content.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+      content = convertMarkdownBadgesAndLinksToHtml(content);
     }
 
     const action = ['replace_content', 'append_content', 'update_title', 'none'].includes(extracted.action)
@@ -784,7 +870,7 @@ RETURN ONLY VALID JSON (no markdown fences):
       enhancedHtml = enhancedHtml.replace(/^```(?:html)?\s*\n?/i, '').replace(/\n?```$/i, '').trim();
       const bodyMatch = enhancedHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
       if (bodyMatch) enhancedHtml = bodyMatch[1].trim();
-      enhancedHtml = enhancedHtml.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+      enhancedHtml = convertMarkdownBadgesAndLinksToHtml(enhancedHtml);
     }
 
     return {
@@ -833,7 +919,7 @@ Output ONLY clean HTML with no markdown code fences.`;
 
   const res = await executeAICompletion(prompt, 'You are an executive summary writer. Output clean HTML only, no markdown.');
   let html = res.text.replace(/^```(?:html)?\s*\n?/i, '').replace(/\n?```$/i, '').trim();
-  html = html.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+  html = convertMarkdownBadgesAndLinksToHtml(html);
   return html;
 }
 
@@ -861,6 +947,6 @@ Output ONLY clean HTML with no markdown code fences.`;
 
   const res = await executeAICompletion(prompt, 'You are a task management specialist. Output clean HTML only, no markdown.');
   let html = res.text.replace(/^```(?:html)?\s*\n?/i, '').replace(/\n?```$/i, '').trim();
-  html = html.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+  html = convertMarkdownBadgesAndLinksToHtml(html);
   return html;
 }

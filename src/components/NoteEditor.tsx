@@ -22,6 +22,7 @@ import SlashCommandMenu from './SlashCommandMenu';
 import ExportModal from './ExportModal';
 import VoiceDictationModal from './VoiceDictationModal';
 import { voiceDictation, audioReader } from '../utils/audioTools';
+import { convertMarkdownBadgesAndLinksToHtml } from '../services/aiService';
 
 interface NoteEditorProps {
   user: FirebaseUser;
@@ -780,6 +781,20 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
           }
         }
       });
+
+      // 5. Automatically convert raw markdown badges, images, and links into rich visual HTML
+      if (
+        root.innerHTML.includes('[![') || 
+        /!\[[^\]]*\]\([^)]+\)/.test(root.innerHTML) || 
+        /\[[^\]]+\](?:\s*|<\/p>\s*<p[^>]*>|<br\s*\/?>)*\((?:https?:\/\/)/i.test(root.innerHTML)
+      ) {
+        const upgraded = convertMarkdownBadgesAndLinksToHtml(root.innerHTML);
+        if (upgraded !== root.innerHTML) {
+          root.innerHTML = upgraded;
+          latestContent.current = upgraded;
+          setBody(upgraded);
+        }
+      }
     } catch (e) {
       console.warn('Block upgrade notice:', e);
     }
@@ -4362,6 +4377,22 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                   ref={contentRef}
                   contentEditable
                   onInput={handleInput}
+                  onBlur={() => {
+                    if (contentRef.current) {
+                      upgradeLegacyBlocks(contentRef.current);
+                    }
+                  }}
+                  onPaste={() => {
+                    setTimeout(() => {
+                      if (contentRef.current) {
+                        upgradeLegacyBlocks(contentRef.current);
+                        const html = contentRef.current.innerHTML;
+                        latestContent.current = html;
+                        setBody(html);
+                        pushToHistory(html);
+                      }
+                    }, 50);
+                  }}
                   onKeyDown={handleKeyDown}
                   onKeyUp={() => {
                     const sel = window.getSelection();
