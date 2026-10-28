@@ -812,6 +812,7 @@ details.glick-toggle[open] > summary .glick-toggle-arrow {
 
 .glick-floating-inking-bar {
   max-width: calc(100vw - 16px) !important;
+  box-shadow: 0 10px 30px -5px rgba(99, 102, 241, 0.15), 0 4px 12px rgba(15, 23, 42, 0.08) !important;
 }
 
 

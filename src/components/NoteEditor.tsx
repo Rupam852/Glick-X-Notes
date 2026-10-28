@@ -494,6 +494,19 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   const [eraserCursorPos, setEraserCursorPos] = useState<{ x: number; y: number } | null>(null);
   const [inlineEditingInkTextId, setInlineEditingInkTextId] = useState<string | null>(null);
 
+  const calculatedInkHeight = useMemo(() => {
+    let maxY = 600;
+    inkStrokes.forEach(s => {
+      if (s.points) {
+        s.points.forEach(p => { if (p.y > maxY) maxY = p.y; });
+      }
+      if (s.shapeEnd && s.shapeEnd.y > maxY) maxY = s.shapeEnd.y;
+      if (s.shapeStart && s.shapeStart.y > maxY) maxY = s.shapeStart.y;
+    });
+    const scrollH = contentRef.current ? contentRef.current.scrollHeight : 0;
+    return Math.max(maxY + 150, scrollH, 800);
+  }, [inkStrokes, body]);
+
   const inkCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const currentStrokeRef = useRef<InkStroke | null>(null);
   const editorWrapperRef = useRef<HTMLDivElement | null>(null);
@@ -1180,6 +1193,26 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
           const cleanHtml = contentRef.current.innerHTML;
           latestContent.current = cleanHtml;
           setBody(cleanHtml);
+        }
+      }
+
+      // ✂️ Trim any phantom gap: if drawing was saved on a taller mobile layout and is now floating far below text
+      if (loadedStrokes.length > 0 && contentRef.current) {
+        let minStrokeY = Infinity;
+        loadedStrokes.forEach(s => {
+          if (s.points) s.points.forEach(p => { if (p.y < minStrokeY) minStrokeY = p.y; });
+          if (s.shapeStart && s.shapeStart.y < minStrokeY) minStrokeY = s.shapeStart.y;
+          if (s.shapeEnd && s.shapeEnd.y < minStrokeY) minStrokeY = s.shapeEnd.y;
+        });
+        const contentBottom = contentRef.current.scrollHeight || 0;
+        if (isFinite(minStrokeY) && minStrokeY > contentBottom + 80) {
+          const shiftY = minStrokeY - (contentBottom + 20);
+          loadedStrokes = loadedStrokes.map(s => ({
+            ...s,
+            points: (s.points || []).map(p => ({ x: p.x, y: Math.max(0, Math.round(p.y - shiftY)) })),
+            shapeStart: s.shapeStart ? { x: s.shapeStart.x, y: Math.max(0, Math.round(s.shapeStart.y - shiftY)) } : undefined,
+            shapeEnd: s.shapeEnd ? { x: s.shapeEnd.x, y: Math.max(0, Math.round(s.shapeEnd.y - shiftY)) } : undefined
+          }));
         }
       }
 
@@ -2818,7 +2851,13 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       const dpr = Math.max(1, window.devicePixelRatio || 1);
       const w = Math.round(rect.width);
       const scrollH = editor.scrollHeight || 0;
-      const h = Math.max(600, Math.round(rect.height), scrollH);
+      let maxY = 600;
+      inkStrokesRef.current.forEach(s => {
+        if (s.points) s.points.forEach(p => { if (p.y > maxY) maxY = p.y; });
+        if (s.shapeEnd && s.shapeEnd.y > maxY) maxY = s.shapeEnd.y;
+        if (s.shapeStart && s.shapeStart.y > maxY) maxY = s.shapeStart.y;
+      });
+      const h = Math.max(600, Math.round(rect.height), scrollH, maxY + 150);
 
       canvas.width = Math.round(w * dpr);
       canvas.height = Math.round(h * dpr);
@@ -7317,11 +7356,11 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className="glick-floating-inking-bar no-print sticky top-2 z-50 mx-auto w-fit max-w-[calc(100vw-16px)] mb-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-purple-300/80 dark:border-purple-800/80 shadow-2xl shadow-purple-500/15 rounded-2xl p-1 sm:p-1.5 flex flex-col md:flex-row items-center gap-1 md:gap-1.5 select-none"
+                  className="glick-floating-inking-bar no-print sticky top-2 z-50 mx-auto w-fit max-w-[calc(100vw-16px)] mb-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-purple-300/80 dark:border-purple-800/80 shadow-2xl shadow-purple-500/15 rounded-2xl p-1.5 flex flex-wrap items-center justify-center gap-1.5 select-none"
                   style={{ overflow: 'visible' }}
                 >
                   {/* Row 1 on Mobile / Left Group on Desktop: Tools + Mobile Undo/Done */}
-                  <div className="flex items-center gap-1 w-full md:w-auto justify-between md:justify-start" style={{ overflow: 'visible' }}>
+                  <div className="flex items-center gap-1 shrink-0" style={{ overflow: 'visible' }}>
                     {/* Tool Selector */}
                     <div className="flex items-center gap-0.5 sm:gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 sm:p-1 rounded-xl shrink-0" style={{ overflow: 'visible' }}>
                       {/* Select / Move / Resize Tool */}
@@ -7543,7 +7582,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                     </div>
 
                     {/* Mobile Only: Undo, Redo & Done right next to tools */}
-                    <div className="flex md:hidden items-center gap-1 shrink-0">
+                    <div className="hidden">
                       <div className="flex items-center gap-0.5 shrink-0">
                         <button
                           type="button"
@@ -7577,7 +7616,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                   </div>
 
                   {/* Row 2 on Mobile / Right Group on Desktop: Colors, Width, Eraser Size, Clear, and Desktop Done */}
-                  <div className="flex items-center gap-1 w-full md:w-auto justify-center md:justify-start pt-1 md:pt-0 border-t md:border-t-0 border-slate-150 dark:border-slate-800">
+                  <div className="flex items-center gap-1 shrink-0">
                     {/* Realistic Eraser Size Selector */}
                     {inkTool === 'eraser' && (
                       <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl shrink-0">
@@ -7749,7 +7788,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                     </button>
 
                     {/* Desktop-only Undo, Redo & Done Button */}
-                    <div className="hidden md:flex items-center gap-0.5 shrink-0">
+                    <div className="flex items-center gap-0.5 shrink-0">
                       <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-0.5 shrink-0" />
                       <button
                         type="button"
@@ -7924,12 +7963,13 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                   /* 🎨 Issue #1 Fix: Read-Only Inking Overlay: Drawings STAY VISIBLE when Done / Typing text */
                   inkStrokes.length > 0 && (
                     <div
-                      className="glick-page-ink-overlay pointer-events-none absolute top-0 left-0 w-full h-full z-10 overflow-visible select-none"
+                      className="glick-page-ink-overlay pointer-events-none absolute top-0 left-0 w-full z-10 overflow-visible select-none"
+                      style={{ height: `${calculatedInkHeight}px`, minHeight: '100%' }}
                       dangerouslySetInnerHTML={{
                         __html: convertStrokesToSvg(
                           inkStrokes,
                           contentRef.current?.offsetWidth || 850,
-                          Math.max(600, contentRef.current?.scrollHeight || 600)
+                          calculatedInkHeight
                         )
                       }}
                     />
