@@ -620,45 +620,6 @@ export default function Dashboard({
 
           </div>
         </div>
-
-        {/* Scrollable Horizontal Tags List */}
-        {allTags.length > 0 && (
-          <div className="flex items-center gap-1.5 pt-2 border-t border-slate-100 dark:border-slate-800/60 overflow-x-auto pb-1 no-scrollbar">
-            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider shrink-0 flex items-center gap-1">
-              <Tag className="w-3 h-3" /> Filter:
-            </span>
-            <button
-              onClick={() => {
-                sound.playTick();
-                setSelectedTag(null);
-              }}
-              className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer shrink-0 ${
-                !selectedTag 
-                  ? 'bg-indigo-600 text-white shadow-xs' 
-                  : 'bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900'
-              }`}
-            >
-              All
-            </button>
-            {allTags.map(tag => (
-              <button
-                key={tag}
-                onClick={() => {
-                  sound.playTick();
-                  setSelectedTag(selectedTag === tag ? null : tag);
-                }}
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer shrink-0 ${
-                  selectedTag === tag 
-                    ? 'bg-indigo-600 text-white shadow-xs' 
-                    : 'bg-[#fbfcfd] dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-                }`}
-              >
-                <span className={`w-1.5 h-1.5 rounded-full ${getTagDotColor(tag)}`} />
-                #{tag}
-              </button>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* 🚀 Skeleton Shimmer Loading or Notes List */}
