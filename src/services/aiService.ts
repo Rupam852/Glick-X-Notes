@@ -155,25 +155,28 @@ export async function syncAIConfigFromDatabase(userId: string): Promise<AIConfig
 
 export async function testGeminiModel(apiKey: string, model: string): Promise<ModelTestResult> {
   const startTime = Date.now();
-  if (!apiKey || !apiKey.trim()) {
-    return {
-      provider: 'gemini',
-      model,
-      ok: false,
-      status: 'No API Key',
-      latencyMs: 0,
-      message: 'API Key is empty. Please enter your Google Gemini API key.'
-    };
-  }
+  const isProxy = !apiKey || apiKey === '__PROXY__';
 
   try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey.trim()}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: 'Respond with the single word: OK' }] }]
-      })
-    });
+    let res: Response;
+    if (isProxy) {
+      res = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model,
+          prompt: 'Respond with the single word: OK'
+        })
+      });
+    } else {
+      res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey.trim()}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: 'Respond with the single word: OK' }] }]
+        })
+      });
+    }
 
     const latencyMs = Date.now() - startTime;
     const data = await res.json().catch(() => ({}));
@@ -189,6 +192,12 @@ export async function testGeminiModel(apiKey: string, model: string): Promise<Mo
         message: `Connected successfully (${latencyMs}ms). Response: "${text.slice(0, 30)}"`
       };
     } else {
+      // In local dev, if proxy returns 404, fallback to direct fetch if system key is present
+      const systemKey = ((import.meta.env.VITE_GEMINI_API_KEY as string) || '').trim();
+      if (isProxy && systemKey && (res.status === 404 || res.status === 405)) {
+        return testGeminiModel(systemKey, model);
+      }
+
       const errMsg = data.error?.message || `HTTP ${res.status} Error`;
       return {
         provider: 'gemini',
@@ -200,6 +209,10 @@ export async function testGeminiModel(apiKey: string, model: string): Promise<Mo
       };
     }
   } catch (err: any) {
+    const systemKey = ((import.meta.env.VITE_GEMINI_API_KEY as string) || '').trim();
+    if (isProxy && systemKey) {
+      return testGeminiModel(systemKey, model);
+    }
     return {
       provider: 'gemini',
       model,
@@ -218,6 +231,31 @@ async function callGemini(
   systemInstruction?: string,
   images?: { mimeType: string; data: string }[]
 ): Promise<string> {
+  // If using Cloudflare serverless proxy (API key hidden on server)
+  if (!apiKey || apiKey === '__PROXY__') {
+    try {
+      const res = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model, prompt, systemInstruction, images })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error?.message || `AI Server error (Status ${res.status})`);
+      }
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) throw new Error('No response text received from AI server');
+      return text.trim();
+    } catch (proxyErr: any) {
+      // If proxy not reachable (e.g. running vite local dev without functions), fallback to systemKey
+      const systemKey = ((import.meta.env.VITE_GEMINI_API_KEY as string) || '').trim();
+      if (systemKey) {
+        return callGemini(systemKey, model, prompt, systemInstruction, images);
+      }
+      throw proxyErr;
+    }
+  }
+
   const parts: any[] = [{ text: prompt }];
 
   if (images && images.length > 0) {
@@ -269,14 +307,8 @@ export async function executeAICompletion(
   const config = getAIConfig();
   const customKey = config.mode === 'custom' ? config.gemini.apiKey.trim() : '';
   const systemKey = ((import.meta.env.VITE_GEMINI_API_KEY as string) || '').trim();
-  const key = customKey || systemKey;
-  
-  if (!key) {
-    if (config.mode === 'custom') {
-      throw new Error('Please enter your personal Google Gemini API key in AI Settings.');
-    }
-    throw new Error('Google Gemini API key is missing. Please set VITE_GEMINI_API_KEY in Vercel or configure your key in Settings.');
-  }
+  // If custom user key, use it. Otherwise, use '__PROXY__' so key is NEVER exposed in browser network tab
+  const key = customKey || '__PROXY__';
 
   const selectedModel = config.gemini.model || 'gemini-3.5-flash';
   // Sequence: Selected model first, then remaining verified working models

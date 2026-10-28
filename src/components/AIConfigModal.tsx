@@ -136,21 +136,7 @@ export default function AIConfigModal({ isOpen, onClose, userId }: AIConfigModal
     setTestingDefault(true);
     setTestResults(null);
 
-    const defaultGeminiKey = (import.meta.env.VITE_GEMINI_API_KEY as string) || '';
-
-    if (!defaultGeminiKey.trim()) {
-      showToast('Error: VITE_GEMINI_API_KEY is not set in environment.', 'error');
-      setTestResults([{
-        provider: 'gemini',
-        model: 'gemini-3.5-flash',
-        ok: false,
-        status: 'Missing Key',
-        latencyMs: 0,
-        message: 'No API key configured in environment variables.'
-      }]);
-      setTestingDefault(false);
-      return;
-    }
+    const defaultGeminiKey = ((import.meta.env.VITE_GEMINI_API_KEY as string) || '__PROXY__');
 
     const results: ModelTestResult[] = [];
     for (const m of WORKING_GEMINI_FALLBACK_CHAIN) {
