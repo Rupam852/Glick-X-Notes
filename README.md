@@ -1,5 +1,6 @@
 # 📓 Glick X Notes
 
+[![Live Demo](https://img.shields.io/badge/Demo-glick--x--notes.pages.dev-6366f1.svg?style=flat&logo=cloudflare)](https://glick-x-notes.pages.dev/)
 [![React](https://img.shields.io/badge/React-19-blue.svg?logo=react)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue.svg?logo=typescript)](https://www.typescriptlang.org/)
 [![Firebase](https://img.shields.io/badge/Firebase-12-orange.svg?logo=firebase)](https://firebase.google.com/)
@@ -7,44 +8,56 @@
 [![Vite](https://img.shields.io/badge/Vite-6-646CFF.svg?logo=vite)](https://vitejs.dev/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
-**Glick X Notes** is a premium, open-source, highly responsive personal workspace app. Engineered with React 19, TypeScript, and a fully reactive Firebase Client v12 database, Glick X Notes delivers fluid real-time synchronization, advanced rich-text editing, base64 multi-media attachment sandboxing, and strict zero-knowledge data isolation.
+**Glick X Notes** is an ultra-fast, feature-packed modern personal workspace and intelligent note-taking application. Built with React 19, TypeScript, Tailwind CSS v4, and Cloud Firestore v12, Glick X Notes combines effortless real-time synchronization, multi-provider AI assistance (Google Gemini, Groq, Hugging Face), interactive Mermaid diagrams, KaTeX mathematical formulas, freehand canvas drawing, and multi-format export capabilities with enterprise-grade data isolation.
+
+🌐 **Live Production App:** [https://glick-x-notes.pages.dev/](https://glick-x-notes.pages.dev/)
 
 ---
 
-## ✨ Outstanding Features
+## ✨ Core Features
 
-### 🖋️ Next-Generation Rich Text Editor
-* **Vibrant Typography & Headings:** Seamless support for font family selection, headings (H1, H2), bold, italic, custom highlights, and text alignment.
-* **Premium Custom Tables:** Insert dynamic professional tables with advanced column and row controls (add row/column, delete row/column, and custom drag/sizing).
-* **Auto-Save Status Bubbles:** Smooth, animated status indicators displaying saving or synchronized status instantly as you type.
+### 🤖 Multi-Provider AI Intelligence
+* **Bring Your Own Key (BYOK):** Seamlessly configure and test your own API keys for **Google Gemini**, **Groq (Llama 3)**, and **Hugging Face**.
+* **AI Writing Assistant:** One-click summarization, smart action item extraction, tone adjustment (Professional, Casual, Academic), translation, and grammar enhancement.
+* **Auto-Tagging & Title Generation:** Let AI analyze your notes and suggest relevant categorized tags and catchy titles automatically.
 
-### 📱 Tailored Mobile Responsiveness
-* **Two-Tier Adaptive Toolbar:** A sleek, horizontal scrolling touch toolbar designed for mobile viewports, ensuring all rich formatting actions are reachable with a single swipe.
-* **Elevated Floating Bottom Navigation:** Centered absolute-positioned mobile floating `+ New Note` button with bottom safe area support (`env(safe-area-inset-bottom)`) for borderless screen optimization.
-* **Responsive Inline Title Input:** Sleek inline titles that transition beautifully based on focus mode or viewport width using purely reactive CSS.
+### 🖋️ Next-Gen Rich Text & Visual Editor
+* **Typography & Headings:** Full support for H1, H2, H3, blockquotes, code blocks with syntax highlighting, custom highlight colors, and text formatting.
+* **Interactive Mermaid.js Diagrams:** Live visual modal for rendering Flowcharts, Sequence diagrams, Mindmaps, Git graphs, Architecture diagrams, Class diagrams, and ER models directly inside your notes.
+* **KaTeX LaTeX Formulas:** Full math typesetting support for inline expressions `\( ... \)` and multi-term LaTeX equations `$$ ... $$` with a live formula builder modal.
+* **Freehand Canvas Drawing:** Embedded sketch board for handwriting, quick doodles, wireframes, and annotations.
+* **Dynamic Tables:** Insert and edit responsive data tables with intuitive row and column controls.
 
-### 🔒 Enterprise-Grade Security & Isolation
-* **Zero-Knowledge Architecture:** Strict, user-bound indexing rules physically prevent database overrides. Your collections are isolated to your unique cryptographic authenticated account.
-* **Firestore Rules Sandboxing:** Secure child collections for base64 multi-media attachments preventing public storage bucket leaks.
-* **Firebase Auth Integration:** Fluid Google OAuth and custom Email/Password authentication with verified registration protocols.
+### 📁 Advanced Organization & Workspace Management
+* **Folders & Hierarchy:** Organize thoughts into dedicated workspace folders with custom icons and colors.
+* **Tagging & Color Palettes:** Categorize notes with vibrant color tokens (Indigo, Rose, Amber, Emerald, Violet) and searchable multi-tag filters.
+* **Quick Access & Lifecycle:** Pin critical notes, mark favorites, archive completed work, or restore deleted files via the Trash bin with soft-delete recovery.
 
-### ⚡ Performance & Offline Synchronization
-* **Offline Sync Cache:** Read, write, and delete notes offline. Firestore local cache sync keeps your records safe and propagates changes as soon as your connection returns.
-* **Base64 Attachment Sandboxing:** Upload images, files, or documents directly into notes, encoded in optimized base64 data strings for ultra-safe, high-speed database reads.
-* **Interactive Control Panel:** Filter notes dynamically by custom tags, visual colors (Indigo, Pink, Rose, Emerald, Gold), or perform real-time character-matching search highlighting.
+### 📤 Multi-Format Export & Backups
+* **Export Anywhere:** Download your notes instantly in **PDF**, **Markdown (.md)**, **HTML**, **Plain Text (.txt)**, or **JSON backup** formats with preserved formatting and attachments.
+
+### 🔒 Privacy, Security & Isolation
+* **Zero-Knowledge Architecture:** Granular Firestore Security Rules ensure that your collections and documents are accessible strictly by your verified authenticated UID.
+* **Firebase Authentication:** Multi-provider authentication supporting Google OAuth and Email/Password with real-time email verification workflows and secure password recovery.
+* **Offline Sync Support:** Read, write, and create notes offline. Firestore local cache keeps changes safe and syncs instantly upon reconnection.
+
+### 🎨 Clean Brand Aesthetics & Theming
+* **Origami 3D Monogram:** Clean, floating Origami "G" brand asset with zero background boxes, razor-sharp anti-aliased transparency, and retina resolution.
+* **Dark & Light Mode:** System-aware theme toggle with smooth color transitions across all views, landing pages, and modals.
 
 ---
 
 ## 🛠️ Technology Stack
 
-| Architecture Layer | Technology | Key Advantage |
+| Layer | Technologies | Purpose / Advantage |
 | :--- | :--- | :--- |
-| **UI Framework** | React 19 & TypeScript | Dynamic state rendering and compile-time type safety. |
-| **Build Tooling** | Vite | Ultra-fast Hot Module Replacement (HMR) and bundle speeds. |
-| **Styling Engine** | Tailwind CSS v4 Engine | Custom premium theme tokens with modern fluid layout design. |
-| **Animations** | Framer Motion / Motion | Hardware-accelerated dynamic transitions and layout shifts. |
-| **Backend Database** | Cloud Firestore Client v12 | Reactive listener channels with automatic offline synchronization. |
-| **Authentication** | Firebase Authentication | Secure, multi-factor ready user identity management. |
+| **Frontend Framework** | React 19 + TypeScript | High performance, strict type safety, modern concurrent features |
+| **Styling & Design** | Tailwind CSS v4, Lucide Icons | Utility-first responsive design with dark mode styling |
+| **Build Tool** | Vite 6 | Sub-second HMR and optimized production code splitting |
+| **Database & Auth** | Cloud Firestore v12, Firebase Auth | Real-time reactive data streaming, offline cache, and OAuth |
+| **AI Engine** | Google Gemini API, Groq SDK, Hugging Face API | Context-aware writing, summaries, and text generation |
+| **Visualization** | Mermaid.js, KaTeX, Cytoscape, Canvas API | Live diagrams, mathematical typesetting, and freehand drawing |
+| **Deployment** | Cloudflare Pages | Global edge CDN, ultra-low latency, and instant continuous deployment |
 
 ---
 
@@ -65,47 +78,58 @@ cd Glick-X-Notes
 npm install
 ```
 
-### 3. Setup Firebase Configuration
-Create a `firebase-applet-config.json` in your root directory and place your Firebase credentials inside:
-```json
-{
-  "apiKey": "YOUR_API_KEY",
-  "authDomain": "YOUR_AUTH_DOMAIN",
-  "projectId": "YOUR_PROJECT_ID",
-  "storageBucket": "YOUR_STORAGE_BUCKET",
-  "messagingSenderId": "YOUR_MESSAGING_SENDER_ID",
-  "appId": "YOUR_APP_ID"
-}
+### 3. Configure Firebase Environment
+Create a `.env` file in the root directory (or use `firebase-applet-config.json`):
+```env
+VITE_FIREBASE_API_KEY=your_api_key
+VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your_project_id
+VITE_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
+VITE_FIREBASE_APP_ID=your_app_id
 ```
 
 ### 4. Run the Development Server
 ```bash
 npm run dev
 ```
-Open [http://localhost:5173](http://localhost:5173) in your browser to view your brand new notes app!
+Open [http://localhost:5173](http://localhost:5173) in your browser.
 
 ---
 
-## 🔒 Firestore Security Rules Configuration
+## 🔒 Firestore Security Rules
 
-To enforce robust zero-trust security matching the landing page description, deploy the following Firestore security rule set:
+To enforce strict user data isolation, deploy the following Firestore security rules in your Firebase Console:
 
 ```javascript
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Note isolation rules
+    // User profile isolation
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Notes isolation
     match /notes/{noteId} {
       allow read, update, delete: if request.auth != null 
         && request.auth.uid == resource.data.userId;
       allow create: if request.auth != null 
         && request.auth.uid == request.resource.data.userId;
       
-      // Child Base64 Attachments isolation
+      // Nested attachments isolation
       match /attachments/{attachmentId} {
         allow read, write: if request.auth != null 
           && get(/databases/$(database)/documents/notes/$(noteId)).data.userId == request.auth.uid;
       }
+    }
+    
+    // Folders isolation
+    match /folders/{folderId} {
+      allow read, update, delete: if request.auth != null 
+        && request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null 
+        && request.auth.uid == request.resource.data.userId;
     }
   }
 }
@@ -115,29 +139,26 @@ service cloud.firestore {
 
 ## 📦 Production Deployment
 
-### Building the Bundle
-Generate an optimized production build:
+### Building for Production
 ```bash
 npm run build
 ```
 
-### Deploying to Vercel / Netlify
-This repository is configured for Single Page Application (SPA) routing. The `vercel.json` rewrite configuration is pre-configured:
-```json
-{
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
-  ]
-}
+### Cloudflare Pages Deployment
+This repository is configured for Single Page Application (SPA) routing with a `public/_redirects` rule:
+```text
+/*    /index.html   200
 ```
-Simply connect your GitHub repository to Vercel or Netlify, select **Vite** as your framework preset, and trigger the deployment!
+- **Framework preset:** `Vite`
+- **Build command:** `npm run build`
+- **Build output directory:** `dist`
+
+Changes pushed to the `main` branch automatically deploy globally via Cloudflare Pages edge network.
 
 ---
 
 ## 📄 License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is open-source and licensed under the [MIT License](LICENSE).
 
-*Created with premium craftsmanship by [Rupam Bairagya](https://github.com/Rupam852).*
+---
+*Developed with craftsmanship by [Rupam Bairagya](https://github.com/Rupam852).*
