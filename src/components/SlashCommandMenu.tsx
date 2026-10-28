@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   CheckSquare, Heading1, Heading2, Heading3, Code, 
   Lightbulb, AlertTriangle, Target, ChevronRight, Table, 
-  Sparkles, Quote, List, ListOrdered
+  Sparkles, Quote, List
 } from 'lucide-react';
 
 export interface SlashCommandItem {
@@ -31,6 +31,7 @@ export default function SlashCommandMenu({
 }: SlashCommandMenuProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
+  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   const COMMANDS: Omit<SlashCommandItem, 'action'>[] = [
     {
@@ -127,46 +128,76 @@ export default function SlashCommandMenu({
   ];
 
   // Filter based on search query after `/`
+  const cleanQ = (query || '').toLowerCase().replace('/', '').trim();
   const filtered = COMMANDS.filter(cmd => {
-    if (!query) return true;
-    const q = query.toLowerCase().replace('/', '');
+    if (!cleanQ) return true;
     return (
-      cmd.label.toLowerCase().includes(q) ||
-      cmd.desc.toLowerCase().includes(q) ||
-      cmd.keywords.some(k => k.includes(q))
+      cmd.label.toLowerCase().includes(cleanQ) ||
+      cmd.desc.toLowerCase().includes(cleanQ) ||
+      cmd.keywords.some(k => k.includes(cleanQ))
     );
   });
-
-  // Handle keyboard navigation
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        setSelectedIndex(prev => (prev + 1) % (filtered.length || 1));
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        setSelectedIndex(prev => (prev - 1 + (filtered.length || 1)) % (filtered.length || 1));
-      } else if (e.key === 'Enter') {
-        e.preventDefault();
-        if (filtered[selectedIndex]) {
-          onExecute(filtered[selectedIndex].id);
-        }
-      } else if (e.key === 'Escape') {
-        e.preventDefault();
-        onClose();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, selectedIndex, filtered, onExecute, onClose]);
 
   // Reset selected index when query changes
   useEffect(() => {
     setSelectedIndex(0);
-  }, [query]);
+  }, [cleanQ]);
+
+  // If query returns no results, close the menu so Enter works normally
+  useEffect(() => {
+    if (isOpen && cleanQ && filtered.length === 0) {
+      onClose();
+    }
+  }, [isOpen, cleanQ, filtered.length, onClose]);
+
+  // Smooth scroll selected item into view on Arrow navigation
+  useEffect(() => {
+    if (itemRefs.current[selectedIndex]) {
+      itemRefs.current[selectedIndex]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }, [selectedIndex]);
+
+  // Handle keyboard navigation only when open with matches
+  useEffect(() => {
+    if (!isOpen || filtered.length === 0) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        e.stopPropagation();
+        setSelectedIndex(prev => (prev + 1) % filtered.length);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        e.stopPropagation();
+        setSelectedIndex(prev => (prev - 1 + filtered.length) % filtered.length);
+      } else if (e.key === 'Enter') {
+        if (filtered[selectedIndex]) {
+          e.preventDefault();
+          e.stopPropagation();
+          onExecute(filtered[selectedIndex].id);
+        }
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, [isOpen, selectedIndex, filtered, onExecute, onClose]);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleMousedown = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+    window.addEventListener('mousedown', handleMousedown);
+    return () => window.removeEventListener('mousedown', handleMousedown);
+  }, [isOpen, onClose]);
 
   if (!isOpen || filtered.length === 0) return null;
 
@@ -178,11 +209,11 @@ export default function SlashCommandMenu({
     <div
       ref={menuRef}
       style={{ top: `${top}px`, left: `${left}px` }}
-      className="fixed z-50 w-72 max-h-80 overflow-y-auto bg-white dark:bg-[#0c1220] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-1.5 space-y-0.5 animate-in fade-in zoom-in-95 duration-150 select-none backdrop-blur-md"
+      className="fixed z-50 w-72 max-h-80 overflow-y-auto bg-white dark:bg-[#0c1220] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-1.5 space-y-0.5 animate-in fade-in zoom-in-95 duration-150 select-none backdrop-blur-md no-scrollbar"
     >
-      <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 mb-1">
+      <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 mb-1 sticky top-0 bg-white/95 dark:bg-[#0c1220]/95 backdrop-blur-sm z-10">
         <span>Insert Block</span>
-        <span className="text-[9px] font-mono lowercase">type to filter</span>
+        <span className="text-[9px] font-mono lowercase">{selectedIndex + 1}/{filtered.length}</span>
       </div>
 
       {filtered.map((item, idx) => {
@@ -190,12 +221,13 @@ export default function SlashCommandMenu({
         return (
           <button
             key={item.id}
+            ref={el => { itemRefs.current[idx] = el; }}
             type="button"
             onClick={() => onExecute(item.id)}
             onMouseEnter={() => setSelectedIndex(idx)}
             className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left transition-colors cursor-pointer ${
               isSelected 
-                ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-900 dark:text-indigo-200' 
+                ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-900 dark:text-indigo-200 ring-1 ring-indigo-500/30' 
                 : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900'
             }`}
           >

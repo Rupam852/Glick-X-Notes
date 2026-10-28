@@ -139,11 +139,41 @@ export default function ExportModal({
     printWindow.document.close();
   };
 
-  // 4. Copy Styled Share Card Text
+  // 4. Clean Share Card Text (Without raw markdown asterisks)
+  const getCleanShareText = () => {
+    const cleanTitle = (noteTitle || 'Untitled Note').trim();
+    // Strip raw asterisks and markdown symbols
+    const cleanBody = noteText.replace(/\*+/g, '').replace(/#+/g, '').trim();
+    let text = `📝 ${cleanTitle}\n\n${cleanBody.slice(0, 350)}${cleanBody.length > 350 ? '...' : ''}`;
+    if (tags.length > 0) {
+      text += `\n\n🏷️ ${tags.map(t => `#${t.replace(/[^a-zA-Z0-9_-]/g, '')}`).join(' ')}`;
+    }
+    text += `\n\n✨ Written with Glick X Notes`;
+    return text;
+  };
+
   const handleCopyCard = () => {
-    const shareText = `📝 **${noteTitle || 'Untitled Note'}**\n\n${noteText.slice(0, 400)}${noteText.length > 400 ? '...' : ''}\n\n🏷️ ${tags.map(t => `#${t}`).join(' ')}\n✨ Crafted with Glick X Notes`;
+    const shareText = getCleanShareText();
     navigator.clipboard.writeText(shareText);
     showToast('Copied summary card to clipboard!', 'success');
+  };
+
+  const handleNativeShare = async () => {
+    const shareText = getCleanShareText();
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: noteTitle || 'Glick X Notes',
+          text: shareText
+        });
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          handleCopyCard();
+        }
+      }
+    } else {
+      handleCopyCard();
+    }
   };
 
   return (
@@ -247,15 +277,26 @@ export default function ExportModal({
                 </div>
               )}
 
-              <div className="pt-2 flex items-center justify-between border-t border-slate-200/60 dark:border-slate-800">
+              <div className="pt-2 flex items-center justify-between border-t border-slate-200/60 dark:border-slate-800 gap-2">
                 <span className="text-[10px] font-bold text-indigo-500">Glick X Notes</span>
-                <button
-                  onClick={handleCopyCard}
-                  className="px-3 py-1 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 transition"
-                >
-                  <Copy className="w-3 h-3" />
-                  Copy Card
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={handleNativeShare}
+                    className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-xs"
+                  >
+                    <Share2 className="w-3 h-3" />
+                    Share
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCopyCard}
+                    className="px-3 py-1 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 transition cursor-pointer"
+                  >
+                    <Copy className="w-3 h-3" />
+                    Copy
+                  </button>
+                </div>
               </div>
             </div>
           </div>

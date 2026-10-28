@@ -1196,9 +1196,21 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       title = 'Goal';
     }
 
-    const html = `<div class="glick-callout callout-${type}" style="padding: 12px 16px; margin: 12px 0; border-radius: 12px; background: ${bg}; border-left: 4px solid ${border}; display: flex; align-items: flex-start; gap: 10px;"><span style="font-size: 18px; user-select: none;">${emoji}</span><div style="flex: 1;"><strong style="color: ${border}; font-size: 13px;">${title}:</strong><p style="margin: 4px 0 0 0; font-size: 14px;">Write your ${title.toLowerCase()} details here...</p></div></div><p><br/></p>`;
+    const focusId = `callout-focus-${Date.now()}`;
+    const html = `<div class="glick-callout callout-${type}" style="padding: 12px 16px; margin: 12px 0; border-radius: 12px; background: ${bg}; border-left: 4px solid ${border}; display: flex; align-items: flex-start; gap: 10px;"><span style="font-size: 18px; user-select: none;">${emoji}</span><div style="flex: 1;"><strong style="color: ${border}; font-size: 13px;">${title}:</strong><p id="${focusId}" style="margin: 4px 0 0 0; font-size: 14px;">Write your ${title.toLowerCase()} details here...</p></div></div><p><br/></p>`;
     document.execCommand('insertHTML', false, html);
     if (contentRef.current) {
+      const target = contentRef.current.querySelector(`#${focusId}`);
+      if (target) {
+        target.removeAttribute('id');
+        const range = document.createRange();
+        range.selectNodeContents(target);
+        const sel = window.getSelection();
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+        contentRef.current.focus();
+        savedSelectionRef.current = saveSelection();
+      }
       const h = contentRef.current.innerHTML;
       latestContent.current = h;
       setBody(h);
@@ -1209,22 +1221,46 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
 
   const handleInsertCodeBlock = () => {
     restoreSelection(savedSelectionRef.current);
-    const html = `<pre style="background: #0f172a; color: #f8fafc; padding: 14px 16px; border-radius: 12px; font-family: monospace; font-size: 13px; margin: 12px 0; overflow-x: auto; border: 1px solid #1e293b;"><code>// Enter code snippet here...</code></pre><p><br/></p>`;
+    const focusId = `code-focus-${Date.now()}`;
+    const html = `<pre class="glick-code-block" style="background: #0f172a; color: #f8fafc; padding: 14px 16px; border-radius: 12px; font-family: monospace; font-size: 13px; margin: 12px 0; overflow-x: auto; border: 1px solid #1e293b;"><code id="${focusId}">// Enter code snippet here...</code></pre><p><br/></p>`;
     document.execCommand('insertHTML', false, html);
     if (contentRef.current) {
+      const target = contentRef.current.querySelector(`#${focusId}`);
+      if (target) {
+        target.removeAttribute('id');
+        const range = document.createRange();
+        range.selectNodeContents(target);
+        const sel = window.getSelection();
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+        contentRef.current.focus();
+        savedSelectionRef.current = saveSelection();
+      }
       const h = contentRef.current.innerHTML;
       latestContent.current = h;
       setBody(h);
       pushToHistory(h);
     }
-    showToast('Inserted code snippet block', 'success');
+    showToast('Inserted code block - ready to type', 'success');
   };
 
   const handleInsertToggle = () => {
     restoreSelection(savedSelectionRef.current);
-    const html = `<details style="padding: 10px 14px; margin: 10px 0; border: 1px solid rgba(148, 163, 184, 0.35); border-radius: 12px; background: rgba(248, 250, 252, 0.5);"><summary style="font-weight: 700; font-size: 14px; cursor: pointer; outline: none; user-select: none; color: #4f46e5;">Toggle Section (Click to expand)</summary><div style="margin-top: 8px; padding-left: 8px; font-size: 14px;"><p>Hidden notes, checklist, or deeper details go here...</p></div></details><p><br/></p>`;
+    const focusId = `toggle-focus-${Date.now()}`;
+    const html = `<details class="glick-toggle" style="padding: 10px 14px; margin: 10px 0; border: 1px solid rgba(148, 163, 184, 0.35); border-radius: 12px; background: rgba(248, 250, 252, 0.5);"><summary id="${focusId}" style="font-weight: 700; font-size: 14px; cursor: pointer; outline: none; user-select: none; color: #4f46e5;">Toggle Section (Click to expand)</summary><div style="margin-top: 8px; padding-left: 8px; font-size: 14px;"><p>Hidden notes, checklist, or deeper details go here...</p></div></details><p><br/></p>`;
     document.execCommand('insertHTML', false, html);
     if (contentRef.current) {
+      const target = contentRef.current.querySelector(`#${focusId}`);
+      if (target) {
+        target.removeAttribute('id');
+        const range = document.createRange();
+        range.selectNodeContents(target);
+        const sel = window.getSelection();
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+        contentRef.current.focus();
+        savedSelectionRef.current = saveSelection();
+      }
       const h = contentRef.current.innerHTML;
       latestContent.current = h;
       setBody(h);
@@ -1304,11 +1340,27 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   const handleExecuteSlashCommand = (cmdId: string) => {
     setSlashMenuOpen(false);
     
-    // Remove the slash trigger text if any
+    // Cleanly remove the '/' and any typed query text from the editor
     const sel = window.getSelection();
     if (sel && sel.rangeCount > 0) {
-      document.execCommand('delete', false);
+      const range = sel.getRangeAt(0);
+      const textNode = range.startContainer;
+      if (textNode && textNode.nodeType === Node.TEXT_NODE && textNode.textContent) {
+        const fullText = textNode.textContent;
+        const slashIdx = fullText.lastIndexOf('/');
+        if (slashIdx !== -1) {
+          textNode.textContent = fullText.slice(0, slashIdx);
+          const newRange = document.createRange();
+          newRange.setStart(textNode, textNode.textContent.length);
+          newRange.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+        }
+      } else {
+        document.execCommand('delete', false);
+      }
     }
+    savedSelectionRef.current = saveSelection();
 
     switch (cmdId) {
       case 'ai':
@@ -1754,6 +1806,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   };
 
   const handleContentClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    setSlashMenuOpen(false);
     const target = e.target as HTMLElement;
     const anchor = target.closest('a');
     if (anchor) {
@@ -1815,17 +1868,30 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       }
     }
 
+    // Slash Command Trigger
     if (e.key === '/') {
-      setTimeout(() => {
-        const sel = window.getSelection();
-        if (sel && sel.rangeCount > 0) {
-          const range = sel.getRangeAt(0);
-          const rect = range.getBoundingClientRect();
-          setSlashMenuPos({ top: rect.bottom + 6, left: rect.left });
-          setSlashMenuOpen(true);
-          setSlashQuery('');
+      const sel = window.getSelection();
+      let shouldOpenSlash = true;
+      if (sel && sel.rangeCount > 0) {
+        const range = sel.getRangeAt(0);
+        const textBefore = range.startContainer.textContent?.slice(0, range.startOffset) || '';
+        // If typed in the middle of a word or url (e.g. "https:/" or "abc/"), do not open slash menu
+        if (textBefore.length > 0 && !/\s$/.test(textBefore)) {
+          shouldOpenSlash = false;
         }
-      }, 10);
+      }
+      if (shouldOpenSlash) {
+        setTimeout(() => {
+          const sel2 = window.getSelection();
+          if (sel2 && sel2.rangeCount > 0) {
+            const range = sel2.getRangeAt(0);
+            const rect = range.getBoundingClientRect();
+            setSlashMenuPos({ top: rect.bottom + 6, left: rect.left });
+            setSlashMenuOpen(true);
+            setSlashQuery('');
+          }
+        }, 10);
+      }
     } else if (slashMenuOpen) {
       if (e.key === 'Escape' || e.key === ' ') {
         setSlashMenuOpen(false);
@@ -1849,41 +1915,104 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       if (zenMode) setZenMode(false);
     }
 
+    // Smart Enter & Block Breakout Handling
     if (e.key === 'Enter') {
+      // If slash command menu is active, SlashCommandMenu handles Enter
+      if (slashMenuOpen) {
+        return;
+      }
+
       const selection = window.getSelection();
       if (!selection || selection.rangeCount === 0) return;
       
       let node: Node | null = selection.anchorNode;
-      let isPre = false;
-      let isBlockquote = false;
+      let preElement: HTMLElement | null = null;
+      let calloutElement: HTMLElement | null = null;
       
       while (node && node !== contentRef.current) {
-        if (node.nodeName === 'PRE') isPre = true;
-        if (node.nodeName === 'BLOCKQUOTE') isBlockquote = true;
-        if (isPre || isBlockquote) break;
+        if (node.nodeName === 'PRE') preElement = node as HTMLElement;
+        if ((node as HTMLElement).classList?.contains('glick-callout')) calloutElement = node as HTMLElement;
         node = node.parentNode;
       }
 
-      if ((isPre || isBlockquote) && e.shiftKey) {
+      // Case 1: Inside Code Block (<pre>)
+      if (preElement) {
+        const isShift = e.shiftKey;
+        const range = selection.getRangeAt(0);
+        const currentLineText = range.startContainer.textContent || '';
+        
+        // Shift+Enter OR Enter on empty code line -> BREAK OUT OF CODE BLOCK
+        if (isShift || currentLineText.trim() === '' || currentLineText.includes('// Enter code snippet here...')) {
+          e.preventDefault();
+          let nextP = preElement.nextElementSibling as HTMLElement;
+          if (!nextP || (nextP.nodeName !== 'P' && nextP.nodeName !== 'DIV')) {
+            nextP = document.createElement('p');
+            nextP.innerHTML = '<br>';
+            preElement.parentNode?.insertBefore(nextP, preElement.nextSibling);
+          }
+          const newRange = document.createRange();
+          newRange.setStart(nextP, 0);
+          newRange.collapse(true);
+          selection.removeAllRanges();
+          selection.addRange(newRange);
+          contentRef.current?.focus();
+          if (contentRef.current) {
+            const html = contentRef.current.innerHTML;
+            latestContent.current = html;
+            setBody(html);
+            pushToHistory(html);
+          }
+          return;
+        }
+
+        // Normal Enter inside code block -> insert real newline break
         e.preventDefault();
-        document.execCommand('insertParagraph', false);
-        document.execCommand('formatBlock', false, 'P');
+        const br = document.createElement('br');
+        range.deleteContents();
+        range.insertNode(br);
+        range.setStartAfter(br);
+        range.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(range);
         if (contentRef.current) {
           const html = contentRef.current.innerHTML;
           latestContent.current = html;
           setBody(html);
           pushToHistory(html);
         }
-      } else if (isPre && !e.shiftKey) {
-        e.preventDefault();
-        document.execCommand('insertText', false, '\n');
-        if (contentRef.current) {
-          const html = contentRef.current.innerHTML;
-          latestContent.current = html;
-          setBody(html);
-          pushToHistory(html);
+        return;
+      }
+
+      // Case 2: Inside Callout Box (.glick-callout)
+      if (calloutElement) {
+        const isShift = e.shiftKey;
+        const currentText = selection.anchorNode?.textContent || '';
+        // Shift+Enter OR empty line in callout -> BREAK OUT OF CALLOUT
+        if (isShift || currentText.trim() === '' || currentText.includes('details here...')) {
+          e.preventDefault();
+          let nextP = calloutElement.nextElementSibling as HTMLElement;
+          if (!nextP || (nextP.nodeName !== 'P' && nextP.nodeName !== 'DIV')) {
+            nextP = document.createElement('p');
+            nextP.innerHTML = '<br>';
+            calloutElement.parentNode?.insertBefore(nextP, calloutElement.nextSibling);
+          }
+          const newRange = document.createRange();
+          newRange.setStart(nextP, 0);
+          newRange.collapse(true);
+          selection.removeAllRanges();
+          selection.addRange(newRange);
+          contentRef.current?.focus();
+          if (contentRef.current) {
+            const html = contentRef.current.innerHTML;
+            latestContent.current = html;
+            setBody(html);
+            pushToHistory(html);
+          }
+          return;
         }
       }
+
+      // Normal Enter: DO NOT PREVENT DEFAULT! Browser creates natural clean new paragraph/line!
     }
   };
 
