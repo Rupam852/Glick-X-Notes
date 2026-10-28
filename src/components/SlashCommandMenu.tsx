@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   CheckSquare, Heading1, Heading2, Heading3, Code, 
   Lightbulb, AlertTriangle, Target, ChevronRight, Table, 
-  Sparkles, Quote, List
+  Sparkles, Quote, List, Image as ImageIcon
 } from 'lucide-react';
 
 export interface SlashCommandItem {
@@ -124,6 +124,13 @@ export default function SlashCommandMenu({
       desc: 'Indented blockquote styling',
       icon: <Quote className="w-4 h-4 text-slate-500" />,
       keywords: ['quote', 'blockquote', 'cite']
+    },
+    {
+      id: 'image',
+      label: 'Image / Photo',
+      desc: 'Insert photo directly into note',
+      icon: <ImageIcon className="w-4 h-4 text-emerald-500" />,
+      keywords: ['image', 'photo', 'picture', 'upload', 'camera', 'pic']
     }
   ];
 

@@ -1507,6 +1507,9 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       case 'quote':
         toggleBlock('blockquote', 'blockquote');
         break;
+      case 'image':
+        document.getElementById('image-upload')?.click();
+        break;
       default:
         break;
     }
@@ -2697,9 +2700,63 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     }
   };
 
+  // Insert base64 image block directly into the content editable editor body
+  const insertImageBase64 = (base64: string, altName: string = 'Photo') => {
+    ensureSelectionInsideEditor();
+    const nextLineId = `img-next-${Date.now()}`;
+    const html = `<div class="glick-block-wrapper glick-image-container" style="position: relative; margin: 16px 0; text-align: center; user-select: none;" contenteditable="false"><div style="position: relative; display: inline-block; max-width: 100%;"><img src="${base64}" alt="${altName}" style="max-width: 100%; max-height: 520px; border-radius: 14px; object-fit: contain; box-shadow: 0 4px 16px rgba(15,23,42,0.12); display: block;" /><button type="button" data-action="delete-block" title="Delete image" style="position: absolute; top: 10px; right: 10px; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.25); color: white; border-radius: 8px; padding: 4px 10px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px; z-index: 10;">✕ Remove</button></div></div><p id="${nextLineId}"><br/></p>`;
+
+    ensureSelectionInsideEditor();
+    document.execCommand('insertHTML', false, html);
+
+    if (contentRef.current) {
+      const nextP = contentRef.current.querySelector(`#${nextLineId}`);
+      if (nextP) {
+        nextP.removeAttribute('id');
+        const range = document.createRange();
+        range.setStart(nextP, 0);
+        range.collapse(true);
+        const sel = window.getSelection();
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+        contentRef.current.focus();
+        savedSelectionRef.current = range.cloneRange();
+      }
+      const h = contentRef.current.innerHTML;
+      latestContent.current = h;
+      setBody(h);
+      pushToHistory(h);
+    }
+    showToast('Photo inserted into note!', 'success');
+  };
+
+  const handleInsertImageFile = (file: File) => {
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      showToast(`Image ${file.name} is too large (max 2MB)`, 'error');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64 = e.target?.result as string;
+      if (base64) {
+        insertImageBase64(base64, file.name);
+      }
+      // Also save in note attachments subcollection for safe backup & downloading
+      handleFiles([file]);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      handleFiles(e.target.files);
+    if (e.target.files && e.target.files.length > 0) {
+      Array.from(e.target.files).forEach(file => {
+        if (file.type.startsWith('image/')) {
+          handleInsertImageFile(file);
+        } else {
+          handleFiles([file]);
+        }
+      });
     }
     e.target.value = '';
   };
@@ -2721,7 +2778,18 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDraggingFile(false);
-    if (e.dataTransfer.files) handleFiles(e.dataTransfer.files);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const files = Array.from(e.dataTransfer.files);
+      const imageFiles = files.filter(f => f.type.startsWith('image/'));
+      const otherFiles = files.filter(f => !f.type.startsWith('image/'));
+
+      if (imageFiles.length > 0) {
+        imageFiles.forEach(f => handleInsertImageFile(f));
+      }
+      if (otherFiles.length > 0) {
+        handleFiles(otherFiles);
+      }
+    }
   };
 
   const deleteAttachment = async (attachmentId: string) => {
@@ -2877,6 +2945,18 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  {viewingAttachment.type.startsWith('image/') && (
+                    <button 
+                      onClick={() => {
+                        insertImageBase64(viewingAttachment.data, viewingAttachment.name);
+                        setViewingAttachment(null);
+                      }}
+                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
+                      title="Insert photo directly into note body"
+                    >
+                      <Plus className="w-4 h-4" /> Insert into Note
+                    </button>
+                  )}
                   <button 
                     onClick={() => downloadAttachment(viewingAttachment)}
                     className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-600 dark:text-slate-400 transition-all cursor-pointer"
@@ -3892,6 +3972,18 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                           <p className="text-[9px] text-slate-400 uppercase tracking-widest">{(file.size / 1024).toFixed(1)} KB</p>
                         </div>
                         <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all">
+                          {file.type.startsWith('image/') && (
+                            <button 
+                              onClick={(e) => { 
+                                e.stopPropagation(); 
+                                insertImageBase64(file.data, file.name); 
+                              }} 
+                              className="p-1 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 rounded-md text-indigo-600 dark:text-indigo-400 cursor-pointer"
+                              title="Insert photo into note body"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                           <button onClick={(e) => { e.stopPropagation(); downloadAttachment(file); }} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md text-slate-600 dark:text-slate-400 cursor-pointer">
                             <Download className="w-3.5 h-3.5" />
                           </button>
