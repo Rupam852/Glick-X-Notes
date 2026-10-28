@@ -2152,12 +2152,8 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
 
       // Case 1: Inside Code Block (<pre>)
       if (preElement) {
-        const isShift = e.shiftKey;
-        const range = selection.getRangeAt(0);
-        const currentLineText = range.startContainer.textContent || '';
-        
-        // Shift+Enter OR Enter on empty code line -> BREAK OUT OF CODE BLOCK
-        if (isShift || currentLineText.trim() === '' || currentLineText.includes('// Enter code snippet here...')) {
+        // Shift+Enter: Break out of code block into new paragraph outside
+        if (e.shiftKey) {
           e.preventDefault();
           const container = preElement.closest('.glick-block-wrapper') || preElement;
           let nextP = container.nextElementSibling as HTMLElement;
@@ -2181,15 +2177,34 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
           return;
         }
 
-        // Normal Enter inside code block -> insert real newline break
+        // Normal Enter: Single Enter immediately creates next line of code on 1 press!
         e.preventDefault();
-        const br = document.createElement('br');
+        const range = selection.getRangeAt(0);
         range.deleteContents();
+
+        // Clear initial placeholder if untouched
+        const codeElement = preElement.querySelector('code') || preElement;
+        if (codeElement.textContent === '// Enter code snippet here...') {
+          codeElement.textContent = '';
+        }
+
+        // Insert primary line break
+        const br = document.createElement('br');
         range.insertNode(br);
-        range.setStartAfter(br);
-        range.collapse(true);
+
+        // Crucial fix: In HTML contentEditable, a solitary trailing <br> has zero visual height.
+        // We ensure a trailing companion <br> exists so the new line has immediate height on the FIRST Enter!
+        if (!br.nextSibling) {
+          const companionBr = document.createElement('br');
+          br.parentNode?.appendChild(companionBr);
+        }
+
+        const newRange = document.createRange();
+        newRange.setStartAfter(br);
+        newRange.collapse(true);
         selection.removeAllRanges();
-        selection.addRange(range);
+        selection.addRange(newRange);
+
         if (contentRef.current) {
           const html = contentRef.current.innerHTML;
           latestContent.current = html;
@@ -2201,10 +2216,8 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
 
       // Case 2: Inside Callout Box (.glick-callout)
       if (calloutElement) {
-        const isShift = e.shiftKey;
-        const currentText = selection.anchorNode?.textContent || '';
-        // Shift+Enter OR empty line in callout -> BREAK OUT OF CALLOUT
-        if (isShift || currentText.trim() === '' || currentText.includes('details here...')) {
+        // Shift+Enter: Break out of callout into new paragraph outside
+        if (e.shiftKey) {
           e.preventDefault();
           const container = calloutElement.closest('.glick-block-wrapper') || calloutElement;
           let nextP = container.nextElementSibling as HTMLElement;
@@ -2227,24 +2240,100 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
           }
           return;
         }
-      }
 
-      // Case 3: Inside Toggle Section (<details>)
-      if (toggleElement && e.shiftKey) {
+        // Normal Enter: Single Enter creates a new line inside the callout on 1 press!
         e.preventDefault();
-        const container = toggleElement.closest('.glick-block-wrapper') || toggleElement;
-        let nextP = container.nextElementSibling as HTMLElement;
-        if (!nextP || (nextP.nodeName !== 'P' && nextP.nodeName !== 'DIV')) {
-          nextP = document.createElement('p');
-          nextP.innerHTML = '<br>';
-          container.parentNode?.insertBefore(nextP, container.nextSibling);
+        const range = selection.getRangeAt(0);
+        range.deleteContents();
+
+        // Clear placeholder if present
+        const pElement = calloutElement.querySelector('p');
+        if (pElement && pElement.textContent?.includes('details here...')) {
+          pElement.textContent = '';
         }
+
+        const br = document.createElement('br');
+        range.insertNode(br);
+
+        // Ensure trailing companion <br> for immediate visual line height
+        if (!br.nextSibling) {
+          const companionBr = document.createElement('br');
+          br.parentNode?.appendChild(companionBr);
+        }
+
         const newRange = document.createRange();
-        newRange.setStart(nextP, 0);
+        newRange.setStartAfter(br);
         newRange.collapse(true);
         selection.removeAllRanges();
         selection.addRange(newRange);
-        contentRef.current?.focus();
+
+        if (contentRef.current) {
+          const html = contentRef.current.innerHTML;
+          latestContent.current = html;
+          setBody(html);
+          pushToHistory(html);
+        }
+        return;
+      }
+
+      // Case 3: Inside Toggle Section (<details>)
+      if (toggleElement) {
+        if (e.shiftKey) {
+          e.preventDefault();
+          const container = toggleElement.closest('.glick-block-wrapper') || toggleElement;
+          let nextP = container.nextElementSibling as HTMLElement;
+          if (!nextP || (nextP.nodeName !== 'P' && nextP.nodeName !== 'DIV')) {
+            nextP = document.createElement('p');
+            nextP.innerHTML = '<br>';
+            container.parentNode?.insertBefore(nextP, container.nextSibling);
+          }
+          const newRange = document.createRange();
+          newRange.setStart(nextP, 0);
+          newRange.collapse(true);
+          selection.removeAllRanges();
+          selection.addRange(newRange);
+          contentRef.current?.focus();
+          if (contentRef.current) {
+            const html = contentRef.current.innerHTML;
+            latestContent.current = html;
+            setBody(html);
+            pushToHistory(html);
+          }
+          return;
+        }
+
+        // Inside summary vs inside body
+        const summary = toggleElement.querySelector('summary');
+        if (summary && summary.contains(selection.anchorNode)) {
+          // If in summary, normal Enter expands the toggle and focuses content
+          e.preventDefault();
+          (toggleElement as HTMLDetailsElement).open = true;
+          const bodyDiv = toggleElement.querySelector('div');
+          if (bodyDiv) {
+            const newRange = document.createRange();
+            newRange.selectNodeContents(bodyDiv);
+            newRange.collapse(false);
+            selection.removeAllRanges();
+            selection.addRange(newRange);
+          }
+          return;
+        }
+
+        // Normal Enter inside toggle body -> single Enter creates new line
+        e.preventDefault();
+        const range = selection.getRangeAt(0);
+        range.deleteContents();
+        const br = document.createElement('br');
+        range.insertNode(br);
+        if (!br.nextSibling) {
+          const companionBr = document.createElement('br');
+          br.parentNode?.appendChild(companionBr);
+        }
+        const newRange = document.createRange();
+        newRange.setStartAfter(br);
+        newRange.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(newRange);
         if (contentRef.current) {
           const html = contentRef.current.innerHTML;
           latestContent.current = html;
