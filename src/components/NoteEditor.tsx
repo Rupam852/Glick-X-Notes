@@ -578,6 +578,9 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
 
   const [showFindReplace, setShowFindReplace] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [selectedInspectEl, setSelectedInspectEl] = useState<HTMLElement | null>(null);
+  const [inspectBounds, setInspectBounds] = useState<{ top: number; left: number; width: number; height: number; title: string } | null>(null);
   const [sidebarWidth, setSidebarWidth] = useState(320);
   const [isResizing, setIsResizing] = useState(false);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
@@ -605,6 +608,13 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     setShowSidebar(false);
     return true;
   }, showSidebar);
+
+  useBackHandler(() => {
+    setIsSelectMode(false);
+    setSelectedInspectEl(null);
+    setInspectBounds(null);
+    return true;
+  }, isSelectMode);
 
   useBackHandler(() => {
     setViewingAttachment(null);
@@ -819,6 +829,106 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       window.removeEventListener('mouseup', stopResizing);
     };
   }, [resize, stopResizing]);
+
+  // 👆 Touch & Pointer Element Selection & Resizing (Points 1, 2, 4)
+  const updateInspectBounds = useCallback((el?: HTMLElement | null) => {
+    const target = el !== undefined ? el : selectedInspectEl;
+    const wrapper = editorWrapperRef.current;
+    if (!target || !wrapper) {
+      setInspectBounds(null);
+      return;
+    }
+    const targetRect = target.getBoundingClientRect();
+    const wrapperRect = wrapper.getBoundingClientRect();
+
+    let tagTitle = 'Element';
+    if (target.nodeName === 'TABLE') tagTitle = 'Table';
+    else if (target.classList.contains('glick-callout')) tagTitle = 'Callout Card';
+    else if (target.classList.contains('glick-diagram-container')) tagTitle = 'Diagram';
+    else if (target.classList.contains('glick-code-container')) tagTitle = 'Code Snippet';
+    else if (target.nodeName === 'IMG') tagTitle = 'Image';
+    else if (target.getAttribute('style')?.includes('border-radius')) tagTitle = 'Snippet Block';
+
+    setInspectBounds({
+      top: Math.round(targetRect.top - wrapperRect.top),
+      left: Math.round(targetRect.left - wrapperRect.left),
+      width: Math.round(targetRect.width),
+      height: Math.round(targetRect.height),
+      title: tagTitle
+    });
+  }, [selectedInspectEl]);
+
+  useEffect(() => {
+    const scroller = scrollContainerRef.current;
+    if (!scroller || !selectedInspectEl) return;
+    const handleScrollOrResize = () => {
+      updateInspectBounds();
+    };
+    scroller.addEventListener('scroll', handleScrollOrResize, { passive: true });
+    window.addEventListener('resize', handleScrollOrResize);
+    return () => {
+      scroller.removeEventListener('scroll', handleScrollOrResize);
+      window.removeEventListener('resize', handleScrollOrResize);
+    };
+  }, [selectedInspectEl, updateInspectBounds]);
+
+  const handleInspectResizeStart = (e: React.PointerEvent, handleType: 'right' | 'corner') => {
+    e.preventDefault();
+    e.stopPropagation();
+    const handleEl = e.currentTarget as HTMLElement;
+    try {
+      handleEl.setPointerCapture(e.pointerId);
+    } catch {}
+
+    const targetEl = selectedInspectEl;
+    if (!targetEl) return;
+
+    markLocalActivity();
+
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startWidth = targetEl.offsetWidth;
+    const startHeight = targetEl.offsetHeight;
+    const maxWidth = editorWrapperRef.current?.offsetWidth || 850;
+
+    const onPointerMove = (moveEvent: PointerEvent) => {
+      const dx = moveEvent.clientX - startX;
+      const newWidth = Math.max(120, Math.min(maxWidth, Math.round(startWidth + dx)));
+      targetEl.style.width = `${newWidth}px`;
+      targetEl.style.maxWidth = '100%';
+
+      if (handleType === 'corner') {
+        const dy = moveEvent.clientY - startY;
+        const newHeight = Math.max(40, Math.round(startHeight + dy));
+        targetEl.style.minHeight = `${newHeight}px`;
+      }
+
+      updateInspectBounds(targetEl);
+    };
+
+    const onPointerUp = (upEvent: PointerEvent) => {
+      try {
+        handleEl.releasePointerCapture(upEvent.pointerId);
+      } catch {}
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerUp);
+
+      markLocalActivity();
+      if (contentRef.current) {
+        const html = contentRef.current.innerHTML;
+        latestContent.current = html;
+        setBody(html);
+        pushToHistory(html);
+        handleSave();
+      }
+      showToast('Size updated & synced!', 'success');
+    };
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
+  };
 
   // Custom Undo/Redo Management
   const pushToHistory = useCallback((content: string) => {
@@ -3889,6 +3999,21 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     setSlashMenuOpen(false);
     const target = e.target as HTMLElement;
 
+    // 👆 Select Mode Interaction: Pick element and show big drag handles
+    if (isSelectMode) {
+      const selectable = target.closest('table, .glick-callout, .glick-diagram-container, .glick-code-container, .glick-block-wrapper, img, .glick-shape-wrapper, div[style*="border-radius"], div[style*="background"]') as HTMLElement;
+      if (selectable && selectable !== contentRef.current) {
+        e.preventDefault();
+        e.stopPropagation();
+        setSelectedInspectEl(selectable);
+        updateInspectBounds(selectable);
+        return;
+      } else {
+        setSelectedInspectEl(null);
+        setInspectBounds(null);
+      }
+    }
+
     // 1. Delete Block Button Click ([✕])
     const deleteBtn = target.closest('[data-action="delete-block"]') as HTMLElement;
     if (deleteBtn) {
@@ -5977,6 +6102,30 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
             )}
           </button>
 
+          {/* 👆 Touch Select & Resize Mode Toggle (Points 1, 2, 4) */}
+          <button 
+            type="button"
+            onMouseDown={handleButtonMouseDown} 
+            onClick={() => {
+              setIsSelectMode(prev => {
+                if (prev) {
+                  setSelectedInspectEl(null);
+                  setInspectBounds(null);
+                }
+                return !prev;
+              });
+            }} 
+            className={`px-3 py-1.5 h-9 rounded-xl flex items-center gap-1.5 shrink-0 font-bold text-xs transition-all cursor-pointer ${
+              isSelectMode 
+                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/25 ring-2 ring-indigo-300 dark:ring-indigo-700' 
+                : 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-800 hover:bg-indigo-100'
+            }`} 
+            title={isSelectMode ? "Exit Select Mode" : "Select & Resize Mode: Tap table or card to drag-resize"}
+          >
+            <MousePointer className="w-4 h-4" />
+            <span>{isSelectMode ? 'Selecting...' : 'Select'}</span>
+          </button>
+
           <div className="w-px h-5 bg-slate-250 dark:bg-slate-800 mx-1 shrink-0" />
 
           {/* Search tool */}
@@ -7979,6 +8128,37 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
               </div>
             )}
 
+            {/* 👆 Select Mode Sticky Banner with Done button (Point 4) */}
+            <AnimatePresence>
+              {isSelectMode && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="sticky top-2 z-45 mx-auto w-fit max-w-[calc(100vw-24px)] mb-3 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl shadow-xl flex items-center gap-3 text-xs font-bold select-none"
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>Select Mode Active</span>
+                  </span>
+                  <span className="text-[11px] opacity-80 hidden sm:inline">
+                    {selectedInspectEl ? 'Touch handle ko pakad kar drag karein' : 'Kisi bhi table ya card par tap karein'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsSelectMode(false);
+                      setSelectedInspectEl(null);
+                      setInspectBounds(null);
+                    }}
+                    className="px-3 py-1 bg-white text-indigo-600 hover:bg-slate-100 rounded-xl text-xs font-black shadow-md cursor-pointer transition active:scale-95"
+                  >
+                    Done ✓
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* Eye-Care Warm Paper Document Sheet */}
             <div className={`note-paper-sheet w-full ${isA4Mode ? 'a4-page-mode' : 'max-w-4xl mx-auto bg-[#fafbfc] dark:bg-[#111726] rounded-2xl md:rounded-3xl border border-slate-200/70 dark:border-slate-800/80 shadow-[0_2px_16px_rgba(15,23,42,0.03)] p-4 sm:p-6 md:p-8 lg:p-10 min-h-[calc(100vh-140px)]'} paper-style-${paperStyle} ${paperTone !== 'default' ? `paper-tone-${paperTone}` : ''} transition-all`}>
               
@@ -8106,6 +8286,45 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                       }}
                     />
                   )
+                )}
+                
+                {/* 👆 Interactive Element Selection & Touch Drag Handles (Points 1, 2, 4) */}
+                {isSelectMode && selectedInspectEl && inspectBounds && (
+                  <div
+                    className="glick-element-inspect-overlay pointer-events-none absolute z-40 select-none transition-all duration-75"
+                    style={{
+                      top: `${inspectBounds.top - 4}px`,
+                      left: `${inspectBounds.left - 4}px`,
+                      width: `${inspectBounds.width + 8}px`,
+                      height: `${inspectBounds.height + 8}px`,
+                    }}
+                  >
+                    {/* Glowing Outline Box */}
+                    <div className="w-full h-full rounded-2xl border-2 border-indigo-600 bg-indigo-500/10 shadow-[0_0_0_4px_rgba(99,102,241,0.25)] relative">
+                      {/* Top Tag Badge */}
+                      <div className="absolute -top-3.5 left-3 px-2 py-0.5 bg-indigo-600 text-white font-bold text-[10px] tracking-wider uppercase rounded-md shadow-md flex items-center gap-1 select-none">
+                        <span>🔲 {inspectBounds.title}</span>
+                      </div>
+
+                      {/* Large Right-Side Touch Grab Handle (Point 1 & 2) */}
+                      <div
+                        className="pointer-events-auto absolute -right-4 top-1/2 -translate-y-1/2 w-8 h-12 bg-white dark:bg-slate-800 border-2 border-indigo-600 text-indigo-600 dark:text-indigo-400 rounded-full shadow-2xl flex items-center justify-center cursor-ew-resize active:scale-125 active:bg-indigo-600 active:text-white transition-all select-none touch-none"
+                        onPointerDown={(e) => handleInspectResizeStart(e, 'right')}
+                        title="Touch & drag horizontally to resize width"
+                      >
+                        <ArrowLeftRight className="w-4 h-4" />
+                      </div>
+
+                      {/* Large Bottom-Right Corner Touch Grab Handle (Point 1 & 2) */}
+                      <div
+                        className="pointer-events-auto absolute -right-3.5 -bottom-3.5 w-9 h-9 bg-white dark:bg-slate-800 border-2 border-indigo-600 text-indigo-600 dark:text-indigo-400 rounded-full shadow-2xl flex items-center justify-center cursor-nwse-resize active:scale-125 active:bg-indigo-600 active:text-white transition-all select-none touch-none"
+                        onPointerDown={(e) => handleInspectResizeStart(e, 'corner')}
+                        title="Touch & drag diagonally to resize"
+                      >
+                        <Maximize2 className="w-4 h-4" />
+                      </div>
+                    </div>
+                  </div>
                 )}
                 
                 <div
