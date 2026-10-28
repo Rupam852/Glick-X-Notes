@@ -450,6 +450,18 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   const [inkColor, setInkColor] = useState('#6366f1');
   const [inkWidth, setInkWidth] = useState(3);
   const [showInkShapeMenu, setShowInkShapeMenu] = useState(false);
+
+  useEffect(() => {
+    if (!showInkShapeMenu) return;
+    const handleOutside = (e: PointerEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.glick-ink-shapes-dropdown-container')) {
+        setShowInkShapeMenu(false);
+      }
+    };
+    document.addEventListener('pointerdown', handleOutside);
+    return () => document.removeEventListener('pointerdown', handleOutside);
+  }, [showInkShapeMenu]);
   const [inkStrokes, setInkStrokes] = useState<InkStroke[]>([]);
   const [inkHistory, setInkHistory] = useState<InkStroke[][]>([]);
   const [inkHistoryIndex, setInkHistoryIndex] = useState(-1);
@@ -6877,13 +6889,14 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
             <AnimatePresence>
               {isInkingMode && (
                 <motion.div
-                  initial={{ opacity: 0, y: -20, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                  className="glick-floating-inking-bar no-print sticky top-2 z-50 mx-auto w-fit max-w-[98%] mb-4 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-purple-300 dark:border-purple-800 shadow-2xl shadow-purple-500/15 rounded-2xl p-1 sm:p-1.5 flex flex-nowrap items-center gap-1 select-none overflow-visible"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="glick-floating-inking-bar no-print sticky top-2 z-50 mx-auto w-fit max-w-[98%] mb-4 bg-white dark:bg-slate-900 border border-purple-300 dark:border-purple-800 shadow-2xl shadow-purple-500/15 rounded-2xl p-1 sm:p-1.5 flex flex-nowrap items-center gap-1 select-none"
+                  style={{ overflow: 'visible' }}
                 >
                   {/* Tool Selector */}
-                  <div className="flex items-center gap-0.5 sm:gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 sm:p-1 rounded-xl shrink-0">
+                  <div className="flex items-center gap-0.5 sm:gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 sm:p-1 rounded-xl shrink-0" style={{ overflow: 'visible' }}>
                     {/* Select / Move / Resize Tool */}
                     <button
                       type="button"
@@ -6943,7 +6956,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                     </button>
 
                     {/* Categorized Shapes Dropdown Selector */}
-                    <div className="relative shrink-0">
+                    <div className="glick-ink-shapes-dropdown-container relative shrink-0" style={{ overflow: 'visible' }}>
                       <button
                         type="button"
                         onClick={() => setShowInkShapeMenu(prev => !prev)}
@@ -6975,18 +6988,11 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                       </button>
 
                       {showInkShapeMenu && (
-                        <>
-                          <div 
-                            className="fixed inset-0 z-40" 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setShowInkShapeMenu(false);
-                            }} 
-                          />
-                          <div 
-                            onPointerDown={(e) => e.stopPropagation()}
-                            className="absolute top-full left-0 mt-2 p-2 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col gap-2 z-50 min-w-[210px] animate-in fade-in slide-in-from-top-1 duration-150 max-h-[380px] overflow-y-auto no-scrollbar"
-                          >
+                        <div 
+                          onPointerDown={(e) => e.stopPropagation()}
+                          className="absolute top-full left-0 mt-2 p-2 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col gap-2 z-[100] min-w-[210px] animate-in fade-in slide-in-from-top-1 duration-150 max-h-[380px] overflow-y-auto no-scrollbar"
+                          style={{ boxShadow: '0 20px 40px -10px rgba(0,0,0,0.3), 0 0 0 1px rgba(0,0,0,0.1)' }}
+                        >
                           {/* Lines & Arrows */}
                           <div>
                             <p className="px-2 py-0.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Lines & Connectors</p>
@@ -7088,8 +7094,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                             </div>
                           </div>
                         </div>
-                      </>
-                    )}
+                      )}
                     </div>
 
                     {/* Realistic Eraser Tool Button */}
