@@ -104,13 +104,13 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
       <div className="sticky top-4 z-50 px-4 md:px-6 max-w-6xl mx-auto">
         <header className="backdrop-blur-2xl bg-white/85 dark:bg-[#0c1220]/85 border border-slate-200/90 dark:border-slate-800/90 rounded-2xl md:rounded-full px-5 py-3 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.3)] transition-all">
           <div className="flex items-center justify-between">
-            {/* Logo & Brand */}
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-blue-500 p-0.5 shadow-md shadow-indigo-500/20 flex items-center justify-center shrink-0">
-                <div className="w-full h-full bg-white dark:bg-[#080d19] rounded-[10px] flex items-center justify-center p-1 overflow-hidden">
-                  <img src="/favicon.png?v=4" alt="Glick X Notes" className="w-full h-full object-contain filter drop-shadow-[0_1px_3px_rgba(99,102,241,0.25)]" />
-                </div>
-              </div>
+            {/* Logo & Brand - Pure Origami G Structure */}
+            <div className="flex items-center gap-2.5">
+              <img 
+                src="/favicon.png?v=5" 
+                alt="Glick X Notes" 
+                className="w-8 h-8 md:w-9 md:h-9 object-contain filter drop-shadow-[0_2px_8px_rgba(99,102,241,0.35)] shrink-0 select-none" 
+              />
               <span className="text-base md:text-lg font-black tracking-tight bg-gradient-to-r from-slate-900 via-indigo-900 to-slate-800 dark:from-white dark:via-indigo-200 dark:to-slate-200 bg-clip-text text-transparent">
                 Glick X Notes
               </span>
@@ -574,12 +574,12 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
           
           {/* Brand & Author */}
           <div className="flex flex-col sm:flex-row items-center gap-3 text-center sm:text-left">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-600 via-indigo-500 to-blue-500 p-0.5 shadow-sm flex items-center justify-center shrink-0">
-                <div className="w-full h-full bg-white dark:bg-[#080d19] rounded-[6px] flex items-center justify-center p-0.5 overflow-hidden">
-                  <img src="/favicon.png?v=4" alt="Glick X Notes" className="w-full h-full object-contain" />
-                </div>
-              </div>
+            <div className="flex items-center gap-2">
+              <img 
+                src="/favicon.png?v=5" 
+                alt="Glick X Notes" 
+                className="w-6 h-6 object-contain filter drop-shadow-[0_1px_5px_rgba(99,102,241,0.3)] shrink-0 select-none" 
+              />
               <span className="text-sm font-black tracking-tight text-slate-800 dark:text-slate-200">
                 Glick X Notes
               </span>

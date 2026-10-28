@@ -131,8 +131,8 @@ export default function EmailVerification({ onVerified }: EmailVerificationProps
                 style={{ animationDuration: '3s' }} 
               />
               {/* Premium overlapping Brand Logo Badge in corner */}
-              <div className="absolute bottom-1 right-1 w-6.5 h-6.5 bg-slate-50 dark:bg-[#080d19] border border-slate-200 dark:border-slate-700/60 rounded-lg flex items-center justify-center p-0.5 overflow-hidden shadow-md">
-                <img src="/favicon.png?v=4" alt="Glick Logo" className="w-full h-full object-contain" />
+              <div className="absolute bottom-1 right-1 w-6.5 h-6.5 flex items-center justify-center select-none">
+                <img src="/favicon.png?v=5" alt="Glick Logo" className="w-full h-full object-contain filter drop-shadow-[0_1px_4px_rgba(99,102,241,0.35)]" />
               </div>
             </div>
           </div>
