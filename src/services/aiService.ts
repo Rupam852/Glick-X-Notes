@@ -373,7 +373,103 @@ ${noteText}
   return sanitizeAIText(res.text);
 }
 
-// 2. Grammar & Tone Polisher
+/**
+ * Polishes rich HTML content while preserving bold/italic/underline styles,
+ * code blocks, tables, images, callouts, and toggles intact.
+ */
+export async function aiPolishHtml(rawHtml: string, tone: 'professional' | 'casual' | 'concise'): Promise<string> {
+  if (!rawHtml || !rawHtml.trim()) return '';
+
+  const protectedTokens: { [token: string]: string } = {};
+  let tokenCounter = 0;
+
+  // 1. Protect all images (<img ...> and .glick-image-container blocks)
+  let protectedHtml = rawHtml.replace(/<div[^>]*class="[^"]*glick-image-[^"]*"[^>]*>[\s\S]*?<\/div>\s*<\/div>/gi, (match) => {
+    const token = `<!--__GLICK_IMG_BLOCK_${tokenCounter++}__-->`;
+    protectedTokens[token] = match;
+    return token;
+  });
+
+  protectedHtml = protectedHtml.replace(/<img\b[^>]*>/gi, (match) => {
+    const token = `<!--__GLICK_IMG_TAG_${tokenCounter++}__-->`;
+    protectedTokens[token] = match;
+    return token;
+  });
+
+  // 2. Protect entire code block containers (<div ... glick-code-container ...>) and pre/code blocks
+  protectedHtml = protectedHtml.replace(/<div[^>]*class="[^"]*glick-code-container[^"]*"[^>]*>[\s\S]*?<\/pre>\s*<\/div>/gi, (match) => {
+    const token = `<!--__GLICK_CODE_WRAPPER_${tokenCounter++}__-->`;
+    protectedTokens[token] = match;
+    return token;
+  });
+
+  protectedHtml = protectedHtml.replace(/<pre\b[^>]*>[\s\S]*?<\/pre>/gi, (match) => {
+    const token = `<!--__GLICK_CODE_BLOCK_${tokenCounter++}__-->`;
+    protectedTokens[token] = match;
+    return token;
+  });
+
+  // 3. Protect all UI controls with contenteditable="false" (e.g. toggle arrows, corner grips, headers)
+  protectedHtml = protectedHtml.replace(/<(?:div|span|button|svg)\b[^>]*contenteditable=["']false["'][^>]*>[\s\S]*?<\/(?:div|span|button|svg)>/gi, (match) => {
+    const token = `<!--__GLICK_NON_EDITABLE_${tokenCounter++}__-->`;
+    protectedTokens[token] = match;
+    return token;
+  });
+
+  // 4. Protect UI action buttons (e.g. data-action="delete-block" or data-action="copy-code")
+  protectedHtml = protectedHtml.replace(/<button\b[^>]*>[\s\S]*?<\/button>/gi, (match) => {
+    const token = `<!--__GLICK_BTN_BLOCK_${tokenCounter++}__-->`;
+    protectedTokens[token] = match;
+    return token;
+  });
+
+  const prompt = `You are a professional rich-text document editor. Rewrite and polish the text inside the provided HTML in a ${tone.toUpperCase()} tone.
+
+CRITICAL PRESERVATION & STYLING RULES:
+1. PRESERVE ALL FORMATTING TAGS & ATTRIBUTES:
+   - Keep <b>, <strong>, <i>, <em>, <u>, <s>, <mark>, <span ...> tags around their highlighted or bold words/phrases. Do NOT strip bold or italic tags!
+   - Keep all inline styles (style="font-weight: bold; color: ...; font-size: ...") intact.
+   - Keep <details>, <summary>, <table>, <thead>, <tbody>, <tr>, <td>, <th>, <blockquote>, <div class="..."> exactly in their structural positions.
+   - Keep all token comments like <!--__GLICK_...__--> EXACTLY unchanged.
+2. POLISH ONLY THE TEXT CONTENT:
+   - Improve grammar, vocabulary, spelling, and sentence flow inside paragraphs, headings, list items, and table cells.
+   - If a specific phrase was bolded (<b>word</b> or <strong>phrase</strong>), polish the phrasing while keeping the <b> or <strong> tags surrounding it.
+   - Do NOT wrap your response in \`\`\`html or markdown code blocks.
+   - Return clean, well-formed HTML only.
+   - Do NOT output any raw markdown asterisks (*, **), hashes (#), or horizontal rules (---).
+   - Do NOT add introductory or conversational notes.
+
+HTML TO POLISH:
+${protectedHtml}`;
+
+  const res = await executeAICompletion(
+    prompt,
+    `You are an expert HTML note editor. Polish text inside HTML tags in a ${tone} tone. Keep all styling tags (<b>, <strong>, <i>, <u>, <span>, <table>, <details>) and token comments intact without markdown wrappers.`
+  );
+
+  let polished = res.text.trim();
+  // Strip code block fences if returned
+  polished = polished.replace(/^```(?:html)?\s*\n?/i, '').replace(/\n?```$/i, '').trim();
+
+  // If wrapped in full HTML/body tags, extract body content
+  const bodyMatch = polished.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+  if (bodyMatch) {
+    polished = bodyMatch[1].trim();
+  }
+
+  // Convert any accidental markdown formatting into proper HTML
+  polished = polished.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+  polished = polished.replace(/(^|[^\*])\*([^*\n]+)\*([^\*]|$)/g, '$1<i>$2</i>$3');
+
+  // Restore protected tokens
+  for (const [token, original] of Object.entries(protectedTokens)) {
+    polished = polished.split(token).join(original);
+  }
+
+  return polished;
+}
+
+// 2. Grammar & Tone Polisher (Plain Text fallback)
 export async function aiPolishText(noteText: string, tone: 'professional' | 'casual' | 'concise'): Promise<string> {
   const prompt = `Rewrite and polish the following note text in a ${tone.toUpperCase()} tone. Fix all spelling, punctuation, and grammar mistakes while preserving all core facts and meaning.
 

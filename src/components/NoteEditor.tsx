@@ -177,6 +177,39 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
 
   // --- NEW FEATURES STATES ---
   const [showAIDrawer, setShowAIDrawer] = useState(false);
+  const [selectedTextForAI, setSelectedTextForAI] = useState('');
+  const [selectedHtmlForAI, setSelectedHtmlForAI] = useState('');
+
+  const handleOpenAIDrawer = () => {
+    let selText = '';
+    let selHtml = '';
+
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0 && contentRef.current) {
+      const range = sel.getRangeAt(0);
+      if (contentRef.current.contains(range.commonAncestorContainer) && !range.collapsed) {
+        selText = sel.toString().trim();
+        const div = document.createElement('div');
+        div.appendChild(range.cloneContents());
+        selHtml = div.innerHTML;
+        savedSelectionRef.current = range.cloneRange();
+      }
+    }
+
+    if (!selHtml && savedSelectionRef.current && contentRef.current) {
+      if (contentRef.current.contains(savedSelectionRef.current.commonAncestorContainer) && !savedSelectionRef.current.collapsed) {
+        const cloned = savedSelectionRef.current.cloneContents();
+        const div = document.createElement('div');
+        div.appendChild(cloned);
+        selHtml = div.innerHTML;
+        selText = div.textContent || '';
+      }
+    }
+
+    setSelectedTextForAI(selText);
+    setSelectedHtmlForAI(selHtml);
+    setShowAIDrawer(true);
+  };
   const [showExportModal, setShowExportModal] = useState(false);
   const [showVoiceModal, setShowVoiceModal] = useState(false);
   const [isDictating, setIsDictating] = useState(false);
@@ -1589,7 +1622,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
 
     switch (cmdId) {
       case 'ai':
-        setShowAIDrawer(true);
+        handleOpenAIDrawer();
         break;
       case 'todo':
         handleChecklist();
@@ -3353,7 +3386,11 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
             {/* AI Assistant Button */}
             <button
               type="button"
-              onClick={() => setShowAIDrawer(true)}
+              onMouseDown={() => {
+                const sel = saveSelection(contentRef.current);
+                if (sel) savedSelectionRef.current = sel;
+              }}
+              onClick={handleOpenAIDrawer}
               className="px-2 md:px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white text-xs font-bold transition-all shadow-sm hover:shadow-indigo-500/20 flex items-center gap-1.5 cursor-pointer shrink-0"
               title="Open AI Assistant (Summarize, Polish, Title & Tags, Chat)"
             >
@@ -4462,6 +4499,9 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         onClose={() => setShowAIDrawer(false)}
         noteTitle={title}
         noteText={(title ? title + '\n\n' : '') + extractTextFromHtml(body)}
+        noteHtml={contentRef.current ? contentRef.current.innerHTML : body}
+        selectedText={selectedTextForAI}
+        selectedHtml={selectedHtmlForAI}
         onApplyTitle={(newTitle) => setTitle(newTitle)}
         onApplyTags={(newTags) => {
           const currentTagsList = tags ? tags.split(',').map(t => t.trim().toLowerCase()).filter(Boolean) : [];
@@ -4471,18 +4511,53 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         onInsertText={(text) => {
           if (contentRef.current) {
             contentRef.current.innerHTML += text.replace(/\n/g, '<br/>');
+            upgradeLegacyBlocks(contentRef.current);
             const html = contentRef.current.innerHTML;
             latestContent.current = html;
             setBody(html);
             pushToHistory(html);
           }
         }}
+        onReplaceSelection={(replacementHtml) => {
+          if (!contentRef.current) return;
+          contentRef.current.focus();
+          if (savedSelectionRef.current) {
+            restoreSelection(savedSelectionRef.current);
+            const sel = window.getSelection();
+            if (sel && sel.rangeCount > 0) {
+              const range = sel.getRangeAt(0);
+              range.deleteContents();
+              const template = document.createElement('template');
+              template.innerHTML = replacementHtml;
+              const frag = template.content;
+              const lastNode = frag.lastChild;
+              range.insertNode(frag);
+              if (lastNode) {
+                const newRange = document.createRange();
+                newRange.setStartAfter(lastNode);
+                newRange.collapse(true);
+                sel.removeAllRanges();
+                sel.addRange(newRange);
+                savedSelectionRef.current = newRange.cloneRange();
+              }
+            }
+          } else {
+            contentRef.current.innerHTML += replacementHtml;
+          }
+          upgradeLegacyBlocks(contentRef.current);
+          const html = contentRef.current.innerHTML;
+          latestContent.current = html;
+          setBody(html);
+          pushToHistory(html);
+        }}
         onReplaceContent={(newHtml) => {
           if (contentRef.current) {
             contentRef.current.innerHTML = newHtml;
-            latestContent.current = newHtml;
-            setBody(newHtml);
-            pushToHistory(newHtml);
+            upgradeLegacyBlocks(contentRef.current);
+            const html = contentRef.current.innerHTML;
+            latestContent.current = html;
+            setBody(html);
+            pushToHistory(html);
           }
         }}
       />

@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  aiSummarizeNote, aiPolishText, aiSuggestTitleAndTags, aiAskAboutNote,
+  aiSummarizeNote, aiPolishText, aiPolishHtml, aiSuggestTitleAndTags, aiAskAboutNote,
   formatAITextToEditorHtml, sanitizeAIText
 } from '../services/aiService';
 import { useToast } from '../contexts/ToastContext';
@@ -15,10 +15,14 @@ interface AIAssistantDrawerProps {
   onClose: () => void;
   noteTitle: string;
   noteText: string;
+  noteHtml?: string;
+  selectedText?: string;
+  selectedHtml?: string;
   onApplyTitle: (newTitle: string) => void;
   onApplyTags: (newTags: string[]) => void;
   onInsertText: (text: string) => void;
   onReplaceContent?: (newHtml: string) => void;
+  onReplaceSelection?: (newHtml: string) => void;
 }
 
 export default function AIAssistantDrawer({
@@ -26,10 +30,14 @@ export default function AIAssistantDrawer({
   onClose,
   noteTitle,
   noteText,
+  noteHtml,
+  selectedText,
+  selectedHtml,
   onApplyTitle,
   onApplyTags,
   onInsertText,
-  onReplaceContent
+  onReplaceContent,
+  onReplaceSelection
 }: AIAssistantDrawerProps) {
   const { showToast } = useToast();
 
@@ -42,6 +50,17 @@ export default function AIAssistantDrawer({
   const [selectedTone, setSelectedTone] = useState<'professional' | 'casual' | 'concise'>('professional');
   const [loadingPolish, setLoadingPolish] = useState(false);
   const [polishResult, setPolishResult] = useState<string | null>(null);
+
+  const hasSelection = Boolean((selectedHtml && selectedHtml.trim()) || (selectedText && selectedText.trim()));
+  const [polishScope, setPolishScope] = useState<'selection' | 'full'>('full');
+
+  React.useEffect(() => {
+    if (hasSelection) {
+      setPolishScope('selection');
+    } else {
+      setPolishScope('full');
+    }
+  }, [hasSelection, isOpen]);
 
   const [loadingMeta, setLoadingMeta] = useState(false);
   const [suggestedMeta, setSuggestedMeta] = useState<{ title: string; tags: string[] } | null>(null);
@@ -79,20 +98,31 @@ export default function AIAssistantDrawer({
     }
   };
 
-  // 2. Polish Text
+  // 2. Polish Text with Bold, Styles, and Snippets 100% Preserved
   const handlePolish = async () => {
-    if (!noteText.trim()) {
-      showToast('Note is empty! Write some content first.', 'error');
+    const isSelection = polishScope === 'selection' && hasSelection;
+    const targetHtml = isSelection ? (selectedHtml || selectedText || '') : (noteHtml || noteText || '');
+    const plainFallback = isSelection ? (selectedText || '') : (noteText || '');
+
+    if (!targetHtml.trim() && !plainFallback.trim()) {
+      showToast('No content to polish! Write or select some text first.', 'error');
       return;
     }
+
     setLoadingPolish(true);
     setPolishResult(null);
     try {
-      const polished = await aiPolishText(noteText, selectedTone);
+      const polished = await aiPolishHtml(targetHtml || plainFallback, selectedTone);
       setPolishResult(polished);
-      showToast(`Polished in ${selectedTone} tone!`, 'success');
+      showToast(`Polished in ${selectedTone} tone with styles & snippets preserved!`, 'success');
     } catch (err: any) {
-      showToast(err.message || 'Failed to polish text', 'error');
+      try {
+        const fallback = await aiPolishText(plainFallback, selectedTone);
+        setPolishResult(fallback);
+        showToast(`Polished text in ${selectedTone} tone!`, 'success');
+      } catch (innerErr: any) {
+        showToast(err.message || 'Failed to polish text', 'error');
+      }
     } finally {
       setLoadingPolish(false);
     }
@@ -291,22 +321,50 @@ export default function AIAssistantDrawer({
               )}
             </div>
 
-            {/* TOOL 3: GRAMMAR & TONE POLISHER */}
+            {/* TOOL 3: GRAMMAR, STYLE & SNIPPET POLISHER */}
             <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Wand2 className="w-4 h-4 text-emerald-500" />
-                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Grammar & Tone Polisher</span>
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Polish & Fix Style</span>
                 </div>
                 <button
                   onClick={handlePolish}
                   disabled={loadingPolish}
-                  className="px-2.5 py-1 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition flex items-center gap-1 shadow-xs"
+                  className="px-2.5 py-1 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition flex items-center gap-1 shadow-xs cursor-pointer"
                 >
                   {loadingPolish ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-                  Polish
+                  {polishScope === 'selection' && hasSelection ? 'Polish Selection' : 'Polish Note'}
                 </button>
               </div>
+
+              {/* Scope Selector (Only visible if editor has text or snippet selected) */}
+              {hasSelection && (
+                <div className="flex items-center gap-1.5 p-1 bg-slate-200/60 dark:bg-slate-950/60 rounded-lg text-xs">
+                  <button
+                    type="button"
+                    onClick={() => { setPolishScope('selection'); setPolishResult(null); }}
+                    className={`flex-1 py-1 px-2 rounded-md font-bold text-[11px] transition ${
+                      polishScope === 'selection'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    ✨ Selected Snippet
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setPolishScope('full'); setPolishResult(null); }}
+                    className={`flex-1 py-1 px-2 rounded-md font-bold text-[11px] transition ${
+                      polishScope === 'full'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    📄 Full Note
+                  </button>
+                </div>
+              )}
 
               {/* Tone Selector */}
               <div className="grid grid-cols-3 gap-1.5">
@@ -314,7 +372,7 @@ export default function AIAssistantDrawer({
                   <button
                     key={tone}
                     onClick={() => setSelectedTone(tone)}
-                    className={`py-1 text-[11px] font-semibold rounded-md capitalize transition ${
+                    className={`py-1 text-[11px] font-semibold rounded-md capitalize transition cursor-pointer ${
                       selectedTone === tone
                         ? 'bg-emerald-600 text-white'
                         : 'bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400'
@@ -327,26 +385,52 @@ export default function AIAssistantDrawer({
 
               {polishResult && (
                 <div className="p-3 rounded-lg bg-white dark:bg-slate-950 border border-emerald-200 dark:border-emerald-900/50 space-y-2 text-xs">
-                  <div className="text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto">
-                    {polishResult}
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] uppercase font-bold text-slate-400">Preview (Bolds & Snippets Intact)</span>
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">Ready to apply</span>
                   </div>
-                  <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                  
+                  {/* Rendered HTML preview preserving bold styles, tables, code, and snippets */}
+                  <div 
+                    className="text-slate-800 dark:text-slate-200 leading-relaxed max-h-52 overflow-y-auto p-2.5 rounded-md bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800/60 text-xs"
+                    dangerouslySetInnerHTML={{ __html: polishResult }}
+                  />
+
+                  <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
                     <button
-                      onClick={() => handleCopy(polishResult, 'Polished text')}
-                      className="flex-1 py-1 px-2 border border-slate-200 dark:border-slate-800 rounded-md text-[11px] font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 flex items-center justify-center gap-1"
+                      onClick={() => {
+                        const temp = document.createElement('div');
+                        temp.innerHTML = polishResult;
+                        handleCopy(temp.textContent || temp.innerText || polishResult, 'Polished text');
+                      }}
+                      className="flex-1 py-1 px-2 border border-slate-200 dark:border-slate-800 rounded-md text-[11px] font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 flex items-center justify-center gap-1 cursor-pointer"
                     >
                       <Copy className="w-3 h-3" /> Copy
                     </button>
+
+                    {polishScope === 'selection' && hasSelection && onReplaceSelection && (
+                      <button
+                        onClick={() => {
+                          onReplaceSelection(polishResult);
+                          onClose();
+                          showToast('Replaced selected snippet with polished version!', 'success');
+                        }}
+                        className="flex-1 py-1 px-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-[11px] font-bold flex items-center justify-center gap-1 cursor-pointer shadow-xs"
+                      >
+                        <Check className="w-3 h-3" /> Replace Selection
+                      </button>
+                    )}
+
                     {onReplaceContent && (
                       <button
                         onClick={() => {
-                          const html = formatAITextToEditorHtml(polishResult);
-                          onReplaceContent(html);
-                          showToast('Replaced note with clean polished version!', 'success');
+                          onReplaceContent(polishResult);
+                          onClose();
+                          showToast('Replaced note with polished version (styles intact)!', 'success');
                         }}
-                        className="flex-1 py-1 px-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-[11px] font-semibold flex items-center justify-center gap-1"
+                        className="flex-1 py-1 px-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-[11px] font-bold flex items-center justify-center gap-1 cursor-pointer shadow-xs"
                       >
-                        <Check className="w-3 h-3" /> Replace Note
+                        <Check className="w-3 h-3" /> {polishScope === 'selection' && hasSelection ? 'Replace All' : 'Replace Note'}
                       </button>
                     )}
                   </div>
