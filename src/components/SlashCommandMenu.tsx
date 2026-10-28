@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   CheckSquare, Heading1, Heading2, Heading3, Code, 
   Lightbulb, AlertTriangle, Target, ChevronRight, Table, 
-  Sparkles, Quote, List, Image as ImageIcon
+  Sparkles, Quote, List, Image as ImageIcon, GitFork, Sigma, Minus
 } from 'lucide-react';
 
 export interface SlashCommandItem {
@@ -131,6 +131,27 @@ export default function SlashCommandMenu({
       desc: 'Insert photo directly into note',
       icon: <ImageIcon className="w-4 h-4 text-emerald-500" />,
       keywords: ['image', 'photo', 'picture', 'upload', 'camera', 'pic']
+    },
+    {
+      id: 'diagram',
+      label: 'Flowchart / Mermaid Diagram',
+      desc: 'Visual flowchart, sequence or mindmap',
+      icon: <GitFork className="w-4 h-4 text-sky-500" />,
+      keywords: ['mermaid', 'diagram', 'flowchart', 'mindmap', 'chart', 'sequence']
+    },
+    {
+      id: 'math',
+      label: 'LaTeX Math Formula',
+      desc: 'Equations, fractions and scientific formulas',
+      icon: <Sigma className="w-4 h-4 text-indigo-500" />,
+      keywords: ['math', 'latex', 'formula', 'equation', 'science', 'sum', 'integral', 'fraction']
+    },
+    {
+      id: 'divider',
+      label: 'Decorative Divider',
+      desc: 'Gradient fade, star break or dotted line',
+      icon: <Minus className="w-4 h-4 text-purple-500" />,
+      keywords: ['divider', 'hr', 'line', 'separator', 'break']
     }
   ];
 

@@ -23,6 +23,9 @@ import ExportModal from './ExportModal';
 import VoiceDictationModal from './VoiceDictationModal';
 import { voiceDictation, audioReader } from '../utils/audioTools';
 import { convertMarkdownBadgesAndLinksToHtml } from '../services/aiService';
+import MermaidModal from './MermaidModal';
+import MathFormulaModal from './MathFormulaModal';
+import { GitFork, Sigma } from 'lucide-react';
 
 interface NoteEditorProps {
   user: FirebaseUser;
@@ -222,9 +225,28 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   const [slashMenuPos, setSlashMenuPos] = useState({ top: 0, left: 0 });
   const [slashQuery, setSlashQuery] = useState('');
 
-  const [activePopup, setActivePopup] = useState<'text' | 'paragraph' | 'table' | 'tableActions' | 'link' | null>(null);
+  const [activePopup, setActivePopup] = useState<'text' | 'paragraph' | 'table' | 'tableActions' | 'link' | 'highlighter' | 'divider' | null>(null);
 
-  const togglePopup = (popupName: 'text' | 'paragraph' | 'table' | 'tableActions' | 'link' | null) => {
+  // Mermaid Flowchart & Math Formula States
+  const [showMermaidModal, setShowMermaidModal] = useState(false);
+  const [editingDiagramEl, setEditingDiagramEl] = useState<HTMLElement | null>(null);
+  const [initialDiagramCode, setInitialDiagramCode] = useState('');
+
+  const [showMathModal, setShowMathModal] = useState(false);
+  const [editingMathEl, setEditingMathEl] = useState<HTMLElement | null>(null);
+  const [initialMathLatex, setInitialMathLatex] = useState('');
+
+  // 🎨 Pastel Highlight Palette definition
+  const PASTEL_HIGHLIGHT_COLORS = [
+    { name: 'Soft Lemon', value: '#fef08a', colorName: 'Lemon' },
+    { name: 'Mint Green', value: '#bbf7d0', colorName: 'Mint' },
+    { name: 'Ice Blue', value: '#bfdbfe', colorName: 'Ice Blue' },
+    { name: 'Soft Lavender', value: '#e9d5ff', colorName: 'Lavender' },
+    { name: 'Peach Nectar', value: '#fed7aa', colorName: 'Peach' },
+    { name: 'Rose Blush', value: '#fbcfe8', colorName: 'Rose' }
+  ];
+
+  const togglePopup = (popupName: 'text' | 'paragraph' | 'table' | 'tableActions' | 'link' | 'highlighter' | 'divider' | null) => {
     setActivePopup(current => {
       const next = current === popupName ? null : popupName;
       if (next) {
@@ -1560,6 +1582,136 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     showToast('Inserted collapsible toggle', 'success');
   };
 
+  // --- MERMAID FLOWCHART & DIAGRAM HANDLERS ---
+  const handleOpenMermaidModal = (existingEl?: HTMLElement, rawCode?: string) => {
+    if (existingEl) {
+      setEditingDiagramEl(existingEl);
+      setInitialDiagramCode(rawCode || '');
+    } else {
+      setEditingDiagramEl(null);
+      setInitialDiagramCode('');
+    }
+    setShowMermaidModal(true);
+  };
+
+  const handleInsertDiagram = (code: string, svg: string) => {
+    const escapedCode = encodeURIComponent(code);
+    const diagramHtml = `
+      <div class="glick-block-wrapper glick-diagram-container" data-diagram-code="${escapedCode}" style="margin: 16px 0; border-radius: 14px; overflow: hidden; border: 1px solid #334155; background: #0f172a; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+        <div contenteditable="false" style="display: flex; align-items: center; justify-content: space-between; padding: 6px 12px; background: #1e293b; border-bottom: 1px solid #334155; user-select: none;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span style="font-size: 13px;">🔀</span>
+            <span style="font-size: 11px; font-weight: 700; color: #38bdf8; font-family: monospace; letter-spacing: 0.5px;">DIAGRAM & FLOWCHART</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <button type="button" data-action="copy-diagram" title="Copy Diagram SVG" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #cbd5e1; font-size: 11px; padding: 2px 8px; border-radius: 6px; cursor: pointer;">📋 Copy</button>
+            <button type="button" data-action="edit-diagram" title="Edit Diagram" style="background: rgba(56,189,248,0.15); border: 1px solid rgba(56,189,248,0.3); color: #7dd3fc; font-size: 11px; padding: 2px 8px; border-radius: 6px; cursor: pointer;">✏️ Edit</button>
+            <button type="button" data-action="delete-block" title="Delete Diagram" style="background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; font-size: 11px; padding: 2px 8px; border-radius: 6px; cursor: pointer;">✕ Delete</button>
+          </div>
+        </div>
+        <div class="glick-diagram-render" style="padding: 16px; display: flex; justify-content: center; background: #ffffff; overflow-x: auto;">
+          ${svg}
+        </div>
+      </div>
+      <p><br/></p>
+    `;
+
+    if (editingDiagramEl) {
+      editingDiagramEl.outerHTML = diagramHtml;
+      setEditingDiagramEl(null);
+      showToast('Diagram updated successfully!', 'success');
+    } else {
+      ensureSelectionInsideEditor(true);
+      document.execCommand('insertHTML', false, diagramHtml);
+      showToast('Flowchart / Diagram inserted into note!', 'success');
+    }
+
+    if (contentRef.current) {
+      upgradeLegacyBlocks(contentRef.current);
+      const h = contentRef.current.innerHTML;
+      latestContent.current = h;
+      setBody(h);
+      pushToHistory(h);
+    }
+  };
+
+  // --- LATEX MATH FORMULA HANDLERS ---
+  const handleOpenMathModal = (existingEl?: HTMLElement, rawLatex?: string) => {
+    if (existingEl) {
+      setEditingMathEl(existingEl);
+      setInitialMathLatex(rawLatex || '');
+    } else {
+      setEditingMathEl(null);
+      setInitialMathLatex('');
+    }
+    setShowMathModal(true);
+  };
+
+  const handleInsertMath = (latex: string, renderedHtml: string) => {
+    const escapedLatex = encodeURIComponent(latex);
+    const mathBlockHtml = `
+      <div class="glick-block-wrapper glick-math-container" data-math-latex="${escapedLatex}" style="margin: 14px 0; border-radius: 12px; overflow: hidden; border: 1px solid rgba(99, 102, 241, 0.25); background: rgba(99, 102, 241, 0.04); box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <div contenteditable="false" style="display: flex; align-items: center; justify-content: space-between; padding: 5px 12px; background: rgba(99, 102, 241, 0.09); border-bottom: 1px solid rgba(99, 102, 241, 0.15); user-select: none;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span style="font-weight: 900; color: #6366f1; font-size: 13px;">∑</span>
+            <span style="font-size: 10.5px; font-weight: 700; color: #6366f1; font-family: monospace; letter-spacing: 0.5px;">MATH EQUATION</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <button type="button" data-action="copy-latex" title="Copy LaTeX Formula" style="background: rgba(255,255,255,0.8); border: 1px solid rgba(99,102,241,0.25); color: #4338ca; font-size: 11px; padding: 2px 8px; border-radius: 6px; cursor: pointer;">📋 Copy</button>
+            <button type="button" data-action="edit-math" title="Edit Formula" style="background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3); color: #6366f1; font-size: 11px; padding: 2px 8px; border-radius: 6px; cursor: pointer;">✏️ Edit</button>
+            <button type="button" data-action="delete-block" title="Delete Formula" style="background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: #dc2626; font-size: 11px; padding: 2px 8px; border-radius: 6px; cursor: pointer;">✕ Delete</button>
+          </div>
+        </div>
+        <div class="glick-math-render" style="padding: 14px 18px; display: flex; justify-content: center; overflow-x: auto; font-size: 18px;">
+          ${renderedHtml}
+        </div>
+      </div>
+      <p><br/></p>
+    `;
+
+    if (editingMathEl) {
+      editingMathEl.outerHTML = mathBlockHtml;
+      setEditingMathEl(null);
+      showToast('Math formula updated!', 'success');
+    } else {
+      ensureSelectionInsideEditor(true);
+      document.execCommand('insertHTML', false, mathBlockHtml);
+      showToast('LaTeX formula inserted into note!', 'success');
+    }
+
+    if (contentRef.current) {
+      upgradeLegacyBlocks(contentRef.current);
+      const h = contentRef.current.innerHTML;
+      latestContent.current = h;
+      setBody(h);
+      pushToHistory(h);
+    }
+  };
+
+  // --- AESTHETIC DECORATIVE DIVIDERS ---
+  const handleInsertDivider = (type: 'gradient' | 'stars' | 'dots' | 'line') => {
+    let dividerHtml = '';
+    if (type === 'gradient') {
+      dividerHtml = '<div class="glick-block-wrapper" style="margin: 24px 0; height: 2px; background: linear-gradient(90deg, transparent, #6366f1, transparent); border-radius: 2px;"></div><p><br/></p>';
+    } else if (type === 'stars') {
+      dividerHtml = '<div class="glick-block-wrapper" style="text-align: center; margin: 24px 0; color: #818cf8; font-size: 16px; letter-spacing: 14px; user-select: none;">✦ ✦ ✦</div><p><br/></p>';
+    } else if (type === 'dots') {
+      dividerHtml = '<div class="glick-block-wrapper" style="border-top: 2px dashed #94a3b8; margin: 24px 0; opacity: 0.5;"></div><p><br/></p>';
+    } else {
+      dividerHtml = '<hr class="glick-block-wrapper" style="border: none; border-top: 1px solid #cbd5e1; margin: 24px 0;" /><p><br/></p>';
+    }
+    ensureSelectionInsideEditor(true);
+    document.execCommand('insertHTML', false, dividerHtml);
+    togglePopup(null);
+    if (contentRef.current) {
+      const h = contentRef.current.innerHTML;
+      latestContent.current = h;
+      setBody(h);
+      pushToHistory(h);
+    }
+    showToast('Aesthetic divider added!', 'success');
+  };
+
   // --- AUDIO TOOLS (DICTATION & READER) ---
   const toggleVoiceDictation = () => {
     if (!voiceDictation.isSupported()) {
@@ -1677,6 +1829,15 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         break;
       case 'image':
         document.getElementById('image-upload')?.click();
+        break;
+      case 'diagram':
+        handleOpenMermaidModal();
+        break;
+      case 'math':
+        handleOpenMathModal();
+        break;
+      case 'divider':
+        togglePopup('divider');
         break;
       default:
         break;
@@ -2110,7 +2271,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     if (deleteBtn) {
       e.preventDefault();
       e.stopPropagation();
-      const block = deleteBtn.closest('.glick-block-wrapper, .glick-callout, .glick-code-container, details, table');
+      const block = deleteBtn.closest('.glick-block-wrapper, .glick-callout, .glick-code-container, .glick-diagram-container, .glick-math-container, .glick-divider-block, details, table');
       if (block) {
         let targetP = (block.nextElementSibling || block.previousElementSibling) as HTMLElement;
         if (!targetP || (targetP.nodeName !== 'P' && targetP.nodeName !== 'DIV')) {
@@ -2161,7 +2322,77 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       return;
     }
 
-    // 3. Link click
+    // 3. Diagram actions: Copy & Edit
+    const copyDiagramBtn = target.closest('[data-action="copy-diagram"]') as HTMLElement;
+    if (copyDiagramBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      const container = copyDiagramBtn.closest('.glick-diagram-container');
+      const rawCode = container?.getAttribute('data-diagram-code');
+      const textToCopy = rawCode ? decodeURIComponent(rawCode) : '';
+      if (textToCopy) {
+        navigator.clipboard.writeText(textToCopy);
+        const originalText = copyDiagramBtn.innerHTML;
+        copyDiagramBtn.innerHTML = '✓ Copied!';
+        setTimeout(() => {
+          copyDiagramBtn.innerHTML = originalText;
+        }, 2000);
+        showToast('Diagram code copied!', 'success');
+      }
+      return;
+    }
+
+    const editDiagramBtn = target.closest('[data-action="edit-diagram"]') as HTMLElement;
+    if (editDiagramBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      const container = editDiagramBtn.closest('.glick-diagram-container') as HTMLElement;
+      if (container) {
+        const rawCode = container.getAttribute('data-diagram-code');
+        const code = rawCode ? decodeURIComponent(rawCode) : '';
+        setEditingDiagramEl(container);
+        setInitialDiagramCode(code);
+        setShowMermaidModal(true);
+      }
+      return;
+    }
+
+    // 4. Math formula actions: Copy & Edit
+    const copyLatexBtn = target.closest('[data-action="copy-latex"]') as HTMLElement;
+    if (copyLatexBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      const container = copyLatexBtn.closest('.glick-math-container');
+      const rawLatex = container?.getAttribute('data-math-latex');
+      const textToCopy = rawLatex ? decodeURIComponent(rawLatex) : '';
+      if (textToCopy) {
+        navigator.clipboard.writeText(textToCopy);
+        const originalText = copyLatexBtn.innerHTML;
+        copyLatexBtn.innerHTML = '✓ Copied!';
+        setTimeout(() => {
+          copyLatexBtn.innerHTML = originalText;
+        }, 2000);
+        showToast('LaTeX formula copied!', 'success');
+      }
+      return;
+    }
+
+    const editMathBtn = target.closest('[data-action="edit-math"]') as HTMLElement;
+    if (editMathBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      const container = editMathBtn.closest('.glick-math-container') as HTMLElement;
+      if (container) {
+        const rawLatex = container.getAttribute('data-math-latex');
+        const latex = rawLatex ? decodeURIComponent(rawLatex) : '';
+        setEditingMathEl(container);
+        setInitialMathLatex(latex);
+        setShowMathModal(true);
+      }
+      return;
+    }
+
+    // 5. Link click
     const anchor = target.closest('a');
     if (anchor) {
       e.preventDefault();
@@ -3554,6 +3785,21 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
             <AlignLeft className="w-5 h-5" />
           </button>
 
+          {/* 🎨 Quick Pastel Highlighter Pen (Color Palette) */}
+          <button 
+            type="button"
+            onMouseDown={handleButtonMouseDown} 
+            onClick={() => togglePopup('highlighter')} 
+            className={`p-2 w-9 h-9 rounded-xl flex flex-col items-center justify-center shrink-0 transition-all relative ${activePopup === 'highlighter' ? 'bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'}`} 
+            title="Pastel Highlighter Pen (Quick Palette)"
+          >
+            <Highlighter className="w-4 h-4" />
+            <span 
+              className="w-3.5 h-1 rounded-full mt-0.5 shadow-xs" 
+              style={{ backgroundColor: selectedHighlightColor === 'transparent' ? '#cbd5e1' : selectedHighlightColor }} 
+            />
+          </button>
+
           <div className="w-px h-5 bg-slate-250 dark:bg-slate-800 mx-1 shrink-0" />
 
           {/* Heading Blocks */}
@@ -3730,8 +3976,39 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
           >
             <ChevronRight className="w-5 h-5" />
           </button>
-          
 
+          {/* 📊 Mermaid Flowchart & Mindmap Visualizer */}
+          <button 
+            type="button"
+            onMouseDown={handleButtonMouseDown} 
+            onClick={() => handleOpenMermaidModal()} 
+            className="p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-indigo-600 transition-all" 
+            title="Insert Mermaid Flowchart / Mindmap (🔀)"
+          >
+            <GitFork className="w-5 h-5" />
+          </button>
+
+          {/* ∑ LaTeX / Math Formula Editor */}
+          <button 
+            type="button"
+            onMouseDown={handleButtonMouseDown} 
+            onClick={() => handleOpenMathModal()} 
+            className="p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-indigo-600 transition-all font-serif font-black text-base" 
+            title="Insert LaTeX / Math Formula (∑)"
+          >
+            ∑
+          </button>
+
+          {/* ⎯ Aesthetic Decorative Divider */}
+          <button 
+            type="button"
+            onMouseDown={handleButtonMouseDown} 
+            onClick={() => togglePopup(activePopup === 'divider' ? null : 'divider')} 
+            className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-all ${activePopup === 'divider' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} 
+            title="Insert Aesthetic Divider (⎯)"
+          >
+            <Minus className="w-5 h-5" />
+          </button>
 
           <div className="w-px h-5 bg-slate-250 dark:bg-slate-800 mx-1 shrink-0" />
 
@@ -3739,6 +4016,16 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
           <button onMouseDown={handleButtonMouseDown} onClick={() => setShowFindReplace(prev => !prev)} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-colors ${showFindReplace ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Find and Replace">
             <Search className="w-5 h-5" />
           </button>
+
+          {/* ⏱️ Live Reading Time & Word Count Pill */}
+          <div 
+            className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 text-[11px] font-semibold text-slate-500 dark:text-slate-400 select-none shrink-0 border border-slate-200/50 dark:border-slate-700/50 ml-auto"
+            title="Live note statistics"
+          >
+            <span>⏱️ {readingTime || 1} min read</span>
+            <span className="text-slate-350 dark:text-slate-600">·</span>
+            <span>{wordCount} words</span>
+          </div>
 
           <input type="file" id="image-upload" className="hidden" accept="image/*" onChange={handleImageUpload} />
         </div>
@@ -4111,6 +4398,112 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                   <p className="text-xs font-bold text-emerald-900 dark:text-emerald-200 mt-1">Goal Box</p>
                   <p className="text-[10px] text-emerald-700/70 dark:text-emerald-400">Targets and milestones</p>
                 </button>
+              </div>
+            </motion.div>
+          )}
+
+          {activePopup === 'highlighter' && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 absolute top-full left-0 w-full z-30 shadow-xl p-4">
+              <div className="max-w-md mx-auto space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <Highlighter className="w-3.5 h-3.5 text-amber-500" /> Quick Pastel Highlighter Pen
+                  </p>
+                  <span className="text-[10px] text-slate-400">Select text and click marker</span>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {PASTEL_HIGHLIGHT_COLORS.map(c => {
+                    const isSelected = selectedHighlightColor.toLowerCase() === c.value.toLowerCase();
+                    return (
+                      <button
+                        key={c.name}
+                        type="button"
+                        onMouseDown={handleButtonMouseDown}
+                        onClick={() => {
+                          handleHighlightColor(c.value);
+                          setActivePopup(null);
+                        }}
+                        className={`group flex items-center gap-1.5 px-3 py-1.5 rounded-xl border hover:scale-105 active:scale-95 transition-all text-xs font-medium cursor-pointer shadow-xs ${isSelected ? 'ring-2 ring-indigo-500 font-bold border-indigo-400' : 'border-slate-200/80 dark:border-slate-700/80'}`}
+                        style={{ backgroundColor: c.value, color: '#1e293b' }}
+                        title={`Highlight with ${c.name}`}
+                      >
+                        <span className="w-2.5 h-2.5 rounded-full border border-black/15 shrink-0" style={{ backgroundColor: c.value }} />
+                        <span className="text-[11px] font-semibold">{c.name}</span>
+                      </button>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    onMouseDown={handleButtonMouseDown}
+                    onClick={() => {
+                      handleHighlightColor('transparent');
+                      setActivePopup(null);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 text-slate-600 dark:text-slate-300 text-xs font-medium cursor-pointer shadow-xs"
+                    title="Remove highlight"
+                  >
+                    <Eraser className="w-3.5 h-3.5 text-rose-500" />
+                    <span className="text-[11px]">Clear</span>
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {activePopup === 'divider' && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 absolute top-full left-0 w-full z-30 shadow-xl p-4">
+              <div className="max-w-xl mx-auto space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <Minus className="w-3.5 h-3.5 text-indigo-500" /> Aesthetic Decorative Dividers
+                  </p>
+                  <span className="text-[10px] text-slate-400">Click to insert into note</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  <button
+                    type="button"
+                    onMouseDown={handleButtonMouseDown}
+                    onClick={() => { handleInsertDivider('gradient'); setActivePopup(null); }}
+                    className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-600 bg-slate-50/50 dark:bg-slate-800/40 text-left transition hover:scale-102 cursor-pointer flex flex-col justify-between h-20"
+                  >
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-200">Gradient Fade</span>
+                    <div className="h-0.5 w-full bg-linear-to-r from-transparent via-indigo-500 to-transparent my-1" />
+                    <span className="text-[10px] text-slate-400">Soft neon fade</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onMouseDown={handleButtonMouseDown}
+                    onClick={() => { handleInsertDivider('stars'); setActivePopup(null); }}
+                    className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-600 bg-slate-50/50 dark:bg-slate-800/40 text-left transition hover:scale-102 cursor-pointer flex flex-col justify-between h-20"
+                  >
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-200">Star Break</span>
+                    <div className="text-center text-xs tracking-[0.3em] text-indigo-400">✦ ✦ ✦</div>
+                    <span className="text-[10px] text-slate-400">Modern celestial</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onMouseDown={handleButtonMouseDown}
+                    onClick={() => { handleInsertDivider('dots'); setActivePopup(null); }}
+                    className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-600 bg-slate-50/50 dark:bg-slate-800/40 text-left transition hover:scale-102 cursor-pointer flex flex-col justify-between h-20"
+                  >
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-200">Dotted Rule</span>
+                    <div className="border-t-2 border-dotted border-slate-400 dark:border-slate-600 my-1 w-full" />
+                    <span className="text-[10px] text-slate-400">Notion-style dots</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onMouseDown={handleButtonMouseDown}
+                    onClick={() => { handleInsertDivider('line'); setActivePopup(null); }}
+                    className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-600 bg-slate-50/50 dark:bg-slate-800/40 text-left transition hover:scale-102 cursor-pointer flex flex-col justify-between h-20"
+                  >
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-200">Thin Line</span>
+                    <div className="h-px w-full bg-slate-300 dark:bg-slate-700 my-1" />
+                    <span className="text-[10px] text-slate-400">Minimal divider</span>
+                  </button>
+                </div>
               </div>
             </motion.div>
           )}
@@ -4620,6 +5013,31 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         isOpen={showVoiceModal}
         onClose={() => setShowVoiceModal(false)}
         onApply={handleApplyVoiceText}
+      />
+
+      {/* 📊 Mermaid Diagram & Mindmap Modal */}
+      <MermaidModal
+        isOpen={showMermaidModal}
+        onClose={() => {
+          setShowMermaidModal(false);
+          setEditingDiagramEl(null);
+          setInitialDiagramCode('');
+        }}
+        onInsertDiagram={handleInsertDiagram}
+        initialCode={initialDiagramCode}
+        noteContext={body}
+      />
+
+      {/* ∑ LaTeX / Math Formula Modal */}
+      <MathFormulaModal
+        isOpen={showMathModal}
+        onClose={() => {
+          setShowMathModal(false);
+          setEditingMathEl(null);
+          setInitialMathLatex('');
+        }}
+        onInsertMath={handleInsertMath}
+        initialLatex={initialMathLatex}
       />
 
       {/* 🧘 Zen Mode Floating Exit Bar */}

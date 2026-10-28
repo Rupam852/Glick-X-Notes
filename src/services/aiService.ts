@@ -951,3 +951,40 @@ Output ONLY clean HTML with no markdown code fences.`;
   html = convertMarkdownBadgesAndLinksToHtml(html);
   return html;
 }
+
+/**
+ * 9. AI Mermaid Flowchart & Mindmap Generator:
+ */
+export async function aiGenerateMermaidDiagram(description: string, noteContext?: string): Promise<string> {
+  const prompt = `Generate a valid, elegant Mermaid diagram based on this request:
+Request: "${description}"
+${noteContext ? `Note Context:\n"""\n${noteContext.slice(0, 2000)}\n"""\n` : ''}
+
+CRITICAL RULES:
+- Return ONLY the raw Mermaid diagram code (e.g. flowchart TD, mindmap, sequenceDiagram, etc.).
+- Do NOT wrap in \`\`\`mermaid or markdown fences.
+- Use valid Mermaid syntax with safe labels (e.g. ["Clean Label"]).
+- Keep it visually organized, intuitive, and professional.`;
+
+  const res = await executeAICompletion(prompt, 'You are an expert Mermaid diagram architect. Output ONLY valid Mermaid code, no markdown code fences.');
+  let code = res.text.replace(/^```(?:mermaid)?\s*\n?/i, '').replace(/\n?```$/i, '').trim();
+  return code;
+}
+
+/**
+ * 10. AI Math LaTeX Formula Generator:
+ */
+export async function aiGenerateMathFormula(description: string): Promise<string> {
+  const prompt = `Convert the following mathematical concept or equation into valid LaTeX formula code:
+Request: "${description}"
+
+CRITICAL RULES:
+- Output ONLY the raw LaTeX string suitable for KaTeX.
+- Do NOT wrap in $ or $$ or \`\`\`latex.
+- Example: \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}
+- Example: \\int_{0}^{\\infty} e^{-x^2} dx = \\frac{\\sqrt{\\pi}}{2}`;
+
+  const res = await executeAICompletion(prompt, 'You are a LaTeX math specialist. Output ONLY the raw LaTeX formula code, no markdown.');
+  let latex = res.text.replace(/^```(?:latex|tex)?\s*\n?/i, '').replace(/\n?```$/i, '').replace(/^\$+|\$+$/g, '').trim();
+  return latex;
+}
