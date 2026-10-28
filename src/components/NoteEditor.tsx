@@ -3004,23 +3004,39 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       }
     }
 
-    // ⌫ Smart Backspace Block Deletion
+    // ⌫ Smart Backspace Block Handling (Non-destructive: never deletes blocks with text/placeholders)
     if (e.key === 'Backspace') {
       const sel = window.getSelection();
       if (sel && sel.rangeCount > 0 && sel.isCollapsed) {
         const range = sel.getRangeAt(0);
-        const blockContainer = findBlockContainer(range.startContainer);
-        if (blockContainer && blockContainer.nodeName !== 'TABLE') {
-          const rawText = (blockContainer.innerText || blockContainer.textContent || '').trim();
-          const isPlaceholder = 
-            rawText === '' ||
-            rawText === '✕' ||
-            rawText.includes('// Enter code snippet here...') ||
-            rawText.includes('details here...') ||
-            rawText === 'CODE 📋 Copy ✕ Delete // Enter code snippet here...' ||
-            rawText === 'Toggle Section (Click to expand) ✕ Hidden notes, checklist, or deeper details go here...';
+        const startEl = range.startContainer.nodeType === Node.ELEMENT_NODE
+          ? (range.startContainer as HTMLElement)
+          : range.startContainer.parentElement;
 
-          if (isPlaceholder || (isAtStartOfBlock(blockContainer, range) && rawText.length <= 1)) {
+        // 1. Inside columns, tables, or special embedded widgets: NEVER delete container on backspace!
+        if (
+          startEl?.closest('.glick-column') || 
+          startEl?.closest('.glick-columns-container') ||
+          startEl?.closest('table, .glick-diagram-container, .glick-math-container, .glick-drawing-container')
+        ) {
+          return; // Let native browser backspace edit the text safely!
+        }
+
+        const blockContainer = findBlockContainer(range.startContainer);
+        if (blockContainer && blockContainer.nodeName !== 'TABLE' && !blockContainer.classList?.contains('glick-columns-container')) {
+          // Identify the actual text-editing target inside the block container
+          const editableTarget = 
+            blockContainer.querySelector('code, pre.glick-code-block') || 
+            blockContainer.querySelector('.glick-callout p') ||
+            blockContainer.querySelector('details > div') ||
+            blockContainer;
+
+          const editableText = (editableTarget?.textContent || '').replace(/\u200B/g, '').trim();
+
+          // ONLY delete the block container if the editable area has ALREADY been completely cleared to 0 characters
+          // AND the cursor is positioned at the start of the empty block.
+          // NEVER delete the block if there is still placeholder or user text being erased!
+          if (editableText === '' && isAtStartOfBlock(blockContainer, range)) {
             e.preventDefault();
             let targetP = (blockContainer.previousElementSibling || blockContainer.nextElementSibling) as HTMLElement;
             if (!targetP || (targetP.nodeName !== 'P' && targetP.nodeName !== 'DIV')) {
@@ -3043,7 +3059,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
               setBody(html);
               pushToHistory(html);
             }
-            showToast('Block deleted', 'info');
+            showToast('Block removed', 'info');
             return;
           }
         }
