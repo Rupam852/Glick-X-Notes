@@ -106,8 +106,10 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
           <div className="flex items-center justify-between">
             {/* Logo & Brand */}
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-[#080d19] dark:bg-slate-950 flex items-center justify-center shadow-md border border-slate-700/60 p-1.5 overflow-hidden shrink-0">
-                <img src="/favicon.png?v=4" alt="Glick X Notes" className="w-full h-full object-contain" />
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-blue-500 p-0.5 shadow-md shadow-indigo-500/20 flex items-center justify-center shrink-0">
+                <div className="w-full h-full bg-white dark:bg-[#080d19] rounded-[10px] flex items-center justify-center p-1 overflow-hidden">
+                  <img src="/favicon.png?v=4" alt="Glick X Notes" className="w-full h-full object-contain filter drop-shadow-[0_1px_3px_rgba(99,102,241,0.25)]" />
+                </div>
               </div>
               <span className="text-base md:text-lg font-black tracking-tight bg-gradient-to-r from-slate-900 via-indigo-900 to-slate-800 dark:from-white dark:via-indigo-200 dark:to-slate-200 bg-clip-text text-transparent">
                 Glick X Notes
@@ -162,11 +164,25 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
       <section className="pt-20 pb-16 px-6 max-w-6xl mx-auto text-center relative">
         <div className="space-y-6 max-w-3xl mx-auto">
           
+          {/* Hero App Logo Emblem */}
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5 }}
+            className="flex justify-center"
+          >
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-pink-500 p-0.5 shadow-xl shadow-indigo-500/20 flex items-center justify-center">
+              <div className="w-full h-full bg-white dark:bg-[#080d19] rounded-[14px] flex items-center justify-center p-2.5 overflow-hidden">
+                <img src="/favicon.png?v=4" alt="Glick X Notes" className="w-full h-full object-contain filter drop-shadow-[0_4px_12px_rgba(99,102,241,0.3)]" />
+              </div>
+            </div>
+          </motion.div>
+
           {/* Tagline Badge */}
           <motion.div 
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
+            transition={{ duration: 0.5, delay: 0.05 }}
             className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-indigo-500/25 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-xs font-bold tracking-wide shadow-xs"
           >
             <Sparkles className="w-3.5 h-3.5 animate-spin" style={{ animationDuration: '4s' }} />
@@ -573,8 +589,10 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
           {/* Brand & Author */}
           <div className="flex flex-col sm:flex-row items-center gap-3 text-center sm:text-left">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-[#080d19] dark:bg-slate-950 flex items-center justify-center shadow-sm border border-slate-700/60 p-1 overflow-hidden shrink-0">
-                <img src="/favicon.png?v=4" alt="Glick X Notes" className="w-full h-full object-contain" />
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-600 via-indigo-500 to-blue-500 p-0.5 shadow-sm flex items-center justify-center shrink-0">
+                <div className="w-full h-full bg-white dark:bg-[#080d19] rounded-[6px] flex items-center justify-center p-0.5 overflow-hidden">
+                  <img src="/favicon.png?v=4" alt="Glick X Notes" className="w-full h-full object-contain" />
+                </div>
               </div>
               <span className="text-sm font-black tracking-tight text-slate-800 dark:text-slate-200">
                 Glick X Notes
