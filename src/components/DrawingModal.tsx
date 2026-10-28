@@ -4,7 +4,8 @@ import {
   Pencil, Highlighter, Minus, ArrowRight, Square, Circle, 
   Triangle, Star, MessageSquare, Type, Image as ImageIcon,
   Palette, Download, Sparkles, ChevronRight, ChevronDown,
-  Layers, ArrowUp, ArrowDown, Move, Compass
+  Layers, ArrowUp, ArrowDown, Move, Compass,
+  Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -75,6 +76,11 @@ export interface CanvasObject {
   points?: { x: number; y: number }[]; // for freehand pen / highlighter
   text?: string;
   fontSize?: number;
+  fontFamily?: string;
+  isBold?: boolean;
+  isItalic?: boolean;
+  isUnderline?: boolean;
+  align?: 'left' | 'center' | 'right';
   imageElement?: HTMLImageElement;
   imageSrc?: string;
 }
@@ -114,6 +120,11 @@ export default function DrawingModal({
     y: number;
     text: string;
     fontSize: number;
+    fontFamily?: string;
+    isBold?: boolean;
+    isItalic?: boolean;
+    isUnderline?: boolean;
+    align?: 'left' | 'center' | 'right';
     color: string;
     rotation?: number;
   } | null>(null);
@@ -135,14 +146,13 @@ export default function DrawingModal({
   const initialObjectSnapshotRef = useRef<CanvasObject | null>(null);
   const activeDrawPointsRef = useRef<{ x: number; y: number }[]>([]);
 
-  // Auto-focus inline textarea when text tool activates
+  // Auto-focus inline textarea when text tool activates and select all
   useEffect(() => {
     if (editingTextState && textInputRef.current) {
       textInputRef.current.focus();
-      const len = textInputRef.current.value.length;
-      textInputRef.current.setSelectionRange(len, len);
+      textInputRef.current.select();
     }
-  }, [editingTextState]);
+  }, [editingTextState?.id]);
 
   // Update history buttons state
   const updateHistoryState = () => {
@@ -631,13 +641,43 @@ export default function DrawingModal({
         ctx.stroke();
       }
     } else if (type === 'text') {
-      ctx.fillStyle = stroke;
+      // Optional text box background if fillColor is not transparent
+      if (fill && fill !== 'transparent') {
+        ctx.fillStyle = fill;
+        ctx.fillRect(0, 0, w, h);
+      }
+      ctx.fillStyle = stroke || '#0f172a';
       const fSize = obj?.fontSize || 22;
-      ctx.font = `bold ${fSize}px Outfit, sans-serif`;
+      const fFamily = obj?.fontFamily || 'Outfit, sans-serif';
+      const fWeight = (obj?.isBold ?? true) ? 'bold' : 'normal';
+      const fStyle = obj?.isItalic ? 'italic' : 'normal';
+      ctx.font = `${fStyle} ${fWeight} ${fSize}px ${fFamily}`;
       ctx.textBaseline = 'top';
-      const lines = (obj?.text || 'Text').split('\n');
+
+      const align = obj?.align || 'left';
+      ctx.textAlign = align;
+
+      const lines = (obj?.text || 'Type text here').split('\n');
+      const lineHeight = fSize * 1.35;
       lines.forEach((line, idx) => {
-        ctx.fillText(line, 0, idx * (fSize * 1.3));
+        let lx = 0;
+        if (align === 'center') lx = w / 2;
+        else if (align === 'right') lx = w;
+        const ly = idx * lineHeight;
+        ctx.fillText(line, lx, ly);
+
+        if (obj?.isUnderline) {
+          const m = ctx.measureText(line);
+          ctx.beginPath();
+          let ux = lx;
+          if (align === 'center') ux = lx - m.width / 2;
+          else if (align === 'right') ux = lx - m.width;
+          ctx.moveTo(ux, ly + fSize + 2);
+          ctx.lineTo(ux + m.width, ly + fSize + 2);
+          ctx.strokeStyle = ctx.fillStyle;
+          ctx.lineWidth = Math.max(1, fSize / 14);
+          ctx.stroke();
+        }
       });
     }
   };
@@ -806,17 +846,32 @@ export default function DrawingModal({
     isInteractingRef.current = true;
     dragStartMouseRef.current = { x, y };
 
-    // 1. Text Tool Click: Open live inline editor right at (x, y) with blinking cursor!
+    // 1. Text Tool Click or Drag to create Text Box (Word style)
     if (activeTool === 'text') {
-      isInteractingRef.current = false;
-      setEditingTextState({
+      dragModeRef.current = 'draw';
+      const defaultText = 'Your Text Here';
+      const newTextObj: CanvasObject = {
+        id: `text-${Date.now()}`,
+        type: 'text',
         x,
         y,
-        text: '',
+        width: 160,
+        height: 38,
+        rotation: 0,
+        strokeColor,
+        strokeWidth: 1,
+        fillColor: 'transparent',
+        text: defaultText,
         fontSize: 22,
-        color: strokeColor,
-        rotation: 0
-      });
+        fontFamily: 'Outfit, sans-serif',
+        isBold: true,
+        isItalic: false,
+        isUnderline: false,
+        align: 'left'
+      };
+      initialObjectSnapshotRef.current = newTextObj;
+      setObjects(prev => [...prev, newTextObj]);
+      setSelectedId(newTextObj.id);
       return;
     }
 
@@ -996,7 +1051,9 @@ export default function DrawingModal({
     if (!isInteractingRef.current) return;
     isInteractingRef.current = false;
 
-    // If we were drawing a shape, switch back to 'select' mode so user can immediately resize/rotate!
+    const wasDrawingText = dragModeRef.current === 'draw' && activeTool === 'text';
+
+    // If we were drawing a shape or text, switch back to 'select' mode so user can immediately resize/rotate!
     if (dragModeRef.current === 'draw' && activeTool !== 'pen' && activeTool !== 'highlighter') {
       setActiveTool('select');
     }
@@ -1005,6 +1062,32 @@ export default function DrawingModal({
     initialObjectSnapshotRef.current = null;
     activeDrawPointsRef.current = [];
     pushHistory(objects);
+
+    if (wasDrawingText) {
+      setObjects(currentObjs => {
+        const lastObj = currentObjs[currentObjs.length - 1];
+        if (lastObj && lastObj.type === 'text') {
+          setSelectedId(lastObj.id);
+          setTimeout(() => {
+            setEditingTextState({
+              id: lastObj.id,
+              x: lastObj.x,
+              y: lastObj.y,
+              text: lastObj.text || 'Your Text Here',
+              fontSize: lastObj.fontSize || 22,
+              fontFamily: lastObj.fontFamily || 'Outfit, sans-serif',
+              isBold: lastObj.isBold,
+              isItalic: lastObj.isItalic,
+              isUnderline: lastObj.isUnderline,
+              align: lastObj.align || 'left',
+              color: lastObj.strokeColor,
+              rotation: lastObj.rotation
+            });
+          }, 30);
+        }
+        return currentObjs;
+      });
+    }
   };
 
   // -------------------------------------------------------------
@@ -1119,43 +1202,43 @@ export default function DrawingModal({
   // Commit live inline text directly into canvas objects
   const commitInlineText = () => {
     if (!editingTextState) return;
-    const trimmed = editingTextState.text.trim();
     const current = editingTextState;
+    const trimmed = current.text.trim();
     setEditingTextState(null);
 
-    if (!trimmed) {
-      if (current.id) {
-        const next = objects.filter(o => o.id !== current.id);
-        setObjects(next);
-        setSelectedId(null);
-        pushHistory(next);
-      }
-      setActiveTool('select');
-      return;
-    }
+    // Keep text so it doesn't vanish if user accidentally clicks outside without typing
+    const finalContent = trimmed || (current.id ? 'Your Text Here' : 'Your Text Here');
 
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
     const fSize = current.fontSize || 22;
-    let textW = 120;
+    const fFamily = current.fontFamily || 'Outfit, sans-serif';
+    const fWeight = (current.isBold ?? true) ? 'bold' : 'normal';
+    const fStyle = current.isItalic ? 'italic' : 'normal';
+    let textW = 140;
     let textH = fSize * 1.4;
 
     if (ctx) {
-      ctx.font = `bold ${fSize}px Outfit, sans-serif`;
-      const lines = trimmed.split('\n');
+      ctx.font = `${fStyle} ${fWeight} ${fSize}px ${fFamily}`;
+      const lines = finalContent.split('\n');
       const maxLineWidth = Math.max(...lines.map(l => ctx.measureText(l).width));
-      textW = Math.max(50, Math.round(maxLineWidth) + 14);
-      textH = Math.round(lines.length * fSize * 1.3);
+      textW = Math.max(80, Math.round(maxLineWidth) + 20);
+      textH = Math.max(34, Math.round(lines.length * fSize * 1.35));
     }
 
     if (current.id) {
       const next = objects.map(o => o.id === current.id ? {
         ...o,
-        text: trimmed,
-        width: textW,
-        height: textH,
+        text: finalContent,
+        width: Math.max(o.width, textW),
+        height: Math.max(o.height, textH),
         strokeColor: current.color,
-        fontSize: fSize
+        fontSize: fSize,
+        fontFamily: fFamily,
+        isBold: current.isBold,
+        isItalic: current.isItalic,
+        isUnderline: current.isUnderline,
+        align: current.align
       } : o);
       setObjects(next);
       setSelectedId(current.id);
@@ -1172,8 +1255,13 @@ export default function DrawingModal({
         strokeColor: current.color,
         strokeWidth: 1,
         fillColor: 'transparent',
-        text: trimmed,
-        fontSize: fSize
+        text: finalContent,
+        fontSize: fSize,
+        fontFamily: fFamily,
+        isBold: current.isBold !== undefined ? current.isBold : true,
+        isItalic: !!current.isItalic,
+        isUnderline: !!current.isUnderline,
+        align: current.align || 'left'
       };
       const next = [...objects, newObj];
       setObjects(next);
@@ -1196,6 +1284,11 @@ export default function DrawingModal({
         y: hit.obj.y,
         text: hit.obj.text || '',
         fontSize: hit.obj.fontSize || 22,
+        fontFamily: hit.obj.fontFamily || 'Outfit, sans-serif',
+        isBold: hit.obj.isBold,
+        isItalic: hit.obj.isItalic,
+        isUnderline: hit.obj.isUnderline,
+        align: hit.obj.align || 'left',
         color: hit.obj.strokeColor,
         rotation: hit.obj.rotation
       });
@@ -1683,6 +1776,157 @@ export default function DrawingModal({
               <div className="flex items-center gap-1 pl-2 border-l border-indigo-200 dark:border-indigo-800 ml-2 animate-in fade-in duration-150">
                 {selectedObj?.type === 'text' && (
                   <>
+                    {/* Font Family Dropdown */}
+                    <select
+                      value={selectedObj.fontFamily || 'Outfit, sans-serif'}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const next = objects.map(o => o.id === selectedId ? { ...o, fontFamily: val } : o);
+                        setObjects(next);
+                        pushHistory(next);
+                      }}
+                      className="px-2 py-1 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 cursor-pointer outline-none"
+                      title="Font Style"
+                    >
+                      <option value="Outfit, sans-serif">Outfit</option>
+                      <option value="Inter, sans-serif">Inter</option>
+                      <option value="Roboto, sans-serif">Roboto</option>
+                      <option value="Georgia, serif">Serif</option>
+                      <option value="'Courier New', monospace">Monospace</option>
+                      <option value="'Comic Sans MS', cursive">Handwriting</option>
+                    </select>
+
+                    {/* Font Size decrease / increase & display */}
+                    <div className="flex items-center gap-0.5 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newSize = Math.max(10, (selectedObj.fontSize || 22) - 2);
+                          const next = objects.map(o => o.id === selectedId ? { ...o, fontSize: newSize, height: Math.max(o.height, Math.round(((o.text || '').split('\n').length || 1) * newSize * 1.35)) } : o);
+                          setObjects(next);
+                          pushHistory(next);
+                        }}
+                        className="px-1.5 py-0.5 rounded text-xs font-bold hover:bg-white dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition cursor-pointer"
+                        title="Decrease Font Size"
+                      >
+                        -
+                      </button>
+                      <span className="px-1 text-[11px] font-bold text-slate-700 dark:text-slate-200 min-w-[28px] text-center">
+                        {selectedObj.fontSize || 22}px
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newSize = Math.min(96, (selectedObj.fontSize || 22) + 2);
+                          const next = objects.map(o => o.id === selectedId ? { ...o, fontSize: newSize, height: Math.max(o.height, Math.round(((o.text || '').split('\n').length || 1) * newSize * 1.35)) } : o);
+                          setObjects(next);
+                          pushHistory(next);
+                        }}
+                        className="px-1.5 py-0.5 rounded text-xs font-bold hover:bg-white dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition cursor-pointer"
+                        title="Increase Font Size"
+                      >
+                        +
+                      </button>
+                    </div>
+
+                    {/* Bold Toggle */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const isB = !(selectedObj.isBold ?? true);
+                        const next = objects.map(o => o.id === selectedId ? { ...o, isBold: isB } : o);
+                        setObjects(next);
+                        pushHistory(next);
+                      }}
+                      className={`p-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                        (selectedObj.isBold ?? true)
+                          ? 'bg-indigo-600 text-white shadow-xs'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200'
+                      }`}
+                      title="Bold"
+                    >
+                      <Bold className="w-3.5 h-3.5" />
+                    </button>
+
+                    {/* Italic Toggle */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const isI = !selectedObj.isItalic;
+                        const next = objects.map(o => o.id === selectedId ? { ...o, isItalic: isI } : o);
+                        setObjects(next);
+                        pushHistory(next);
+                      }}
+                      className={`p-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                        selectedObj.isItalic
+                          ? 'bg-indigo-600 text-white shadow-xs'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200'
+                      }`}
+                      title="Italic"
+                    >
+                      <Italic className="w-3.5 h-3.5" />
+                    </button>
+
+                    {/* Underline Toggle */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const isU = !selectedObj.isUnderline;
+                        const next = objects.map(o => o.id === selectedId ? { ...o, isUnderline: isU } : o);
+                        setObjects(next);
+                        pushHistory(next);
+                      }}
+                      className={`p-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                        selectedObj.isUnderline
+                          ? 'bg-indigo-600 text-white shadow-xs'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200'
+                      }`}
+                      title="Underline"
+                    >
+                      <Underline className="w-3.5 h-3.5" />
+                    </button>
+
+                    {/* Alignments */}
+                    <div className="flex items-center gap-0.5 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = objects.map(o => o.id === selectedId ? { ...o, align: 'left' as const } : o);
+                          setObjects(next);
+                          pushHistory(next);
+                        }}
+                        className={`p-1 rounded text-xs transition cursor-pointer ${(!selectedObj.align || selectedObj.align === 'left') ? 'bg-white dark:bg-slate-700 text-indigo-600 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
+                        title="Align Left"
+                      >
+                        <AlignLeft className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = objects.map(o => o.id === selectedId ? { ...o, align: 'center' as const } : o);
+                          setObjects(next);
+                          pushHistory(next);
+                        }}
+                        className={`p-1 rounded text-xs transition cursor-pointer ${selectedObj.align === 'center' ? 'bg-white dark:bg-slate-700 text-indigo-600 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
+                        title="Align Center"
+                      >
+                        <AlignCenter className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = objects.map(o => o.id === selectedId ? { ...o, align: 'right' as const } : o);
+                          setObjects(next);
+                          pushHistory(next);
+                        }}
+                        className={`p-1 rounded text-xs transition cursor-pointer ${selectedObj.align === 'right' ? 'bg-white dark:bg-slate-700 text-indigo-600 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
+                        title="Align Right"
+                      >
+                        <AlignRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    {/* Edit Text Button */}
                     <button
                       type="button"
                       onClick={() => {
@@ -1692,44 +1936,22 @@ export default function DrawingModal({
                           y: selectedObj.y,
                           text: selectedObj.text || '',
                           fontSize: selectedObj.fontSize || 22,
+                          fontFamily: selectedObj.fontFamily || 'Outfit, sans-serif',
+                          isBold: selectedObj.isBold,
+                          isItalic: selectedObj.isItalic,
+                          isUnderline: selectedObj.isUnderline,
+                          align: selectedObj.align || 'left',
                           color: selectedObj.strokeColor,
                           rotation: selectedObj.rotation
                         });
                       }}
-                      className="flex items-center gap-1 px-2 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 hover:bg-indigo-100 text-xs font-bold transition cursor-pointer"
-                      title="Edit Text In-Place"
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 hover:bg-indigo-100 text-xs font-bold transition cursor-pointer border border-indigo-200/60 dark:border-indigo-800"
+                      title="Edit Text Content"
                     >
                       <Type className="w-3.5 h-3.5" />
                       <span>Edit</span>
                     </button>
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const newSize = Math.max(12, (selectedObj.fontSize || 22) - 3);
-                        const next = objects.map(o => o.id === selectedId ? { ...o, fontSize: newSize, height: Math.round(((o.text || '').split('\n').length || 1) * newSize * 1.3) } : o);
-                        setObjects(next);
-                        pushHistory(next);
-                      }}
-                      className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 text-xs font-bold transition cursor-pointer"
-                      title="Smaller Font Size (A-)"
-                    >
-                      A-
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const newSize = Math.min(80, (selectedObj.fontSize || 22) + 3);
-                        const next = objects.map(o => o.id === selectedId ? { ...o, fontSize: newSize, height: Math.round(((o.text || '').split('\n').length || 1) * newSize * 1.3) } : o);
-                        setObjects(next);
-                        pushHistory(next);
-                      }}
-                      className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 text-xs font-bold transition cursor-pointer"
-                      title="Larger Font Size (A+)"
-                    >
-                      A+
-                    </button>
                     <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-0.5" />
                   </>
                 )}
@@ -1816,12 +2038,16 @@ export default function DrawingModal({
                   onBlur={commitInlineText}
                   placeholder="Type text here..."
                   rows={Math.max(1, (editingTextState.text.split('\n').length || 1))}
-                  className="outline-none resize-none overflow-hidden font-bold leading-tight"
+                  className="outline-none resize-none overflow-hidden leading-tight"
                   style={{
                     fontSize: `${editingTextState.fontSize || 22}px`,
                     color: editingTextState.color,
-                    fontFamily: 'Outfit, sans-serif',
-                    minWidth: '130px',
+                    fontFamily: editingTextState.fontFamily || 'Outfit, sans-serif',
+                    fontWeight: (editingTextState.isBold ?? true) ? 'bold' : 'normal',
+                    fontStyle: editingTextState.isItalic ? 'italic' : 'normal',
+                    textDecoration: editingTextState.isUnderline ? 'underline' : 'none',
+                    textAlign: editingTextState.align || 'left',
+                    minWidth: '140px',
                     maxWidth: `${Math.max(200, (canvasRef.current?.width || 800) - editingTextState.x - 20)}px`,
                     background: 'rgba(255, 255, 255, 0.95)',
                     border: '2px dashed #6366f1',
