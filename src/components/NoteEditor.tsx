@@ -7100,7 +7100,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                   {inkTool === 'eraser' && (
                     <>
                       <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-0.5 shrink-0" />
-                      <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                      <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl shrink-0">
                         <span className="text-[10px] font-bold text-slate-500 uppercase px-1">Size</span>
                         {[
                           { label: 'S', size: 14, title: 'Small (14px)' },
