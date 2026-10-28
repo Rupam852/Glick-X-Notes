@@ -37,6 +37,44 @@ export default function AIConfigModal({ isOpen, onClose, userId }: AIConfigModal
   const [testResults, setTestResults] = useState<ModelTestResult[] | null>(null);
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
 
+  const formatCooldown = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    if (mins > 0) {
+      return `${mins}m ${secs < 10 ? '0' : ''}${secs}s`;
+    }
+    return `${secs}s`;
+  };
+
+  const startCooldown = () => {
+    const duration = 5 * 60; // 5 minutes (300 seconds)
+    const until = Date.now() + duration * 1000;
+    try {
+      localStorage.setItem('ai_test_cooldown_until', until.toString());
+    } catch {}
+    setCooldownSeconds(duration);
+  };
+
+  // Cooldown timer with localStorage persistence
+  useEffect(() => {
+    const checkCooldown = () => {
+      try {
+        const untilStr = localStorage.getItem('ai_test_cooldown_until');
+        if (untilStr) {
+          const until = parseInt(untilStr, 10);
+          const remaining = Math.max(0, Math.ceil((until - Date.now()) / 1000));
+          setCooldownSeconds(remaining);
+          return;
+        }
+      } catch {}
+      setCooldownSeconds(0);
+    };
+
+    checkCooldown();
+    const timer = setInterval(checkCooldown, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   // Load fresh config from local storage and sync with Firestore database when opening
   useEffect(() => {
     if (isOpen) {
@@ -59,15 +97,6 @@ export default function AIConfigModal({ isOpen, onClose, userId }: AIConfigModal
       loadConfig();
     }
   }, [isOpen, userId]);
-
-  // Cooldown timer
-  useEffect(() => {
-    if (cooldownSeconds <= 0) return;
-    const timer = setInterval(() => {
-      setCooldownSeconds(prev => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [cooldownSeconds]);
 
   if (!isOpen) return null;
 
@@ -146,7 +175,7 @@ export default function AIConfigModal({ isOpen, onClose, userId }: AIConfigModal
 
     setTestResults(results);
     setTestingDefault(false);
-    setCooldownSeconds(15);
+    startCooldown();
 
     const anySuccess = results.some(r => r.ok);
     if (!anySuccess) {
@@ -159,6 +188,7 @@ export default function AIConfigModal({ isOpen, onClose, userId }: AIConfigModal
 
   // Run Test for Custom Gemini Configuration with sequential fallback
   const handleTestCustom = async () => {
+    if (cooldownSeconds > 0) return;
     if (!geminiKey.trim()) {
       showToast('Please enter your Google Gemini API key first.', 'error');
       setTestResults([{
@@ -188,6 +218,7 @@ export default function AIConfigModal({ isOpen, onClose, userId }: AIConfigModal
 
     setTestResults(results);
     setTestingCustom(false);
+    startCooldown();
 
     const anySuccess = results.some(r => r.ok);
     if (!anySuccess) {
@@ -354,8 +385,8 @@ export default function AIConfigModal({ isOpen, onClose, userId }: AIConfigModal
                     </>
                   ) : cooldownSeconds > 0 ? (
                     <>
-                      <RefreshCw className="w-4 h-4" />
-                      Cooldown: Try again in {cooldownSeconds}s
+                      <RefreshCw className="w-4 h-4 animate-spin-slow" />
+                      Cooldown: Try again in {formatCooldown(cooldownSeconds)}
                     </>
                   ) : (
                     <>
@@ -442,11 +473,21 @@ export default function AIConfigModal({ isOpen, onClose, userId }: AIConfigModal
                 <button
                   type="button"
                   onClick={handleTestCustom}
-                  disabled={testingCustom || saving}
-                  className="py-2.5 px-4 rounded-xl text-sm font-semibold border border-blue-200 dark:border-blue-800/80 hover:bg-blue-50 dark:hover:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center gap-2 transition"
+                  disabled={testingCustom || saving || cooldownSeconds > 0}
+                  className={`py-2.5 px-4 rounded-xl text-sm font-semibold border flex items-center justify-center gap-2 transition ${
+                    cooldownSeconds > 0
+                      ? 'border-slate-200 dark:border-slate-800 text-slate-400 bg-slate-100 dark:bg-slate-900 cursor-not-allowed'
+                      : 'border-blue-200 dark:border-blue-800/80 hover:bg-blue-50 dark:hover:bg-blue-950/40 text-blue-600 dark:text-blue-400'
+                  }`}
                 >
-                  {testingCustom ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-                  Test Fallback Chain
+                  {testingCustom ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : cooldownSeconds > 0 ? (
+                    <RefreshCw className="w-4 h-4 animate-spin-slow" />
+                  ) : (
+                    <Play className="w-4 h-4" />
+                  )}
+                  {cooldownSeconds > 0 ? `Wait ${formatCooldown(cooldownSeconds)}` : 'Test Fallback Chain'}
                 </button>
               </div>
             </div>
