@@ -278,15 +278,18 @@ export default function AIAssistantDrawer({
     } else {
       const base = chatInput.trim();
       const started = dictationRef.current.start(
-        (transcript) => {
-          if (transcript) {
-            setChatInput(base ? `${base} ${transcript}` : transcript);
+        (finalText, interimText) => {
+          const speech = (finalText + (interimText ? ' ' + interimText : '')).trim();
+          if (speech) {
+            setChatInput(base ? `${base} ${speech}` : speech);
           }
         },
         (err) => {
           console.warn('Voice dictation error:', err);
+          if (err !== 'no-speech' && err !== 'aborted') {
+            showToast('Mic notice: ' + err, 'error');
+          }
           setIsListening(false);
-          showToast('Mic error: ' + err, 'error');
         },
         () => {
           setIsListening(false);
