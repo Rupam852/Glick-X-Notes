@@ -837,26 +837,36 @@ details.glick-toggle[open] > summary .glick-toggle-arrow {
   overflow: visible !important;
 }
 
-/* Callout specific flex layout */
+/* Callout block layout: Natural vertical block flow so headers and bullet lists are never squeezed horizontally or cut off */
 .glick-callout {
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: flex-start !important;
-  gap: 10px !important;
+  display: block !important;
   width: 100% !important;
   box-sizing: border-box !important;
-  overflow: hidden !important;
+  overflow: visible !important;
+  position: relative !important;
+  padding: 14px 18px !important;
+  border-radius: 12px !important;
+  margin: 14px 0 !important;
 }
 
-.glick-callout > div {
-  flex: 1 1 0% !important;
-  min-width: 0 !important;
+.glick-callout p,
+.glick-callout div,
+.glick-callout ul,
+.glick-callout ol {
+  display: block !important;
+  width: 100% !important;
   max-width: 100% !important;
   overflow-wrap: break-word !important;
   word-break: break-word !important;
 }
 
-/* Text and list items inside callouts and editor must wrap and clear */
+.glick-callout ul,
+.glick-callout ol {
+  padding-left: 1.5rem !important;
+  margin: 8px 0 !important;
+}
+
+/* Text and list items inside editor must wrap and clear */
 .editor-content p,
 .editor-content li,
 .editor-content ul,
@@ -879,7 +889,7 @@ details.glick-toggle[open] > summary .glick-toggle-arrow {
 .editor-content li > div {
   display: block !important;
   clear: both !important;
-  margin: 10px 0 !important;
+  margin: 12px 0 !important;
   width: 100% !important;
 }
 
@@ -933,23 +943,31 @@ details.glick-toggle[open] > summary .glick-toggle-arrow {
   }
 
   .glick-callout {
-    padding: 10px 12px !important;
-    gap: 8px !important;
-    font-size: 13px !important;
-    margin: 10px 0 !important;
+    padding: 12px 14px !important;
+    font-size: 14px !important;
+    margin: 12px 0 !important;
+    overflow: visible !important;
+  }
+
+  .glick-callout ul {
+    padding-left: 1.25rem !important;
+    margin: 6px 0 !important;
   }
 
   .glick-callout span[contenteditable="false"] {
-    font-size: 16px !important;
+    font-size: 18px !important;
   }
 
   .glick-diagram-render {
     padding: 10px !important;
   }
 
-  /* Prevent any absolute or floated element from bleeding out */
-  .editor-content * {
-    max-width: 100%;
-    box-sizing: border-box;
+  /* Prevent elements from bleeding out without breaking SVGs */
+  .editor-content img,
+  .editor-content table,
+  .editor-content pre,
+  .editor-content .glick-block-wrapper {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
   }
 }
