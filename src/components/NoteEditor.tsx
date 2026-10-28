@@ -29,7 +29,7 @@ import DrawingModal from './DrawingModal';
 import { 
   GitFork, Sigma, Printer, Indent, Outdent, CaseSensitive, Bookmark, 
   Columns as Columns2, Subscript, Superscript, BookOpen, Palette, Square,
-  Pencil, RotateCcw, RotateCw
+  Pencil, RotateCcw, RotateCw, Shapes, Circle, Triangle, Star, ArrowRight
 } from 'lucide-react';
 
 interface NoteEditorProps {
@@ -80,17 +80,80 @@ const extractTextFromHtml = (html: string): string => {
 };
 
 // ✏️ Direct Inking / Pen Stroke Interface (OneNote style)
+export type InkShapeType = 'line' | 'arrow' | 'rect' | 'circle' | 'triangle' | 'star';
+export type InkToolType = 'pen' | 'highlighter' | 'eraser' | InkShapeType;
+
 export interface InkStroke {
   id: string;
-  tool: 'pen' | 'highlighter';
+  tool: InkToolType;
   color: string;
   width: number;
   points: { x: number; y: number }[];
+  shapeStart?: { x: number; y: number };
+  shapeEnd?: { x: number; y: number };
 }
 
 const convertStrokesToSvg = (strokes: InkStroke[], width: number, height: number): string => {
   if (strokes.length === 0) return '';
-  const paths = strokes.map(s => {
+  const elements = strokes.map(s => {
+    // If it's a shape stroke
+    if (s.shapeStart && s.shapeEnd) {
+      const x1 = s.shapeStart.x;
+      const y1 = s.shapeStart.y;
+      const x2 = s.shapeEnd.x;
+      const y2 = s.shapeEnd.y;
+      const strokeWidth = s.width;
+      const strokeColor = s.color;
+
+      if (s.tool === 'line') {
+        return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${strokeColor}" stroke-width="${strokeWidth}" stroke-linecap="round" />`;
+      }
+      if (s.tool === 'arrow') {
+        const angle = Math.atan2(y2 - y1, x2 - x1);
+        const headLen = Math.max(12, strokeWidth * 3.5);
+        const a1x = x2 - headLen * Math.cos(angle - Math.PI / 6);
+        const a1y = y2 - headLen * Math.sin(angle - Math.PI / 6);
+        const a2x = x2 - headLen * Math.cos(angle + Math.PI / 6);
+        const a2y = y2 - headLen * Math.sin(angle + Math.PI / 6);
+        return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${strokeColor}" stroke-width="${strokeWidth}" stroke-linecap="round" />` +
+               `<polygon points="${x2},${y2} ${a1x},${a1y} ${a2x},${a2y}" fill="${strokeColor}" />`;
+      }
+      if (s.tool === 'rect') {
+        const minX = Math.min(x1, x2);
+        const minY = Math.min(y1, y2);
+        const w = Math.abs(x2 - x1);
+        const h = Math.abs(y2 - y1);
+        return `<rect x="${minX}" y="${minY}" width="${w}" height="${h}" rx="6" stroke="${strokeColor}" stroke-width="${strokeWidth}" fill="none" stroke-linejoin="round" />`;
+      }
+      if (s.tool === 'circle') {
+        const cx = (x1 + x2) / 2;
+        const cy = (y1 + y2) / 2;
+        const rx = Math.abs(x2 - x1) / 2;
+        const ry = Math.abs(y2 - y1) / 2;
+        return `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" stroke="${strokeColor}" stroke-width="${strokeWidth}" fill="none" />`;
+      }
+      if (s.tool === 'triangle') {
+        const minX = Math.min(x1, x2);
+        const maxX = Math.max(x1, x2);
+        const minY = Math.min(y1, y2);
+        const maxY = Math.max(y1, y2);
+        return `<polygon points="${(minX + maxX) / 2},${minY} ${maxX},${maxY} ${minX},${maxY}" stroke="${strokeColor}" stroke-width="${strokeWidth}" stroke-linejoin="round" fill="none" />`;
+      }
+      if (s.tool === 'star') {
+        const cx = (x1 + x2) / 2;
+        const cy = (y1 + y2) / 2;
+        const outerR = Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1)) / 2;
+        const innerR = outerR * 0.45;
+        const pts: string[] = [];
+        for (let i = 0; i < 10; i++) {
+          const r = i % 2 === 0 ? outerR : innerR;
+          const a = (i * Math.PI) / 5 - Math.PI / 2;
+          pts.push(`${cx + r * Math.cos(a)},${cy + r * Math.sin(a)}`);
+        }
+        return `<polygon points="${pts.join(' ')}" stroke="${strokeColor}" stroke-width="${strokeWidth}" stroke-linejoin="round" fill="none" />`;
+      }
+    }
+
     if (!s.points || s.points.length === 0) return '';
     let d = `M ${s.points[0].x} ${s.points[0].y}`;
     if (s.points.length === 1) {
@@ -109,7 +172,7 @@ const convertStrokesToSvg = (strokes: InkStroke[], width: number, height: number
     return `<path d="${d}" stroke="${s.color}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="${opacity}" />`;
   }).join('');
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" style="width: 100%; height: 100%; display: block; overflow: visible;">${paths}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" style="width: 100%; height: 100%; display: block; overflow: visible;">${elements}</svg>`;
 };
 
 // Helper to save selection
@@ -284,9 +347,10 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
 
   // ✏️ Direct Note Inking / Pen Mode States (OneNote & Apple Notes style)
   const [isInkingMode, setIsInkingMode] = useState(false);
-  const [inkTool, setInkTool] = useState<'pen' | 'highlighter' | 'eraser'>('pen');
+  const [inkTool, setInkTool] = useState<InkToolType>('pen');
   const [inkColor, setInkColor] = useState('#6366f1');
   const [inkWidth, setInkWidth] = useState(3);
+  const [showInkShapeMenu, setShowInkShapeMenu] = useState(false);
   const [inkStrokes, setInkStrokes] = useState<InkStroke[]>([]);
   const [inkHistory, setInkHistory] = useState<InkStroke[][]>([]);
   const [inkHistoryIndex, setInkHistoryIndex] = useState(-1);
@@ -1815,6 +1879,8 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   };
 
   // --- ✏️ ONE-NOTE / APPLE NOTES STYLE DIRECT NOTE INKING LOGIC ---
+  const isInkShapeTool = (tool: string) => ['line', 'arrow', 'rect', 'circle', 'triangle', 'star'].includes(tool);
+
   const renderInkCanvas = useCallback(() => {
     const canvas = inkCanvasRef.current;
     if (!canvas) return;
@@ -1833,7 +1899,6 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     }
 
     for (const stroke of allStrokes) {
-      if (!stroke.points || stroke.points.length === 0) continue;
       ctx.save();
       ctx.strokeStyle = stroke.color;
       ctx.lineWidth = stroke.tool === 'highlighter' ? stroke.width * 4 : stroke.width;
@@ -1841,6 +1906,89 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       ctx.lineJoin = 'round';
       ctx.globalAlpha = stroke.tool === 'highlighter' ? 0.38 : 1.0;
 
+      if (stroke.shapeStart && stroke.shapeEnd) {
+        const x1 = stroke.shapeStart.x;
+        const y1 = stroke.shapeStart.y;
+        const x2 = stroke.shapeEnd.x;
+        const y2 = stroke.shapeEnd.y;
+
+        if (stroke.tool === 'line') {
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+          ctx.stroke();
+        } else if (stroke.tool === 'arrow') {
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+          ctx.stroke();
+
+          const angle = Math.atan2(y2 - y1, x2 - x1);
+          const headLen = Math.max(12, stroke.width * 3.5);
+          ctx.beginPath();
+          ctx.moveTo(x2, y2);
+          ctx.lineTo(x2 - headLen * Math.cos(angle - Math.PI / 6), y2 - headLen * Math.sin(angle - Math.PI / 6));
+          ctx.lineTo(x2 - headLen * Math.cos(angle + Math.PI / 6), y2 - headLen * Math.sin(angle + Math.PI / 6));
+          ctx.closePath();
+          ctx.fillStyle = stroke.color;
+          ctx.fill();
+        } else if (stroke.tool === 'rect') {
+          const minX = Math.min(x1, x2);
+          const minY = Math.min(y1, y2);
+          const w = Math.abs(x2 - x1);
+          const h = Math.abs(y2 - y1);
+          const radius = Math.min(6, w / 4, h / 4);
+          ctx.beginPath();
+          if (ctx.roundRect) {
+            ctx.roundRect(minX, minY, w, h, radius);
+          } else {
+            ctx.rect(minX, minY, w, h);
+          }
+          ctx.stroke();
+        } else if (stroke.tool === 'circle') {
+          const cx = (x1 + x2) / 2;
+          const cy = (y1 + y2) / 2;
+          const rx = Math.abs(x2 - x1) / 2;
+          const ry = Math.abs(y2 - y1) / 2;
+          ctx.beginPath();
+          ctx.ellipse(cx, cy, Math.max(1, rx), Math.max(1, ry), 0, 0, Math.PI * 2);
+          ctx.stroke();
+        } else if (stroke.tool === 'triangle') {
+          const minX = Math.min(x1, x2);
+          const maxX = Math.max(x1, x2);
+          const minY = Math.min(y1, y2);
+          const maxY = Math.max(y1, y2);
+          ctx.beginPath();
+          ctx.moveTo((minX + maxX) / 2, minY);
+          ctx.lineTo(maxX, maxY);
+          ctx.lineTo(minX, maxY);
+          ctx.closePath();
+          ctx.stroke();
+        } else if (stroke.tool === 'star') {
+          const cx = (x1 + x2) / 2;
+          const cy = (y1 + y2) / 2;
+          const outerR = Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1)) / 2;
+          const innerR = outerR * 0.45;
+          ctx.beginPath();
+          for (let i = 0; i < 10; i++) {
+            const r = i % 2 === 0 ? outerR : innerR;
+            const a = (i * Math.PI) / 5 - Math.PI / 2;
+            const px = cx + r * Math.cos(a);
+            const py = cy + r * Math.sin(a);
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          }
+          ctx.closePath();
+          ctx.stroke();
+        }
+        ctx.restore();
+        continue;
+      }
+
+      if (!stroke.points || stroke.points.length === 0) {
+        ctx.restore();
+        continue;
+      }
       ctx.beginPath();
       const pts = stroke.points;
       if (pts.length === 1) {
@@ -1865,6 +2013,13 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
 
   const eraseStrokesAt = (x: number, y: number) => {
     const remaining = inkStrokes.filter(stroke => {
+      if (stroke.shapeStart && stroke.shapeEnd) {
+        const minX = Math.min(stroke.shapeStart.x, stroke.shapeEnd.x) - 15;
+        const maxX = Math.max(stroke.shapeStart.x, stroke.shapeEnd.x) + 15;
+        const minY = Math.min(stroke.shapeStart.y, stroke.shapeEnd.y) - 15;
+        const maxY = Math.max(stroke.shapeStart.y, stroke.shapeEnd.y) + 15;
+        if (x >= minX && x <= maxX && y >= minY && y <= maxY) return false;
+      }
       return !stroke.points.some(pt => Math.hypot(pt.x - x, pt.y - y) <= 20);
     });
     if (remaining.length !== inkStrokes.length) {
@@ -1881,6 +2036,8 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     e.preventDefault();
     canvas.setPointerCapture(e.pointerId);
 
+    setShowInkShapeMenu(false);
+
     const rect = canvas.getBoundingClientRect();
     const x = Math.round(e.clientX - rect.left);
     const y = Math.round(e.clientY - rect.top);
@@ -1890,13 +2047,25 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       return;
     }
 
-    currentStrokeRef.current = {
-      id: `stroke-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      tool: inkTool,
-      color: inkColor,
-      width: inkWidth,
-      points: [{ x, y }]
-    };
+    if (isInkShapeTool(inkTool)) {
+      currentStrokeRef.current = {
+        id: `stroke-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        tool: inkTool,
+        color: inkColor,
+        width: inkWidth,
+        points: [{ x, y }],
+        shapeStart: { x, y },
+        shapeEnd: { x, y }
+      };
+    } else {
+      currentStrokeRef.current = {
+        id: `stroke-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        tool: inkTool,
+        color: inkColor,
+        width: inkWidth,
+        points: [{ x, y }]
+      };
+    }
     renderInkCanvas();
   };
 
@@ -1914,11 +2083,16 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     }
 
     if (currentStrokeRef.current && (e.buttons & 1)) {
-      const pts = currentStrokeRef.current.points;
-      const last = pts[pts.length - 1];
-      if (Math.hypot(x - last.x, y - last.y) >= 2) {
-        pts.push({ x, y });
+      if (currentStrokeRef.current.shapeStart) {
+        currentStrokeRef.current.shapeEnd = { x, y };
         renderInkCanvas();
+      } else {
+        const pts = currentStrokeRef.current.points;
+        const last = pts[pts.length - 1];
+        if (Math.hypot(x - last.x, y - last.y) >= 2) {
+          pts.push({ x, y });
+          renderInkCanvas();
+        }
       }
     }
   };
@@ -1933,7 +2107,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     if (currentStrokeRef.current) {
       const finished = currentStrokeRef.current;
       currentStrokeRef.current = null;
-      if (finished.points.length > 0) {
+      if (finished.points.length > 0 || finished.shapeStart) {
         const nextStrokes = [...inkStrokes, finished];
         setInkStrokes(nextStrokes);
         const nextHist = [...inkHistory.slice(0, inkHistoryIndex + 1), nextStrokes];
@@ -1990,6 +2164,10 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     const width = Math.max(300, Math.round(rect.width) || 800);
     let maxY = 400;
     for (const s of strokesToSave) {
+      if (s.shapeStart && s.shapeEnd) {
+        if (s.shapeStart.y > maxY) maxY = s.shapeStart.y;
+        if (s.shapeEnd.y > maxY) maxY = s.shapeEnd.y;
+      }
       for (const p of s.points) {
         if (p.y > maxY) maxY = p.y;
       }
@@ -6208,7 +6386,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                   <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
                     <button
                       type="button"
-                      onClick={() => setInkTool('pen')}
+                      onClick={() => { setInkTool('pen'); setShowInkShapeMenu(false); }}
                       className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold transition cursor-pointer ${
                         inkTool === 'pen'
                           ? 'bg-purple-600 text-white shadow-xs'
@@ -6222,7 +6400,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
 
                     <button
                       type="button"
-                      onClick={() => setInkTool('highlighter')}
+                      onClick={() => { setInkTool('highlighter'); setShowInkShapeMenu(false); }}
                       className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold transition cursor-pointer ${
                         inkTool === 'highlighter'
                           ? 'bg-amber-400 text-slate-900 shadow-xs'
@@ -6234,15 +6412,77 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                       <span>Highlight</span>
                     </button>
 
+                    {/* Geometric Shapes Dropdown Selector */}
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setShowInkShapeMenu(prev => !prev)}
+                        className={`px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold transition cursor-pointer ${
+                          ['line', 'arrow', 'rect', 'circle', 'triangle', 'star'].includes(inkTool)
+                            ? 'bg-purple-600 text-white shadow-xs'
+                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                        }`}
+                        title="Draw Shapes (Line, Arrow, Rectangle, Circle, Triangle, Star)"
+                      >
+                        <Shapes className="w-3.5 h-3.5" />
+                        <span>
+                          {inkTool === 'line' ? 'Line' :
+                           inkTool === 'arrow' ? 'Arrow' :
+                           inkTool === 'rect' ? 'Rectangle' :
+                           inkTool === 'circle' ? 'Circle' :
+                           inkTool === 'triangle' ? 'Triangle' :
+                           inkTool === 'star' ? 'Star' : 'Shapes'}
+                        </span>
+                        <ChevronDown className="w-3 h-3 opacity-70" />
+                      </button>
+
+                      {showInkShapeMenu && (
+                        <div 
+                          onPointerDown={(e) => e.stopPropagation()}
+                          className="absolute top-full left-0 mt-2 p-1.5 bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col gap-1 z-50 min-w-[140px] animate-in fade-in slide-in-from-top-1 duration-150"
+                        >
+                          <p className="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Draw Shapes</p>
+                          {[
+                            { id: 'line', label: 'Line', icon: Minus },
+                            { id: 'arrow', label: 'Arrow', icon: ArrowRight },
+                            { id: 'rect', label: 'Rectangle', icon: Square },
+                            { id: 'circle', label: 'Circle', icon: Circle },
+                            { id: 'triangle', label: 'Triangle', icon: Triangle },
+                            { id: 'star', label: 'Star', icon: Star },
+                          ].map(sh => {
+                            const IconComponent = sh.icon;
+                            return (
+                              <button
+                                key={sh.id}
+                                type="button"
+                                onClick={() => {
+                                  setInkTool(sh.id as InkToolType);
+                                  setShowInkShapeMenu(false);
+                                }}
+                                className={`flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium rounded-lg text-left transition cursor-pointer ${
+                                  inkTool === sh.id
+                                    ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300 font-bold'
+                                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                                }`}
+                              >
+                                <IconComponent className="w-3.5 h-3.5 shrink-0" />
+                                <span>{sh.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
                     <button
                       type="button"
-                      onClick={() => setInkTool('eraser')}
+                      onClick={() => { setInkTool('eraser'); setShowInkShapeMenu(false); }}
                       className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold transition cursor-pointer ${
                         inkTool === 'eraser'
                           ? 'bg-rose-500 text-white shadow-xs'
                           : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                       }`}
-                      title="Eraser Tool (Touch any stroke to erase)"
+                      title="Eraser Tool (Touch any stroke or shape to erase)"
                     >
                       <Eraser className="w-3.5 h-3.5" />
                       <span>Eraser</span>
