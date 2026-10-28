@@ -4130,8 +4130,20 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
             <Type className="w-5 h-5" />
           </button>
           
-          <button onMouseDown={handleButtonMouseDown} onClick={() => togglePopup('paragraph')} className={`p-2 w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all ${activePopup === 'paragraph' ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Paragraph styles">
-            <AlignLeft className="w-5 h-5" />
+          <button onMouseDown={handleButtonMouseDown} onClick={() => togglePopup('paragraph')} className={`px-2 h-9 rounded-xl flex items-center justify-center gap-0.5 shrink-0 transition-all ${activePopup === 'paragraph' ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Paragraph Styles & Line Spacing (1.0, 1.15, 1.5, 2.0)">
+            <AlignLeft className="w-4.5 h-4.5" />
+            <ChevronDown className="w-3 h-3 text-slate-400" />
+          </button>
+
+          {/* 🔠 Change Case (Letter Capitalization Inverter) */}
+          <button 
+            type="button"
+            onMouseDown={handleButtonMouseDown} 
+            onClick={() => togglePopup('paragraph')} 
+            className={`p-2 w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all ${activePopup === 'paragraph' ? 'text-indigo-600' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'}`} 
+            title="Change Case (UPPERCASE, lowercase, Title Case, Sentence case)"
+          >
+            <CaseSensitive className="w-5 h-5" />
           </button>
 
           {/* 🎨 Quick Pastel Highlighter Pen (Color Palette) */}
@@ -4268,6 +4280,27 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
           
           <button onMouseDown={handleButtonMouseDown} onClick={() => handleListToggle('insertOrderedList')} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-colors ${activeFormats.orderedList ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Ordered List">
             <ListOrdered className="w-5 h-5" />
+          </button>
+
+          {/* Direct Outdent & Indent buttons (MS Word / Google Docs style) */}
+          <button 
+            type="button" 
+            onMouseDown={handleButtonMouseDown} 
+            onClick={handleOutdent} 
+            className="p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all cursor-pointer" 
+            title="Decrease Indent / Outdent (Shift+Tab)"
+          >
+            <Outdent className="w-4.5 h-4.5" />
+          </button>
+
+          <button 
+            type="button" 
+            onMouseDown={handleButtonMouseDown} 
+            onClick={handleIndent} 
+            className="p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all cursor-pointer" 
+            title="Increase Indent (Tab)"
+          >
+            <Indent className="w-4.5 h-4.5" />
           </button>
 
           <button onMouseDown={handleButtonMouseDown} onClick={() => toggleBlock('blockquote', 'blockquote')} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-colors ${activeFormats.blockquote ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Blockquote">
