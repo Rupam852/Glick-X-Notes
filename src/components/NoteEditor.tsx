@@ -25,9 +25,10 @@ import { voiceDictation, audioReader } from '../utils/audioTools';
 import { convertMarkdownBadgesAndLinksToHtml } from '../services/aiService';
 import MermaidModal from './MermaidModal';
 import MathFormulaModal from './MathFormulaModal';
+import DrawingModal from './DrawingModal';
 import { 
   GitFork, Sigma, Printer, Indent, Outdent, CaseSensitive, Bookmark, 
-  Columns as Columns2, Subscript, Superscript, BookOpen 
+  Columns as Columns2, Subscript, Superscript, BookOpen, Palette 
 } from 'lucide-react';
 
 interface NoteEditorProps {
@@ -240,6 +241,11 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   const [showMathModal, setShowMathModal] = useState(false);
   const [editingMathEl, setEditingMathEl] = useState<HTMLElement | null>(null);
   const [initialMathLatex, setInitialMathLatex] = useState('');
+
+  // 🎨 Drawing Modal States (Google Docs style)
+  const [showDrawingModal, setShowDrawingModal] = useState(false);
+  const [editingDrawingEl, setEditingDrawingEl] = useState<HTMLElement | null>(null);
+  const [initialDrawingData, setInitialDrawingData] = useState<string | undefined>(undefined);
 
   // 🎨 Pastel Highlight Palette definition
   const PASTEL_HIGHLIGHT_COLORS = [
@@ -1693,6 +1699,60 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     }
   };
 
+  // --- 🎨 GOOGLE DOCS STYLE DRAWING & SKETCH HANDLERS ---
+  const handleOpenDrawingModal = (existingEl?: HTMLElement, src?: string) => {
+    if (existingEl) {
+      setEditingDrawingEl(existingEl);
+      setInitialDrawingData(src);
+    } else {
+      setEditingDrawingEl(null);
+      setInitialDrawingData(undefined);
+    }
+    setShowDrawingModal(true);
+  };
+
+  const handleSaveDrawing = (dataUrl: string) => {
+    const drawingHtml = `
+      <div class="glick-block-wrapper glick-drawing-container" data-drawing-src="${dataUrl}" style="margin: 16px 0; border-radius: 14px; overflow: hidden; border: 1px solid rgba(99,102,241,0.25); background: #ffffff; box-shadow: 0 4px 16px rgba(15,23,42,0.08);">
+        <div contenteditable="false" style="display: flex; align-items: center; justify-content: space-between; padding: 6px 12px; background: #f8fafc; border-bottom: 1px solid rgba(99,102,241,0.2); user-select: none;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span style="font-size: 13px;">🎨</span>
+            <span style="font-size: 11px; font-weight: 700; color: #6366f1; font-family: monospace; letter-spacing: 0.5px;">DRAWING / SKETCH</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <button type="button" data-action="copy-drawing" title="Copy Drawing to Clipboard" style="background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.2); color: #6366f1; font-size: 11px; padding: 2px 8px; border-radius: 6px; cursor: pointer; font-weight: 600;">📋 Copy</button>
+            <button type="button" data-action="edit-drawing" title="Edit Drawing" style="background: #6366f1; border: 1px solid #4f46e5; color: #ffffff; font-size: 11px; padding: 2px 8px; border-radius: 6px; cursor: pointer; font-weight: 600;">✏️ Edit</button>
+            <button type="button" data-action="delete-block" title="Delete Drawing" style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25); color: #ef4444; font-size: 11px; padding: 2px 8px; border-radius: 6px; cursor: pointer; font-weight: 600;">✕ Delete</button>
+          </div>
+        </div>
+        <div class="glick-image-resizable" style="position: relative; display: flex; justify-content: center; padding: 12px; background: transparent; overflow-x: auto;">
+          <img src="${dataUrl}" alt="Drawing" style="max-width: 100%; height: auto; display: block; border-radius: 8px;" />
+          <div class="glick-corner-grip" title="Drag to resize drawing" style="position: absolute; right: 4px; bottom: 4px; width: 14px; height: 14px; cursor: nwse-resize; opacity: 0.6;"></div>
+        </div>
+      </div>
+      <p><br/></p>
+    `;
+
+    if (editingDrawingEl) {
+      editingDrawingEl.outerHTML = drawingHtml;
+      setEditingDrawingEl(null);
+      setInitialDrawingData(undefined);
+      showToast('Drawing updated successfully!', 'success');
+    } else {
+      ensureSelectionInsideEditor(true);
+      document.execCommand('insertHTML', false, drawingHtml);
+      showToast('Drawing canvas inserted into note!', 'success');
+    }
+
+    if (contentRef.current) {
+      upgradeLegacyBlocks(contentRef.current);
+      const h = contentRef.current.innerHTML;
+      latestContent.current = h;
+      setBody(h);
+      pushToHistory(h);
+    }
+  };
+
   // --- AESTHETIC DECORATIVE DIVIDERS ---
   const handleInsertDivider = (type: 'gradient' | 'stars' | 'dots' | 'line') => {
     let dividerHtml = '';
@@ -2021,6 +2081,9 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         break;
       case 'math':
         handleOpenMathModal();
+        break;
+      case 'draw':
+        handleOpenDrawingModal();
         break;
       case 'divider':
         togglePopup('divider');
@@ -2586,6 +2649,53 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         setEditingMathEl(container);
         setInitialMathLatex(latex);
         setShowMathModal(true);
+      }
+      return;
+    }
+
+    // 4b. Drawing actions: Copy & Edit
+    const copyDrawingBtn = target.closest('[data-action="copy-drawing"]') as HTMLElement;
+    if (copyDrawingBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      const container = copyDrawingBtn.closest('.glick-drawing-container') as HTMLElement;
+      const src = container?.getAttribute('data-drawing-src') || container?.querySelector('img')?.src;
+      if (src) {
+        try {
+          fetch(src)
+            .then(res => res.blob())
+            .then(blob => {
+              if (window.ClipboardItem) {
+                navigator.clipboard.write([
+                  new ClipboardItem({ 'image/png': blob })
+                ]).then(() => {
+                  copyDrawingBtn.innerHTML = '✓ Copied!';
+                  setTimeout(() => {
+                    copyDrawingBtn.innerHTML = '📋 Copy';
+                  }, 2000);
+                  showToast('Drawing copied to clipboard!', 'success');
+                });
+              } else {
+                navigator.clipboard.writeText(src);
+                showToast('Drawing data URL copied!', 'success');
+              }
+            });
+        } catch {
+          navigator.clipboard.writeText(src);
+          showToast('Drawing copied!', 'success');
+        }
+      }
+      return;
+    }
+
+    const editDrawingBtn = target.closest('[data-action="edit-drawing"]') as HTMLElement;
+    if (editDrawingBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      const container = editDrawingBtn.closest('.glick-drawing-container') as HTMLElement;
+      if (container) {
+        const src = container.getAttribute('data-drawing-src') || container.querySelector('img')?.src;
+        handleOpenDrawingModal(container, src || undefined);
       }
       return;
     }
@@ -4222,6 +4332,17 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
             ∑
           </button>
 
+          {/* 🎨 Google Docs style Drawing / Canvas */}
+          <button 
+            type="button"
+            onMouseDown={handleButtonMouseDown} 
+            onClick={() => handleOpenDrawingModal()} 
+            className="p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-pink-600 transition-all" 
+            title="Insert Drawing / Doodle Canvas (Google Docs style)"
+          >
+            <Palette className="w-5 h-5" />
+          </button>
+
           {/* ⎯ Aesthetic Decorative Divider */}
           <button 
             type="button"
@@ -5443,6 +5564,18 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         }}
         onInsertMath={handleInsertMath}
         initialLatex={initialMathLatex}
+      />
+
+      {/* 🎨 Google Docs style Drawing Modal */}
+      <DrawingModal
+        isOpen={showDrawingModal}
+        onClose={() => {
+          setShowDrawingModal(false);
+          setEditingDrawingEl(null);
+          setInitialDrawingData(undefined);
+        }}
+        onSaveDrawing={handleSaveDrawing}
+        initialImageData={initialDrawingData}
       />
 
       {/* 🧘 Zen Mode Floating Exit Bar */}

@@ -3,7 +3,7 @@ import {
   CheckSquare, Heading1, Heading2, Heading3, Code, 
   Lightbulb, AlertTriangle, Target, ChevronRight, Table, 
   Sparkles, Quote, List, Image as ImageIcon, GitFork, Sigma, Minus,
-  Bookmark, Columns as Columns2, FileText
+  Bookmark, Columns as Columns2, FileText, Palette
 } from 'lucide-react';
 
 export interface SlashCommandItem {
@@ -146,6 +146,13 @@ export default function SlashCommandMenu({
       desc: 'Equations, fractions and scientific formulas',
       icon: <Sigma className="w-4 h-4 text-indigo-500" />,
       keywords: ['math', 'latex', 'formula', 'equation', 'science', 'sum', 'integral', 'fraction']
+    },
+    {
+      id: 'draw',
+      label: 'Drawing / Canvas (Google Docs style)',
+      desc: 'Freehand sketch, shapes, arrows, callouts & text',
+      icon: <Palette className="w-4 h-4 text-pink-500" />,
+      keywords: ['draw', 'drawing', 'canvas', 'sketch', 'doodle', 'docs', 'paint', 'shape', 'art']
     },
     {
       id: 'divider',
