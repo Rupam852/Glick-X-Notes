@@ -34,8 +34,8 @@
 * **Tagging & Color Palettes:** Categorize notes with vibrant color tokens (Indigo, Rose, Amber, Emerald, Violet) and searchable multi-tag filters.
 * **Quick Access & Lifecycle:** Pin critical notes, mark favorites, archive completed work, or restore deleted files via the Trash bin with soft-delete recovery.
 
-### 📤 Multi-Format Export & Backups
-* **Export Anywhere:** Download your notes instantly in **PDF**, **Markdown (.md)**, **HTML**, **Plain Text (.txt)**, or **JSON backup** formats with preserved formatting and attachments.
+### 📤 Export & Sharing Options
+* **Export & Share Anywhere:** Download your notes instantly in **PDF**, formatted **Markdown (.md)**, clean **Plain Text (.txt)**, or copy beautifully formatted shareable social summary cards.
 
 ### 🔒 Privacy, Security & Isolation
 * **Zero-Knowledge Architecture:** Granular Firestore Security Rules ensure that your collections and documents are accessible strictly by your verified authenticated UID.

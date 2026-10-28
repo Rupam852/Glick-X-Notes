@@ -517,16 +517,16 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
                   Universal Export
                 </h3>
                 <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                  Never get locked in. Export any note with a single click to high-fidelity PDF, Markdown (.md), clean HTML, or JSON backup.
+                  Never get locked in. Export any note with a single click to high-fidelity PDF, formatted Markdown (.md), clean Plain Text (.txt), or social summary cards.
                 </p>
               </div>
 
               {/* Export Formats Pills */}
               <div className="mt-6 flex flex-wrap items-center gap-1.5">
-                <span className="px-2 py-1 rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 text-[10px] font-black border border-red-500/20">PDF</span>
-                <span className="px-2 py-1 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-black border border-blue-500/20">MD</span>
-                <span className="px-2 py-1 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-black border border-amber-500/20">HTML</span>
-                <span className="px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-black border border-emerald-500/20">JSON</span>
+                <span className="px-2 py-1 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[10px] font-black border border-rose-500/20">PDF</span>
+                <span className="px-2 py-1 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[10px] font-black border border-indigo-500/20">MD</span>
+                <span className="px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-black border border-emerald-500/20">TXT</span>
+                <span className="px-2 py-1 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 text-[10px] font-black border border-purple-500/20">CARD</span>
               </div>
             </div>
 
