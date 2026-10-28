@@ -298,4 +298,90 @@ details.glick-toggle[open] > summary .glick-toggle-arrow {
   color: #a5b4fc !important;
 }
 
+/* 🪟 Windows-Style Resizable Blocks & Snippets */
+
+/* 1. Resizable Images */
+.glick-image-container {
+  display: block;
+  text-align: center;
+  margin: 16px 0;
+  position: relative;
+  user-select: none;
+}
+
+.glick-image-resizable {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  transition: box-shadow 0.2s ease;
+  border-radius: 14px;
+}
+
+.glick-image-resizable:hover,
+.glick-image-resizable:focus-within {
+  box-shadow: 0 0 0 2px #6366f1;
+}
+
+.glick-image-toolbar {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(4px);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glick-image-resizable:hover .glick-image-toolbar,
+.glick-image-resizable:focus-within .glick-image-toolbar {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+
+.glick-resize-handle {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  user-select: none;
+}
+
+.glick-image-resizable:hover .glick-resize-handle,
+.glick-image-resizable:focus-within .glick-resize-handle {
+  opacity: 1;
+  visibility: visible;
+}
+
+.glick-resize-handle:hover {
+  transform: scale(1.25);
+  background: #4f46e5 !important;
+}
+
+/* 2. Resizable Tables & Columns */
+.editor-content table {
+  position: relative;
+  max-width: 100%;
+}
+
+.editor-content th,
+.editor-content td {
+  position: relative;
+}
+
+/* 3. Resizable Code Blocks & Callouts (Windows Grip Handle) */
+.glick-code-container,
+.glick-callout {
+  resize: vertical;
+  overflow: auto;
+  min-height: 52px;
+}
+
+.glick-code-container::-webkit-resizer,
+.glick-callout::-webkit-resizer {
+  background-color: transparent;
+  background-image: radial-gradient(circle, #94a3b8 1.5px, transparent 1.5px);
+  background-size: 5px 5px;
+  background-repeat: repeat;
+  cursor: se-resize;
+}
+
 
