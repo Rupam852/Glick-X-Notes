@@ -1197,7 +1197,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     }
 
     const focusId = `callout-focus-${Date.now()}`;
-    const html = `<div class="glick-callout callout-${type}" style="padding: 12px 16px; margin: 12px 0; border-radius: 12px; background: ${bg}; border-left: 4px solid ${border}; display: flex; align-items: flex-start; gap: 10px;"><span style="font-size: 18px; user-select: none;">${emoji}</span><div style="flex: 1;"><strong style="color: ${border}; font-size: 13px;">${title}:</strong><p id="${focusId}" style="margin: 4px 0 0 0; font-size: 14px;">Write your ${title.toLowerCase()} details here...</p></div></div><p><br/></p>`;
+    const html = `<div class="glick-block-wrapper glick-callout callout-${type}" style="position: relative; padding: 12px 14px; margin: 12px 0; border-radius: 12px; background: ${bg}; border-left: 4px solid ${border}; display: flex; align-items: flex-start; gap: 10px;"><span style="font-size: 18px; user-select: none;" contenteditable="false">${emoji}</span><div style="flex: 1; min-width: 0;"><div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;" contenteditable="false"><strong style="color: ${border}; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em;">${title}</strong><button type="button" data-action="delete-block" title="Delete Callout" style="background: transparent; border: none; cursor: pointer; color: #94a3b8; padding: 2px 6px; border-radius: 6px; font-size: 14px; line-height: 1; user-select: none;">✕</button></div><p id="${focusId}" style="margin: 0; font-size: 14px; line-height: 1.5;">Write your ${title.toLowerCase()} details here...</p></div></div><p><br/></p>`;
     document.execCommand('insertHTML', false, html);
     if (contentRef.current) {
       const target = contentRef.current.querySelector(`#${focusId}`);
@@ -1222,7 +1222,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   const handleInsertCodeBlock = () => {
     restoreSelection(savedSelectionRef.current);
     const focusId = `code-focus-${Date.now()}`;
-    const html = `<pre class="glick-code-block" style="background: #0f172a; color: #f8fafc; padding: 14px 16px; border-radius: 12px; font-family: monospace; font-size: 13px; margin: 12px 0; overflow-x: auto; border: 1px solid #1e293b;"><code id="${focusId}">// Enter code snippet here...</code></pre><p><br/></p>`;
+    const html = `<div class="glick-block-wrapper glick-code-container" style="margin: 12px 0; border-radius: 12px; overflow: hidden; border: 1px solid #334155; background: #0f172a;"><div style="display: flex; align-items: center; justify-content: space-between; padding: 6px 12px; background: #1e293b; border-bottom: 1px solid #334155; user-select: none;" contenteditable="false"><div style="display: flex; align-items: center; gap: 6px;"><span style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444; display: inline-block;"></span><span style="width: 10px; height: 10px; border-radius: 50%; background: #f59e0b; display: inline-block;"></span><span style="width: 10px; height: 10px; border-radius: 50%; background: #10b981; display: inline-block;"></span><span style="font-family: monospace; font-size: 11px; font-weight: 700; color: #94a3b8; margin-left: 6px;">CODE</span></div><div style="display: flex; align-items: center; gap: 8px;"><button type="button" data-action="copy-code" title="Copy code" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #cbd5e1; font-size: 11px; padding: 2px 8px; border-radius: 6px; cursor: pointer;">📋 Copy</button><button type="button" data-action="delete-block" title="Delete code block" style="background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; font-size: 11px; padding: 2px 8px; border-radius: 6px; cursor: pointer;">✕ Delete</button></div></div><pre class="glick-code-block" style="margin: 0; padding: 12px 14px; background: transparent; color: #f8fafc; font-family: monospace; font-size: 13px; line-height: 1.5; overflow-x: auto;"><code id="${focusId}">// Enter code snippet here...</code></pre></div><p><br/></p>`;
     document.execCommand('insertHTML', false, html);
     if (contentRef.current) {
       const target = contentRef.current.querySelector(`#${focusId}`);
@@ -1247,7 +1247,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   const handleInsertToggle = () => {
     restoreSelection(savedSelectionRef.current);
     const focusId = `toggle-focus-${Date.now()}`;
-    const html = `<details class="glick-toggle" style="padding: 10px 14px; margin: 10px 0; border: 1px solid rgba(148, 163, 184, 0.35); border-radius: 12px; background: rgba(248, 250, 252, 0.5);"><summary id="${focusId}" style="font-weight: 700; font-size: 14px; cursor: pointer; outline: none; user-select: none; color: #4f46e5;">Toggle Section (Click to expand)</summary><div style="margin-top: 8px; padding-left: 8px; font-size: 14px;"><p>Hidden notes, checklist, or deeper details go here...</p></div></details><p><br/></p>`;
+    const html = `<details class="glick-block-wrapper glick-toggle" style="position: relative; padding: 10px 14px; margin: 10px 0; border: 1px solid rgba(148, 163, 184, 0.35); border-radius: 12px; background: rgba(248, 250, 252, 0.5);"><summary style="font-weight: 700; font-size: 14px; cursor: pointer; outline: none; color: #4f46e5; display: flex; align-items: center; justify-content: space-between;"><span id="${focusId}">Toggle Section (Click to expand)</span><button type="button" data-action="delete-block" title="Delete toggle section" contenteditable="false" style="background: transparent; border: none; cursor: pointer; color: #94a3b8; padding: 2px 6px; border-radius: 6px; font-size: 14px; line-height: 1; user-select: none;">✕</button></summary><div style="margin-top: 8px; padding-left: 8px; font-size: 14px;"><p>Hidden notes, checklist, or deeper details go here...</p></div></details><p><br/></p>`;
     document.execCommand('insertHTML', false, html);
     if (contentRef.current) {
       const target = contentRef.current.querySelector(`#${focusId}`);
@@ -1632,7 +1632,25 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       pushToHistoryImmediate(contentRef.current.innerHTML);
     }
 
+    // Ensure a paragraph exists before removing table
+    let targetP = (table.nextElementSibling || table.previousElementSibling) as HTMLElement;
+    if (!targetP || (targetP.nodeName !== 'P' && targetP.nodeName !== 'DIV')) {
+      targetP = document.createElement('p');
+      targetP.innerHTML = '<br>';
+      table.parentNode?.insertBefore(targetP, table.nextSibling);
+    }
+
     table.remove();
+
+    const sel = window.getSelection();
+    if (sel && targetP) {
+      const range = document.createRange();
+      range.selectNodeContents(targetP);
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+    contentRef.current?.focus();
 
     if (contentRef.current) {
       const html = contentRef.current.innerHTML;
@@ -1641,6 +1659,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       pushToHistory(html);
     }
     setActivePopup(null);
+    showToast('Table deleted', 'info');
   };
 
   const handleCustomTableInsert = () => {
@@ -1808,6 +1827,64 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   const handleContentClick = (e: React.MouseEvent<HTMLDivElement>) => {
     setSlashMenuOpen(false);
     const target = e.target as HTMLElement;
+
+    // 1. Delete Block Button Click ([✕])
+    const deleteBtn = target.closest('[data-action="delete-block"]') as HTMLElement;
+    if (deleteBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      const block = deleteBtn.closest('.glick-block-wrapper, .glick-callout, .glick-code-container, details, table');
+      if (block) {
+        let targetP = (block.nextElementSibling || block.previousElementSibling) as HTMLElement;
+        if (!targetP || (targetP.nodeName !== 'P' && targetP.nodeName !== 'DIV')) {
+          targetP = document.createElement('p');
+          targetP.innerHTML = '<br>';
+          block.parentNode?.insertBefore(targetP, block.nextSibling);
+        }
+        block.remove();
+
+        const sel = window.getSelection();
+        if (sel) {
+          const range = document.createRange();
+          range.setStart(targetP, 0);
+          range.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+        contentRef.current?.focus();
+
+        if (contentRef.current) {
+          const html = contentRef.current.innerHTML;
+          latestContent.current = html;
+          setBody(html);
+          pushToHistory(html);
+        }
+        showToast('Block deleted', 'info');
+      }
+      return;
+    }
+
+    // 2. Copy Code Snippet Click ([📋 Copy])
+    const copyBtn = target.closest('[data-action="copy-code"]') as HTMLElement;
+    if (copyBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      const codeContainer = copyBtn.closest('.glick-code-container, .glick-block-wrapper');
+      const codeElement = codeContainer?.querySelector('pre code') || codeContainer?.querySelector('pre');
+      const textToCopy = codeElement?.textContent || '';
+      if (textToCopy) {
+        navigator.clipboard.writeText(textToCopy);
+        const originalText = copyBtn.innerHTML;
+        copyBtn.innerHTML = '✓ Copied!';
+        setTimeout(() => {
+          copyBtn.innerHTML = originalText;
+        }, 2000);
+        showToast('Code copied to clipboard!', 'success');
+      }
+      return;
+    }
+
+    // 3. Link click
     const anchor = target.closest('a');
     if (anchor) {
       e.preventDefault();
@@ -1915,6 +1992,151 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       if (zenMode) setZenMode(false);
     }
 
+    // Helper to find surrounding block container
+    const findBlockContainer = (startNode: Node | null): HTMLElement | null => {
+      let node: Node | null = startNode;
+      while (node && node !== contentRef.current) {
+        const el = node as HTMLElement;
+        if (el.classList?.contains('glick-block-wrapper') ||
+            el.classList?.contains('glick-callout') ||
+            el.classList?.contains('glick-code-container') ||
+            el.nodeName === 'PRE' ||
+            el.nodeName === 'DETAILS' ||
+            el.nodeName === 'TABLE') {
+          return el;
+        }
+        node = node.parentNode;
+      }
+      return null;
+    };
+
+    // Helper to test if selection range is at the very beginning of a block
+    const isAtStartOfBlock = (container: HTMLElement, currentRange: Range): boolean => {
+      if (currentRange.startOffset !== 0) return false;
+      let curr: Node | null = currentRange.startContainer;
+      while (curr && curr !== container) {
+        let prev = curr.previousSibling;
+        while (prev) {
+          if (prev.textContent && prev.textContent.trim().length > 0) return false;
+          prev = prev.previousSibling;
+        }
+        curr = curr.parentNode;
+      }
+      return true;
+    };
+
+    // Helper to test if selection range is at the very end of a block
+    const isAtEndOfBlock = (container: HTMLElement, currentRange: Range): boolean => {
+      const currentText = currentRange.startContainer.textContent || '';
+      if (currentRange.startOffset < currentText.length) return false;
+      let curr: Node | null = currentRange.startContainer;
+      while (curr && curr !== container) {
+        let next = curr.nextSibling;
+        while (next) {
+          if (next.textContent && next.textContent.trim().length > 0) return false;
+          next = next.nextSibling;
+        }
+        curr = curr.parentNode;
+      }
+      return true;
+    };
+
+    // ⬆️ Smooth ArrowUp Navigation (Exit block to previous line if at top)
+    if (e.key === 'ArrowUp') {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0 && sel.isCollapsed) {
+        const range = sel.getRangeAt(0);
+        const blockContainer = findBlockContainer(range.startContainer);
+        if (blockContainer && isAtStartOfBlock(blockContainer, range)) {
+          let prevP = blockContainer.previousElementSibling as HTMLElement;
+          if (!prevP || (prevP.nodeName !== 'P' && prevP.nodeName !== 'DIV')) {
+            prevP = document.createElement('p');
+            prevP.innerHTML = '<br>';
+            blockContainer.parentNode?.insertBefore(prevP, blockContainer);
+          }
+          e.preventDefault();
+          const newRange = document.createRange();
+          newRange.selectNodeContents(prevP);
+          newRange.collapse(false);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+          contentRef.current?.focus();
+          return;
+        }
+      }
+    }
+
+    // ⬇️ Smooth ArrowDown Navigation (Exit block to next line if at bottom)
+    if (e.key === 'ArrowDown') {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0 && sel.isCollapsed) {
+        const range = sel.getRangeAt(0);
+        const blockContainer = findBlockContainer(range.startContainer);
+        if (blockContainer && isAtEndOfBlock(blockContainer, range)) {
+          let nextP = blockContainer.nextElementSibling as HTMLElement;
+          if (!nextP || (nextP.nodeName !== 'P' && nextP.nodeName !== 'DIV')) {
+            nextP = document.createElement('p');
+            nextP.innerHTML = '<br>';
+            blockContainer.parentNode?.insertBefore(nextP, blockContainer.nextSibling);
+          }
+          e.preventDefault();
+          const newRange = document.createRange();
+          newRange.setStart(nextP, 0);
+          newRange.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+          contentRef.current?.focus();
+          return;
+        }
+      }
+    }
+
+    // ⌫ Smart Backspace Block Deletion
+    if (e.key === 'Backspace') {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0 && sel.isCollapsed) {
+        const range = sel.getRangeAt(0);
+        const blockContainer = findBlockContainer(range.startContainer);
+        if (blockContainer && blockContainer.nodeName !== 'TABLE') {
+          const rawText = (blockContainer.innerText || blockContainer.textContent || '').trim();
+          const isPlaceholder = 
+            rawText === '' ||
+            rawText === '✕' ||
+            rawText.includes('// Enter code snippet here...') ||
+            rawText.includes('details here...') ||
+            rawText === 'CODE 📋 Copy ✕ Delete // Enter code snippet here...' ||
+            rawText === 'Toggle Section (Click to expand) ✕ Hidden notes, checklist, or deeper details go here...';
+
+          if (isPlaceholder || (isAtStartOfBlock(blockContainer, range) && rawText.length <= 1)) {
+            e.preventDefault();
+            let targetP = (blockContainer.previousElementSibling || blockContainer.nextElementSibling) as HTMLElement;
+            if (!targetP || (targetP.nodeName !== 'P' && targetP.nodeName !== 'DIV')) {
+              targetP = document.createElement('p');
+              targetP.innerHTML = '<br>';
+              blockContainer.parentNode?.insertBefore(targetP, blockContainer);
+            }
+            blockContainer.remove();
+
+            const newRange = document.createRange();
+            newRange.selectNodeContents(targetP);
+            newRange.collapse(false);
+            sel.removeAllRanges();
+            sel.addRange(newRange);
+            contentRef.current?.focus();
+
+            if (contentRef.current) {
+              const html = contentRef.current.innerHTML;
+              latestContent.current = html;
+              setBody(html);
+              pushToHistory(html);
+            }
+            showToast('Block deleted', 'info');
+            return;
+          }
+        }
+      }
+    }
+
     // Smart Enter & Block Breakout Handling
     if (e.key === 'Enter') {
       // If slash command menu is active, SlashCommandMenu handles Enter
@@ -1928,10 +2150,12 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       let node: Node | null = selection.anchorNode;
       let preElement: HTMLElement | null = null;
       let calloutElement: HTMLElement | null = null;
+      let toggleElement: HTMLElement | null = null;
       
       while (node && node !== contentRef.current) {
         if (node.nodeName === 'PRE') preElement = node as HTMLElement;
         if ((node as HTMLElement).classList?.contains('glick-callout')) calloutElement = node as HTMLElement;
+        if ((node as HTMLElement).classList?.contains('glick-toggle') || node.nodeName === 'DETAILS') toggleElement = node as HTMLElement;
         node = node.parentNode;
       }
 
@@ -1944,11 +2168,12 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         // Shift+Enter OR Enter on empty code line -> BREAK OUT OF CODE BLOCK
         if (isShift || currentLineText.trim() === '' || currentLineText.includes('// Enter code snippet here...')) {
           e.preventDefault();
-          let nextP = preElement.nextElementSibling as HTMLElement;
+          const container = preElement.closest('.glick-block-wrapper') || preElement;
+          let nextP = container.nextElementSibling as HTMLElement;
           if (!nextP || (nextP.nodeName !== 'P' && nextP.nodeName !== 'DIV')) {
             nextP = document.createElement('p');
             nextP.innerHTML = '<br>';
-            preElement.parentNode?.insertBefore(nextP, preElement.nextSibling);
+            container.parentNode?.insertBefore(nextP, container.nextSibling);
           }
           const newRange = document.createRange();
           newRange.setStart(nextP, 0);
@@ -1990,11 +2215,12 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         // Shift+Enter OR empty line in callout -> BREAK OUT OF CALLOUT
         if (isShift || currentText.trim() === '' || currentText.includes('details here...')) {
           e.preventDefault();
-          let nextP = calloutElement.nextElementSibling as HTMLElement;
+          const container = calloutElement.closest('.glick-block-wrapper') || calloutElement;
+          let nextP = container.nextElementSibling as HTMLElement;
           if (!nextP || (nextP.nodeName !== 'P' && nextP.nodeName !== 'DIV')) {
             nextP = document.createElement('p');
             nextP.innerHTML = '<br>';
-            calloutElement.parentNode?.insertBefore(nextP, calloutElement.nextSibling);
+            container.parentNode?.insertBefore(nextP, container.nextSibling);
           }
           const newRange = document.createRange();
           newRange.setStart(nextP, 0);
@@ -2010,6 +2236,31 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
           }
           return;
         }
+      }
+
+      // Case 3: Inside Toggle Section (<details>)
+      if (toggleElement && e.shiftKey) {
+        e.preventDefault();
+        const container = toggleElement.closest('.glick-block-wrapper') || toggleElement;
+        let nextP = container.nextElementSibling as HTMLElement;
+        if (!nextP || (nextP.nodeName !== 'P' && nextP.nodeName !== 'DIV')) {
+          nextP = document.createElement('p');
+          nextP.innerHTML = '<br>';
+          container.parentNode?.insertBefore(nextP, container.nextSibling);
+        }
+        const newRange = document.createRange();
+        newRange.setStart(nextP, 0);
+        newRange.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(newRange);
+        contentRef.current?.focus();
+        if (contentRef.current) {
+          const html = contentRef.current.innerHTML;
+          latestContent.current = html;
+          setBody(html);
+          pushToHistory(html);
+        }
+        return;
       }
 
       // Normal Enter: DO NOT PREVENT DEFAULT! Browser creates natural clean new paragraph/line!
@@ -3166,6 +3417,14 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                     Delete Column
                   </button>
                 </div>
+                <button
+                  type="button"
+                  onMouseDown={handleButtonMouseDown}
+                  onClick={handleDeleteTable}
+                  className="w-full flex items-center justify-center gap-1.5 p-2.5 rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 text-xs font-bold transition-all cursor-pointer"
+                >
+                  <Trash2 className="w-4 h-4" /> Delete Entire Table
+                </button>
               </div>
             </motion.div>
           )}
