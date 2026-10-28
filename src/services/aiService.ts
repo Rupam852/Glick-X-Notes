@@ -21,10 +21,10 @@ export interface ModelTestResult {
 }
 
 export const GEMINI_MODELS = [
-  { id: 'gemini-3.5-flash', name: 'Gemini 3.5 Flash (Fast & Balanced - Recommended)', default: true },
-  { id: 'gemini-3.5-flash-lite', name: 'Gemini 3.5 Flash-Lite (Ultra-Speed)', default: false },
-  { id: 'gemini-3.7-flash', name: 'Gemini 3.7 Flash (Next-Gen)', default: false },
-  { id: 'gemini-flash-latest', name: 'Gemini Flash Latest', default: false }
+  { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash (Fast & Balanced - Recommended)', default: true },
+  { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash (Next-Gen Fast)', default: false },
+  { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro (Deep Reasoning)', default: false },
+  { id: 'gemini-2.0-flash-lite', name: 'Gemini 2.0 Flash-Lite (Ultra-Speed)', default: false }
 ];
 
 export const OPENAI_MODELS = [
@@ -42,7 +42,7 @@ export function getDefaultAIConfig(): AIConfiguration {
     primary: 'gemini',
     secondary: 'openai',
     gemini: {
-      model: 'gemini-3.5-flash',
+      model: 'gemini-1.5-flash',
       apiKey: (import.meta.env.VITE_GEMINI_API_KEY as string) || ''
     },
     openai: {
@@ -58,13 +58,18 @@ export function getAIConfig(): AIConfiguration {
     if (!stored) return getDefaultAIConfig();
     const parsed = JSON.parse(stored);
     
-    // Ensure all required fields exist
+    // Auto-migrate any invalid legacy model names
+    let geminiModel = parsed.gemini?.model || 'gemini-1.5-flash';
+    if (geminiModel.includes('3.5') || geminiModel.includes('3.7') || geminiModel === 'gemini-flash-latest') {
+      geminiModel = 'gemini-1.5-flash';
+    }
+
     return {
       mode: parsed.mode === 'custom' ? 'custom' : 'default',
       primary: parsed.primary === 'openai' ? 'openai' : 'gemini',
       secondary: parsed.secondary === 'gemini' ? 'gemini' : 'openai',
       gemini: {
-        model: parsed.gemini?.model || 'gemini-3.5-flash',
+        model: geminiModel,
         apiKey: parsed.mode === 'custom' 
           ? (parsed.gemini?.apiKey || '') 
           : ((import.meta.env.VITE_GEMINI_API_KEY as string) || '')
@@ -277,7 +282,7 @@ export async function executeAICompletion(prompt: string, systemInstruction?: st
       const key = config.mode === 'custom' 
         ? config.gemini.apiKey 
         : ((import.meta.env.VITE_GEMINI_API_KEY as string) || '');
-      const model = config.gemini.model || 'gemini-3.5-flash';
+      const model = config.gemini.model || 'gemini-1.5-flash';
       if (!key) throw new Error('Gemini API key is not configured');
       const text = await callGemini(key, model, prompt, systemInstruction);
       return { text, providerUsed: 'Gemini', modelUsed: model };
