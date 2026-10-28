@@ -423,11 +423,12 @@ export default function DrawingModal({
       if (sWidth > 0 && stroke !== 'transparent') ctx.stroke();
     } else if (type === 'cloud') {
       ctx.beginPath();
-      ctx.moveTo(w * 0.2, h * 0.7);
-      ctx.bezierCurveTo(0, h * 0.7, 0, h * 0.4, w * 0.25, h * 0.4);
-      ctx.bezierCurveTo(w * 0.25, h * 0.1, w * 0.55, h * 0.1, w * 0.55, h * 0.35);
-      ctx.bezierCurveTo(w * 0.65, h * 0.2, w * 0.9, h * 0.25, w * 0.9, h * 0.45);
-      ctx.bezierCurveTo(w, h * 0.5, w, h * 0.7, w * 0.8, h * 0.7);
+      ctx.moveTo(w * 0.22, h * 0.78);
+      ctx.bezierCurveTo(0, h * 0.76, 0, h * 0.42, w * 0.22, h * 0.38);
+      ctx.bezierCurveTo(w * 0.22, h * 0.12, w * 0.48, h * 0.12, w * 0.52, h * 0.32);
+      ctx.bezierCurveTo(w * 0.58, h * 0.14, w * 0.82, h * 0.18, w * 0.82, h * 0.42);
+      ctx.bezierCurveTo(w * 1.02, h * 0.48, w * 1.02, h * 0.76, w * 0.78, h * 0.78);
+      ctx.bezierCurveTo(w * 0.62, h * 0.94, w * 0.38, h * 0.94, w * 0.22, h * 0.78);
       ctx.closePath();
       if (fill !== 'transparent') ctx.fill();
       if (sWidth > 0 && stroke !== 'transparent') ctx.stroke();

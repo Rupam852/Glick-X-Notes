@@ -200,23 +200,23 @@ const convertStrokesToSvg = (strokes: InkStroke[], width: number, height: number
         return `<path d="${d}" stroke="${strokeColor}" stroke-width="${strokeWidth}" stroke-linejoin="round" fill="none" />`;
       }
       if (s.tool === 'cloud') {
-        const r1 = Math.min(w, h) * 0.25;
-        const r2 = Math.min(w, h) * 0.3;
-        const r3 = Math.min(w, h) * 0.28;
-        const d = `M ${minX + r1} ${maxY - 4} ` +
-                  `A ${r1} ${r1} 0 0 1 ${minX + w * 0.45 - r2} ${minY + r2 + 6} ` +
-                  `A ${r2} ${r2} 0 0 1 ${minX + w * 0.75} ${minY + r2 + 6} ` +
-                  `A ${r3} ${r3} 0 0 1 ${maxX - 4} ${maxY - 4} Z`;
+        const d = `M ${minX + w * 0.22} ${minY + h * 0.78} ` +
+                  `C ${minX} ${minY + h * 0.76}, ${minX} ${minY + h * 0.42}, ${minX + w * 0.22} ${minY + h * 0.38} ` +
+                  `C ${minX + w * 0.22} ${minY + h * 0.12}, ${minX + w * 0.48} ${minY + h * 0.12}, ${minX + w * 0.52} ${minY + h * 0.32} ` +
+                  `C ${minX + w * 0.58} ${minY + h * 0.14}, ${minX + w * 0.82} ${minY + h * 0.18}, ${minX + w * 0.82} ${minY + h * 0.42} ` +
+                  `C ${minX + w * 1.02} ${minY + h * 0.48}, ${minX + w * 1.02} ${minY + h * 0.76}, ${minX + w * 0.78} ${minY + h * 0.78} ` +
+                  `C ${minX + w * 0.62} ${minY + h * 0.94}, ${minX + w * 0.38} ${minY + h * 0.94}, ${minX + w * 0.22} ${minY + h * 0.78} Z`;
         return `<path d="${d}" stroke="${strokeColor}" stroke-width="${strokeWidth}" stroke-linejoin="round" fill="none" />`;
       }
       if (s.tool === 'calloutRect') {
         const bH = h * 0.78;
-        const d = `M ${minX + 6} ${minY} ` +
-                  `H ${maxX - 6} Q ${maxX} ${minY} ${maxX} ${minY + 6} ` +
-                  `V ${minY + bH - 6} Q ${maxX} ${minY + bH} ${maxX - 6} ${minY + bH} ` +
-                  `H ${minX + w * 0.4} L ${minX + w * 0.2} ${maxY} L ${minX + w * 0.28} ${minY + bH} ` +
-                  `H ${minX + 6} Q ${minX} ${minY + bH} ${minX} ${minY + bH - 6} ` +
-                  `V ${minY + 6} Q ${minX} ${minY} ${minX + 6} ${minY} Z`;
+        const rad = Math.min(10, w * 0.1, bH * 0.1);
+        const d = `M ${minX + rad} ${minY} ` +
+                  `H ${maxX - rad} Q ${maxX} ${minY} ${maxX} ${minY + rad} ` +
+                  `V ${minY + bH - rad} Q ${maxX} ${minY + bH} ${maxX - rad} ${minY + bH} ` +
+                  `H ${minX + w * 0.45} L ${minX + w * 0.2} ${maxY} L ${minX + w * 0.3} ${minY + bH} ` +
+                  `H ${minX + rad} Q ${minX} ${minY + bH} ${minX} ${minY + bH - rad} ` +
+                  `V ${minY + rad} Q ${minX} ${minY} ${minX + rad} ${minY} Z`;
         return `<path d="${d}" stroke="${strokeColor}" stroke-width="${strokeWidth}" stroke-linejoin="round" fill="none" />`;
       }
       if (s.tool === 'calloutRounded') {
@@ -2240,33 +2240,33 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
           ctx.closePath();
           ctx.stroke();
         } else if (stroke.tool === 'cloud') {
-          const r1 = Math.min(w, h) * 0.25;
-          const r2 = Math.min(w, h) * 0.3;
-          const r3 = Math.min(w, h) * 0.28;
           ctx.beginPath();
-          ctx.moveTo(minX + r1, maxY - 4);
-          ctx.arc(minX + w * 0.45 - r2 / 2, minY + r2 + 6, r1, Math.PI, Math.PI * 1.8);
-          ctx.arc(minX + w * 0.72, minY + r2 + 6, r2, Math.PI * 1.2, Math.PI * 2);
-          ctx.arc(maxX - r3, maxY - r3 - 2, r3, Math.PI * 1.5, 0);
-          ctx.lineTo(minX + r1, maxY - 4);
+          ctx.moveTo(minX + w * 0.22, minY + h * 0.78);
+          ctx.bezierCurveTo(minX, minY + h * 0.76, minX, minY + h * 0.42, minX + w * 0.22, minY + h * 0.38);
+          ctx.bezierCurveTo(minX + w * 0.22, minY + h * 0.12, minX + w * 0.48, minY + h * 0.12, minX + w * 0.52, minY + h * 0.32);
+          ctx.bezierCurveTo(minX + w * 0.58, minY + h * 0.14, minX + w * 0.82, minY + h * 0.18, minX + w * 0.82, minY + h * 0.42);
+          ctx.bezierCurveTo(minX + w * 1.02, minY + h * 0.48, minX + w * 1.02, minY + h * 0.76, minX + w * 0.78, minY + h * 0.78);
+          ctx.bezierCurveTo(minX + w * 0.62, minY + h * 0.94, minX + w * 0.38, minY + h * 0.94, minX + w * 0.22, minY + h * 0.78);
           ctx.closePath();
           ctx.stroke();
         } else if (stroke.tool === 'calloutRect') {
           const bH = h * 0.78;
+          const rad = Math.min(10, w * 0.1, bH * 0.1);
           ctx.beginPath();
-          ctx.moveTo(minX + 8, minY);
-          ctx.lineTo(maxX - 8, minY);
-          ctx.quadraticCurveTo(maxX, minY, maxX, minY + 8);
-          ctx.lineTo(maxX, minY + bH - 8);
-          ctx.quadraticCurveTo(maxX, minY + bH, maxX - 8, minY + bH);
+          ctx.moveTo(minX + rad, minY);
+          ctx.lineTo(maxX - rad, minY);
+          ctx.quadraticCurveTo(maxX, minY, maxX, minY + rad);
+          ctx.lineTo(maxX, minY + bH - rad);
+          ctx.quadraticCurveTo(maxX, minY + bH, maxX - rad, minY + bH);
           ctx.lineTo(minX + w * 0.45, minY + bH);
           ctx.lineTo(minX + w * 0.2, maxY);
           ctx.lineTo(minX + w * 0.3, minY + bH);
-          ctx.lineTo(minX + 8, minY + bH);
-          ctx.quadraticCurveTo(minX, minY + bH, minX, minY + bH - 8);
-          ctx.lineTo(minX, minY + 8);
-          ctx.quadraticCurveTo(minX, minY, minX + 8, minY);
+          ctx.lineTo(minX + rad, minY + bH);
+          ctx.quadraticCurveTo(minX, minY + bH, minX, minY + bH - rad);
+          ctx.lineTo(minX, minY + rad);
+          ctx.quadraticCurveTo(minX, minY, minX + rad, minY);
           ctx.closePath();
+          ctx.stroke();
         } else if (stroke.tool === 'calloutRounded') {
           const bH = h * 0.78;
           const cx = (minX + maxX) / 2;
