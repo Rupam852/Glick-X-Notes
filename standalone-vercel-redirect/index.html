@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Glick X Notes - Official Website Moved</title>
+  <link rel="icon" type="image/png" href="https://glick-x-notes.pages.dev/favicon.png?v=4">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background-color: #0b0f19;
+      color: #e2e8f0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .card {
+      background: #111827;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 24px;
+      padding: 42px 30px;
+      max-width: 490px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 700;
+      background: rgba(59, 130, 246, 0.15);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      margin-bottom: 20px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    h1 {
+      font-size: 26px;
+      font-weight: 800;
+      color: #ffffff;
+      margin-bottom: 12px;
+      letter-spacing: -0.5px;
+    }
+    p {
+      color: #94a3b8;
+      font-size: 14.5px;
+      line-height: 1.6;
+      margin-bottom: 26px;
+    }
+    .link-highlight {
+      display: block;
+      margin-top: 10px;
+      color: #38bdf8;
+      font-weight: 600;
+      text-decoration: none;
+      word-break: break-all;
+      font-size: 15px;
+    }
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 16px 24px;
+      border-radius: 14px;
+      font-size: 15px;
+      font-weight: 700;
+      color: #ffffff;
+      background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+      text-decoration: none;
+      box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.5);
+      transition: all 0.2s ease;
+      cursor: pointer;
+      border: none;
+    }
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 15px 30px -5px rgba(59, 130, 246, 0.65);
+    }
+    .btn:active {
+      transform: scale(0.98);
+    }
+    .timer {
+      margin-top: 22px;
+      font-size: 13px;
+      color: #64748b;
+    }
+    .timer strong {
+      color: #38bdf8;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge">🚀 Faster Server Live</div>
+    <h1>Our Official Website Has Moved</h1>
+    <p>
+      Glick X Notes has permanently shifted to our new ultra-fast Cloudflare server. Please visit our official site:
+      <a href="https://glick-x-notes.pages.dev" class="link-highlight" id="targetLink">https://glick-x-notes.pages.dev</a>
+    </p>
+
+    <a href="https://glick-x-notes.pages.dev" class="btn" id="actionBtn">
+      <span>Visit New Official Website</span>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </a>
+
+    <div class="timer">
+      Redirecting automatically in <strong id="countdown">5</strong> seconds...
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      var target = 'https://glick-x-notes.pages.dev' + window.location.pathname + window.location.search + window.location.hash;
+      var link = document.getElementById('targetLink');
+      var btn = document.getElementById('actionBtn');
+      if (link) link.href = target;
+      if (btn) btn.href = target;
+
+      var count = 5;
+      var interval = setInterval(function() {
+        count--;
+        var el = document.getElementById('countdown');
+        if (el) el.textContent = count;
+        if (count <= 0) {
+          clearInterval(interval);
+          window.location.replace(target);
+        }
+      }, 1000);
+    })();
+  </script>
+</body>
+</html>
