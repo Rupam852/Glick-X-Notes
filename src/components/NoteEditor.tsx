@@ -2487,7 +2487,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
 
       // Case 1: Inside Code Block (<pre>)
       if (preElement) {
-        const container = preElement.closest('.glick-block-wrapper') || preElement;
+        const container = (preElement.closest('.glick-block-wrapper') as HTMLElement) || preElement;
         const range = selection.getRangeAt(0);
         const atEnd = isAtEndOfBlock(container, range);
 
@@ -2566,7 +2566,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
 
       // Case 2: Inside Callout Box (.glick-callout)
       if (calloutElement) {
-        const container = calloutElement.closest('.glick-block-wrapper') || calloutElement;
+        const container = (calloutElement.closest('.glick-block-wrapper') as HTMLElement) || calloutElement;
         const range = selection.getRangeAt(0);
         const atEnd = isAtEndOfBlock(container, range);
 
@@ -2643,7 +2643,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
 
       // Case 3: Inside Toggle Section (<details>)
       if (toggleElement) {
-        const container = toggleElement.closest('.glick-block-wrapper') || toggleElement;
+        const container = (toggleElement.closest('.glick-block-wrapper') as HTMLElement) || toggleElement;
 
         // Inside summary vs inside body
         const summary = toggleElement.querySelector('summary');
