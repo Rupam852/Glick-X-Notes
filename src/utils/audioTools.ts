@@ -79,26 +79,46 @@ export class VoiceDictation {
       };
 
       this.recognition.onresult = (event: any) => {
-        let sessionFinal = '';
-        let sessionInterim = '';
+        const finalSegments: string[] = [];
+        let latestInterim = '';
 
-        // Loop over the session results safely from 0 to length
+        // Safely scan all event results, discarding duplicates created by Android Chrome
         for (let i = 0; i < event.results.length; ++i) {
           const res = event.results[i];
-          if (res && res[0]) {
-            if (res.isFinal) {
-              sessionFinal += res[0].transcript;
-            } else {
-              sessionInterim += res[0].transcript;
+          if (!res || !res[0]) continue;
+          const raw = (res[0].transcript || '').trim();
+          if (!raw) continue;
+
+          if (res.isFinal) {
+            if (finalSegments.length > 0) {
+              const last = finalSegments[finalSegments.length - 1];
+              // 1. Exact match duplicate (e.g. Android repeating "hello" as a second final result)
+              if (raw.toLowerCase() === last.toLowerCase()) {
+                continue;
+              }
+              // 2. Cumulative match (e.g. Android sending "hello" then "hello world" in results)
+              if (raw.toLowerCase().startsWith(last.toLowerCase())) {
+                finalSegments[finalSegments.length - 1] = raw;
+                continue;
+              }
+              // 3. Trailing sub-phrase match (e.g. "world" when last was already "hello world")
+              if (last.toLowerCase().endsWith(raw.toLowerCase())) {
+                continue;
+              }
             }
+            finalSegments.push(raw);
+          } else {
+            // Keep the latest interim guess to avoid stutter
+            latestInterim = raw;
           }
         }
 
+        const sessionFinal = finalSegments.join(' ');
         this.sessionFinalText = sessionFinal;
 
         const currentTotal = mergeTranscripts(this.committedText, sessionFinal);
         if (this.onResultCb) {
-          this.onResultCb(currentTotal, sessionInterim);
+          this.onResultCb(currentTotal, latestInterim);
         }
       };
 
@@ -106,9 +126,7 @@ export class VoiceDictation {
         const error = event.error;
         console.warn('Speech recognition error:', error);
 
-        // 'no-speech' is a normal silence timeout on phones and desktop.
-        // 'no-speech' is a normal silence timeout on phones and desktop.
-        // We do NOT kill dictation on 'no-speech' if shouldKeepListening is true.
+        // 'no-speech' and 'aborted' are normal silence timeouts on phones and desktop.
         if (error === 'no-speech' || error === 'aborted') {
           return;
         }
