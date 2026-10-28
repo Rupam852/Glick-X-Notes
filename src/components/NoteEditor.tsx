@@ -22,6 +22,7 @@ import SlashCommandMenu from './SlashCommandMenu';
 import ExportModal from './ExportModal';
 import VoiceDictationModal from './VoiceDictationModal';
 import { voiceDictation, audioReader } from '../utils/audioTools';
+import { sound } from '../utils/sound';
 import { convertMarkdownBadgesAndLinksToHtml } from '../services/aiService';
 import MermaidModal from './MermaidModal';
 import MathFormulaModal from './MathFormulaModal';
@@ -4827,7 +4828,16 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         await setDoc(newDocRef, noteData);
         setCurrentNoteId(targetNoteId);
         setLastSaved(new Date());
-        setLastSavedSnapshot({ title: finalTitle, body: noteData.body, tags, folder, color });
+        setLastSavedSnapshot({
+          title: finalTitle,
+          body: noteData.body,
+          tags,
+          folder,
+          color,
+          paperStyle,
+          paperTone,
+          inkStrokes: inkStrokes || []
+        });
       } catch (error) {
         handleFirestoreError(error, OperationType.WRITE, `notes/${targetNoteId}`);
         showToast('Failed to create note for attachment', 'error');
