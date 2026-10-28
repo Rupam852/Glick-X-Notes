@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { auth, db } from '../firebase';
 import { sendEmailVerification, signOut, deleteUser } from 'firebase/auth';
 import { deleteDoc, doc } from 'firebase/firestore';
-import { Mail, AlertCircle, ArrowLeft, RefreshCw, Loader2 } from 'lucide-react';
+import { Mail, AlertCircle, ArrowLeft, RefreshCw, Loader2, Sun, Moon } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useToast } from '../contexts/ToastContext';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface EmailVerificationProps {
   onVerified: () => void;
@@ -12,6 +13,7 @@ interface EmailVerificationProps {
 
 export default function EmailVerification({ onVerified }: EmailVerificationProps) {
   const { showToast } = useToast();
+  const { theme, toggleTheme } = useTheme();
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [countdown, setCountdown] = useState(0);
@@ -89,17 +91,40 @@ export default function EmailVerification({ onVerified }: EmailVerificationProps
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 relative overflow-hidden">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col items-center justify-center p-6 relative overflow-hidden transition-colors duration-200">
+      {/* Background Tech Grid */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,#80808007_1px,transparent_1px),linear-gradient(to_bottom,#80808007_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none -z-20" />
+
       {/* High-end Cosmic Ambient Lighting */}
-      <div className="absolute -top-40 -left-40 w-96 h-96 bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none animate-pulse duration-[8s]" />
-      <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-pink-500/10 rounded-full blur-[120px] pointer-events-none animate-pulse duration-[10s]" />
+      <div className="absolute -top-40 -left-40 w-96 h-96 bg-indigo-500/15 dark:bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none animate-pulse duration-[8s]" />
+      <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-pink-500/15 dark:bg-pink-500/10 rounded-full blur-[120px] pointer-events-none animate-pulse duration-[10s]" />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-purple-500/5 rounded-full blur-[140px] pointer-events-none" />
+
+      {/* Floating Theme Toggle Switch at Top-Right */}
+      <div className="absolute top-5 right-5 z-20">
+        <button
+          onClick={toggleTheme}
+          type="button"
+          aria-label="Toggle Light and Dark Mode"
+          className="p-2.5 rounded-xl bg-white/80 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 shadow-sm hover:shadow-md transition-all active:scale-95 flex items-center gap-2 cursor-pointer backdrop-blur-md"
+          title={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`}
+        >
+          {theme === 'light' ? (
+            <Moon className="w-4 h-4 text-slate-700" />
+          ) : (
+            <Sun className="w-4 h-4 text-amber-400" />
+          )}
+          <span className="text-xs font-bold hidden sm:inline">
+            {theme === 'light' ? 'Dark Mode' : 'Light Mode'}
+          </span>
+        </button>
+      </div>
 
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="max-w-lg w-full bg-slate-900/40 border border-slate-800/80 backdrop-blur-3xl rounded-[2rem] shadow-[0_0_60px_-15px_rgba(99,102,241,0.3)] overflow-hidden relative z-10 p-8 md:p-10 text-center space-y-8"
+        className="max-w-lg w-full bg-white/90 dark:bg-slate-900/40 border border-slate-200/90 dark:border-slate-800/80 backdrop-blur-3xl rounded-[2rem] shadow-2xl shadow-indigo-500/5 dark:shadow-[0_0_60px_-15px_rgba(99,102,241,0.3)] overflow-hidden relative z-10 p-8 md:p-10 text-center space-y-8 transition-colors duration-200"
       >
         {/* Futuristic Top Lip Neon Highlight */}
         <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-indigo-500 to-pink-500 opacity-60" />
@@ -109,7 +134,7 @@ export default function EmailVerification({ onVerified }: EmailVerificationProps
           <button
             onClick={handleSignOut}
             disabled={loading}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-950/60 hover:bg-slate-950 border border-slate-850 text-slate-400 hover:text-white rounded-lg transition-all cursor-pointer text-[10px] uppercase tracking-wider font-bold shadow-md hover:shadow-[0_0_15px_rgba(99,102,241,0.15)] duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-950/60 dark:hover:bg-slate-950 border border-slate-200 dark:border-slate-850 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg transition-all cursor-pointer text-[10px] uppercase tracking-wider font-bold shadow-xs duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowLeft className="w-3.5 h-3.5" />}
             Back
@@ -121,14 +146,14 @@ export default function EmailVerification({ onVerified }: EmailVerificationProps
           <div className="relative">
             {/* Ambient Backing Glow */}
             <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 rounded-3xl blur-xl opacity-30 animate-pulse" />
-            <div className="w-24 h-24 bg-slate-950 border border-slate-850 rounded-3xl flex items-center justify-center shadow-2xl relative overflow-hidden group">
+            <div className="w-24 h-24 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-3xl flex items-center justify-center shadow-xl relative overflow-hidden group">
               <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/10 via-transparent to-pink-500/10" />
               <Mail 
-                className="w-10 h-10 text-indigo-400 group-hover:scale-110 transition-transform duration-300 animate-bounce" 
+                className="w-10 h-10 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform duration-300 animate-bounce" 
                 style={{ animationDuration: '3s' }} 
               />
               {/* Premium overlapping Brand Logo Badge in corner */}
-              <div className="absolute bottom-1 right-1 w-6.5 h-6.5 bg-[#080d19] border border-slate-700/60 rounded-lg flex items-center justify-center p-0.5 overflow-hidden shadow-md">
+              <div className="absolute bottom-1 right-1 w-6.5 h-6.5 bg-slate-50 dark:bg-[#080d19] border border-slate-200 dark:border-slate-700/60 rounded-lg flex items-center justify-center p-0.5 overflow-hidden shadow-md">
                 <img src="/favicon.png?v=4" alt="Glick Logo" className="w-full h-full object-contain" />
               </div>
             </div>
@@ -137,18 +162,20 @@ export default function EmailVerification({ onVerified }: EmailVerificationProps
 
         {/* Header Block */}
         <div className="space-y-4">
-          <h1 className="text-3.5xl font-black tracking-tight bg-gradient-to-r from-white via-indigo-100 to-pink-100 bg-clip-text text-transparent">
+          <h1 className="text-3.5xl font-black tracking-tight bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-800 dark:from-white dark:via-indigo-100 dark:to-pink-100 bg-clip-text text-transparent">
             Verify Your Email
           </h1>
-          <p className="text-slate-400 text-sm font-medium leading-relaxed max-w-sm mx-auto">
+          <p className="text-slate-600 dark:text-slate-400 text-sm font-medium leading-relaxed max-w-sm mx-auto">
             A verification link was dispatched to your address. Please click the link to confirm ownership and activate your workspace.
           </p>
 
           {/* Premium Email Address Pill Badge */}
           <div className="flex justify-center pt-2">
-            <div className="px-4.5 py-2.5 bg-slate-950/80 border border-indigo-500/20 backdrop-blur-md rounded-full shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] flex items-center gap-2.5">
-              <span className="w-2 h-2 rounded-full bg-indigo-400 animate-ping" />
-              <span className="text-sm font-bold text-indigo-300 tracking-wide select-none">{auth.currentUser?.email}</span>
+            <div className="px-4.5 py-2.5 bg-indigo-50/80 dark:bg-slate-950/80 border border-indigo-200 dark:border-indigo-500/20 backdrop-blur-md rounded-full shadow-xs flex items-center gap-2.5">
+              <span className="w-2 h-2 rounded-full bg-indigo-600 dark:bg-indigo-400 animate-ping" />
+              <span className="text-sm font-bold text-indigo-700 dark:text-indigo-300 tracking-wide select-none">
+                {auth.currentUser?.email}
+              </span>
             </div>
           </div>
         </div>
@@ -170,7 +197,7 @@ export default function EmailVerification({ onVerified }: EmailVerificationProps
             <button
               onClick={resendVerificationEmail}
               disabled={resending || countdown > 0}
-              className="w-full bg-slate-950/60 border border-slate-850 hover:bg-slate-900/60 text-slate-200 font-bold py-3.5 rounded-xl transition-all cursor-pointer text-xs uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-slate-100 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-850 hover:bg-slate-200 dark:hover:bg-slate-900/60 text-slate-800 dark:text-slate-200 font-bold py-3.5 rounded-xl transition-all cursor-pointer text-xs uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {resending ? (
                 <span className="flex items-center justify-center gap-2">
@@ -186,10 +213,10 @@ export default function EmailVerification({ onVerified }: EmailVerificationProps
         </div>
 
         {/* Premium Note helper */}
-        <div className="p-4 bg-indigo-950/10 border border-indigo-950/35 rounded-2xl flex items-start gap-3 text-left backdrop-blur-sm">
-          <AlertCircle className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
-          <p className="text-xs text-slate-400 leading-relaxed font-medium">
-            Didn't receive the email? Please check your <span className="text-indigo-300 font-bold">Spam or Junk folder</span>. The email is automatically dispatched from our Firebase Authentication system.
+        <div className="p-4 bg-indigo-50/80 dark:bg-indigo-950/10 border border-indigo-200/80 dark:border-indigo-950/35 rounded-2xl flex items-start gap-3 text-left backdrop-blur-sm">
+          <AlertCircle className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
+          <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
+            Didn't receive the email? Please check your <span className="text-indigo-600 dark:text-indigo-300 font-bold">Spam or Junk folder</span>. The email is automatically dispatched from our Firebase Authentication system.
           </p>
         </div>
       </motion.div>

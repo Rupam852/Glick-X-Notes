@@ -108,9 +108,11 @@ export default function LoginForm({ onSwitchToSignup, onForgotPassword, onSucces
     <div className="space-y-6">
       <form onSubmit={handleEmailLogin} className="space-y-5">
         <div className="space-y-2">
-          <label className="block text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Email Address</label>
+          <label className="block text-[10px] font-extrabold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+            Email Address
+          </label>
           <div className="relative">
-            <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+            <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-slate-500" />
             <input
               type="email"
               required
@@ -122,29 +124,31 @@ export default function LoginForm({ onSwitchToSignup, onForgotPassword, onSucces
                 setEmail(e.target.value);
                 if (fieldErrors.email) setFieldErrors(prev => ({ ...prev, email: undefined }));
               }}
-              className={`w-full pl-11 pr-4 py-3.5 bg-slate-950/80 text-slate-100 border rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 outline-none font-medium ${
-                fieldErrors.email ? 'border-red-500/80 focus:ring-red-500/10' : 'border-slate-800/80'
+              className={`w-full pl-11 pr-4 py-3.5 bg-slate-50 dark:bg-slate-950/80 text-slate-900 dark:text-slate-100 border rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-950 transition-all duration-200 outline-none font-medium ${
+                fieldErrors.email ? 'border-red-500/80 focus:ring-red-500/10' : 'border-slate-200 dark:border-slate-800/80'
               }`}
             />
           </div>
           {fieldErrors.email && (
-            <p className="text-xs text-red-400 font-semibold">{fieldErrors.email}</p>
+            <p className="text-xs text-red-500 dark:text-red-400 font-semibold">{fieldErrors.email}</p>
           )}
         </div>
 
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <label className="block text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Password</label>
+            <label className="block text-[10px] font-extrabold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+              Password
+            </label>
             <button 
               type="button"
               onClick={onForgotPassword}
-              className="text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer"
+              className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 transition-colors cursor-pointer"
             >
               Forgot password?
             </button>
           </div>
           <div className="relative">
-            <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+            <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-slate-500" />
             <input
               type={showPassword ? 'text' : 'password'}
               required
@@ -156,20 +160,20 @@ export default function LoginForm({ onSwitchToSignup, onForgotPassword, onSucces
                 setPassword(e.target.value);
                 if (fieldErrors.password) setFieldErrors(prev => ({ ...prev, password: undefined }));
               }}
-              className={`w-full pl-11 pr-12 py-3.5 bg-slate-950/80 text-slate-100 border rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 outline-none font-medium ${
-                fieldErrors.password ? 'border-red-500/80 focus:ring-red-500/10' : 'border-slate-800/80'
+              className={`w-full pl-11 pr-12 py-3.5 bg-slate-50 dark:bg-slate-950/80 text-slate-900 dark:text-slate-100 border rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-950 transition-all duration-200 outline-none font-medium ${
+                fieldErrors.password ? 'border-red-500/80 focus:ring-red-500/10' : 'border-slate-200 dark:border-slate-800/80'
               }`}
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors cursor-pointer"
             >
               {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
             </button>
           </div>
           {fieldErrors.password && (
-            <p className="text-xs text-red-400 font-semibold">{fieldErrors.password}</p>
+            <p className="text-xs text-red-500 dark:text-red-400 font-semibold">{fieldErrors.password}</p>
           )}
         </div>
 
@@ -177,7 +181,7 @@ export default function LoginForm({ onSwitchToSignup, onForgotPassword, onSucces
           <motion.div 
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
-            className="flex items-center gap-2.5 text-red-400 text-sm bg-red-950/20 border border-red-900/40 p-3.5 rounded-xl"
+            className="flex items-center gap-2.5 text-red-600 dark:text-red-400 text-sm bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/40 p-3.5 rounded-xl"
           >
             <AlertCircle className="w-4 h-4 flex-shrink-0" />
             <p>{error}</p>
@@ -187,7 +191,7 @@ export default function LoginForm({ onSwitchToSignup, onForgotPassword, onSucces
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-gradient-to-r from-indigo-500 via-violet-600 to-pink-600 hover:from-indigo-400 hover:via-violet-500 hover:to-pink-500 text-white font-black py-3.5 rounded-xl hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
+          className="w-full bg-gradient-to-r from-indigo-500 via-violet-600 to-pink-600 hover:from-indigo-400 hover:via-violet-500 hover:to-pink-500 text-white font-black py-3.5 rounded-xl hover:-translate-y-0.5 active:translate-y-0 shadow-lg shadow-indigo-500/20 transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
         >
           {loading ? 'Signing in...' : 'Sign In'}
           <ArrowRight className="w-4.5 h-4.5" />
@@ -196,25 +200,27 @@ export default function LoginForm({ onSwitchToSignup, onForgotPassword, onSucces
 
       <div className="relative flex items-center justify-center py-2">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-slate-800/60"></div>
+          <div className="w-full border-t border-slate-200 dark:border-slate-800/60"></div>
         </div>
-        <span className="relative px-4 py-1.5 bg-slate-900 border border-slate-800 rounded-full text-slate-500 uppercase tracking-widest text-[9px] font-black z-10">Or continue with</span>
+        <span className="relative px-4 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-full text-slate-500 uppercase tracking-widest text-[9px] font-black z-10 shadow-xs">
+          Or continue with
+        </span>
       </div>
 
       <button
         onClick={handleGoogleLogin}
         disabled={loading}
-        className="w-full bg-slate-950 hover:bg-slate-900/80 text-slate-200 border border-slate-800 hover:border-slate-700 font-bold py-3.5 rounded-xl hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 flex items-center justify-center gap-3 disabled:opacity-70 cursor-pointer"
+        className="w-full bg-white dark:bg-slate-950 hover:bg-slate-50 dark:hover:bg-slate-900/80 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 font-bold py-3.5 rounded-xl shadow-xs hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 flex items-center justify-center gap-3 disabled:opacity-70 cursor-pointer"
       >
         <GoogleIcon />
         Sign in with Google
       </button>
 
-      <p className="text-center text-sm text-slate-400">
+      <p className="text-center text-sm text-slate-500 dark:text-slate-400">
         Don't have an account?{' '}
         <button 
           onClick={onSwitchToSignup}
-          className="text-indigo-400 font-extrabold hover:text-indigo-300 transition-colors cursor-pointer"
+          className="text-indigo-600 dark:text-indigo-400 font-extrabold hover:text-indigo-500 dark:hover:text-indigo-300 transition-colors cursor-pointer"
         >
           Sign up for free
         </button>
