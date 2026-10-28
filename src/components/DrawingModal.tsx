@@ -1182,27 +1182,29 @@ export default function DrawingModal({
         </div>
 
         {/* Toolbar Bar */}
-        <div className="flex items-center gap-1 px-3 py-2 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 overflow-x-auto no-scrollbar shrink-0 text-slate-700 dark:text-slate-200 text-xs">
+        <div className="flex items-center gap-1 px-3 py-2 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/95 relative z-30 shrink-0 text-slate-700 dark:text-slate-200 text-xs overflow-visible">
           
           {/* Actions Dropdown */}
           <div className="relative">
             <button
               type="button"
               onClick={() => setShowActionsMenu(prev => !prev)}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition cursor-pointer"
             >
               <span>Actions</span>
               <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
             </button>
 
             {showActionsMenu && (
-              <div className="absolute left-0 mt-1 top-full w-48 z-40 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-1.5 shadow-2xl space-y-1">
-                <button
-                  type="button"
-                  disabled={!selectedId}
-                  onClick={() => { handleRotate90(); setShowActionsMenu(false); }}
-                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-xs font-semibold disabled:opacity-40"
-                >
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowActionsMenu(false)} />
+                <div className="absolute left-0 mt-1 top-full w-48 z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-1.5 shadow-2xl space-y-1">
+                  <button
+                    type="button"
+                    disabled={!selectedId}
+                    onClick={() => { handleRotate90(); setShowActionsMenu(false); }}
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-xs font-semibold disabled:opacity-40"
+                  >
                   <RotateCw className="w-4 h-4 text-indigo-500" />
                   <span>Rotate 90° Clockwise</span>
                 </button>
@@ -1243,7 +1245,8 @@ export default function DrawingModal({
                   <span>Clear Entire Canvas</span>
                 </button>
               </div>
-            )}
+            </>
+          )}
           </div>
 
           <div className="w-px h-5 bg-slate-200 dark:bg-slate-800 mx-1 shrink-0" />
@@ -1329,7 +1332,9 @@ export default function DrawingModal({
             </button>
 
             {showShapeMenu && (
-              <div className="absolute left-0 mt-1 top-full z-50 flex bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-1.5">
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowShapeMenu(false)} />
+                <div className="absolute left-0 mt-1 top-full z-50 flex bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-1.5 animate-in fade-in zoom-in-95 duration-150">
                 {/* Left Category Menu */}
                 <div className="w-36 space-y-0.5 border-r border-slate-100 dark:border-slate-800 pr-1">
                   {[
@@ -1507,7 +1512,8 @@ export default function DrawingModal({
                   )}
                 </div>
               </div>
-            )}
+            </>
+          )}
           </div>
 
           {/* Text Tool */}

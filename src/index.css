@@ -210,6 +210,69 @@ html.dark ::-webkit-scrollbar-thumb {
   transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.2s;
 }
 
+/* 🎯 Shape Floating Action Bar: Only reveals on hover or cursor focus */
+.glick-shape-floating-bar {
+  opacity: 0 !important;
+  visibility: hidden;
+  transform: translateY(4px);
+  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.2s;
+  pointer-events: none;
+}
+
+.glick-shape-container:hover .glick-shape-floating-bar,
+.glick-shape-container:focus-within .glick-shape-floating-bar {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: translateY(0) !important;
+  pointer-events: auto;
+}
+
+/* Legacy .glick-shape-header fallback: Convert into floating action bar on hover */
+.glick-shape-container .glick-shape-header {
+  position: absolute !important;
+  top: -14px !important;
+  right: 12px !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  opacity: 0 !important;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s;
+  z-index: 20 !important;
+  pointer-events: none;
+}
+
+.glick-shape-container:hover .glick-shape-header,
+.glick-shape-container:focus-within .glick-shape-header {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto;
+}
+
+.glick-shape-container .glick-shape-header > div:first-child {
+  display: none !important; /* Hides static header text */
+}
+
+.dark .glick-shape-floating-bar button,
+.dark .glick-shape-container .glick-shape-header button {
+  background: rgba(15, 23, 42, 0.95) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  color: #cbd5e1 !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important;
+}
+
+.dark .glick-shape-floating-bar button[data-action="style-shape"]:hover,
+.dark .glick-shape-container .glick-shape-header button[data-action="style-shape"]:hover {
+  color: #818cf8 !important;
+  border-color: rgba(99, 102, 241, 0.4) !important;
+}
+
+.dark .glick-shape-floating-bar button[data-action="delete-block"]:hover,
+.dark .glick-shape-container .glick-shape-header button[data-action="delete-block"]:hover {
+  color: #f87171 !important;
+  border-color: rgba(239, 68, 68, 0.4) !important;
+}
+
 /* When mouse hovers over snippet OR when cursor/selection is focused inside snippet */
 .glick-block-wrapper:hover [data-action="delete-block"],
 .glick-block-wrapper:focus-within [data-action="delete-block"],
@@ -316,44 +379,9 @@ details.glick-toggle[open] > summary .glick-toggle-arrow {
   border-radius: 14px;
 }
 
-/* 2. Universal 3x3 Dot Corner Grip (like Windows / Excel / Notion handles) */
+/* 2. Edge & Corner Resizing (Invisible direct edge detection, corner grip dots removed) */
 .glick-corner-grip {
-  position: absolute;
-  right: 4px;
-  bottom: 4px;
-  width: 16px;
-  height: 16px;
-  cursor: nwse-resize;
-  opacity: 0;
-  transition: opacity 0.18s ease;
-  user-select: none;
-  pointer-events: auto;
-  z-index: 15;
-  background-image: radial-gradient(circle, #6366f1 1.5px, transparent 1.5px);
-  background-size: 5px 5px;
-  background-repeat: repeat;
-  border-radius: 3px;
-}
-
-.glick-image-resizable:hover .glick-corner-grip,
-.glick-code-container:hover .glick-corner-grip,
-.glick-callout:hover .glick-corner-grip,
-details.glick-toggle:hover .glick-corner-grip,
-.editor-content table:hover .glick-corner-grip {
-  opacity: 0.85;
-}
-
-.glick-corner-grip:hover {
-  opacity: 1 !important;
-  background-image: radial-gradient(circle, #4f46e5 1.8px, transparent 1.8px);
-}
-
-.dark .glick-corner-grip {
-  background-image: radial-gradient(circle, #818cf8 1.5px, transparent 1.5px);
-}
-
-.dark .glick-corner-grip:hover {
-  background-image: radial-gradient(circle, #a5b4fc 1.8px, transparent 1.8px);
+  display: none !important;
 }
 
 /* 3. Resizable Tables & Columns */

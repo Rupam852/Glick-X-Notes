@@ -806,12 +806,6 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
           const innerDiv = img.parentElement;
           if (innerDiv) {
             innerDiv.className = 'glick-image-resizable';
-            if (!innerDiv.querySelector('.glick-corner-grip')) {
-              const grip = document.createElement('div');
-              grip.className = 'glick-corner-grip';
-              grip.title = 'Drag corner to resize';
-              innerDiv.appendChild(grip);
-            }
           }
         }
       });
@@ -1728,7 +1722,6 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         </div>
         <div class="glick-image-resizable" style="position: relative; display: flex; justify-content: center; padding: 12px; background: transparent; overflow-x: auto;">
           <img src="${dataUrl}" alt="Drawing" style="max-width: 100%; height: auto; display: block; border-radius: 8px;" />
-          <div class="glick-corner-grip" title="Drag to resize drawing" style="position: absolute; right: 4px; bottom: 4px; width: 14px; height: 14px; cursor: nwse-resize; opacity: 0.6;"></div>
         </div>
       </div>
       <p><br/></p>
@@ -2056,19 +2049,15 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     }
 
     const shapeHtml = `
-      <div class="glick-block-wrapper glick-shape-container glick-image-resizable" data-shape-type="${presetType}" style="margin: 16px 0; position: relative; max-width: 100%;">
-        <div contenteditable="false" class="glick-shape-header" style="display: flex; align-items: center; justify-content: space-between; padding: 4px 10px; background: rgba(99,102,241,0.06); border-radius: ${bRadius} ${bRadius} 0 0; border: 1px solid ${border}; border-bottom: none; user-select: none;">
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <span style="font-size: 11px; font-weight: 700; color: ${border}; font-family: monospace; letter-spacing: 0.5px;">${title}</span>
-          </div>
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <button type="button" data-action="style-shape" title="Edit Fill, Border & Corner Styles" style="background: rgba(99,102,241,0.12); border: 1px solid rgba(99,102,241,0.25); color: #4f46e5; font-size: 11px; padding: 2px 8px; border-radius: 6px; cursor: pointer; font-weight: 600;">🎨 Style</button>
-            <button type="button" data-action="delete-block" title="Delete Shape" style="background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.25); color: #ef4444; font-size: 11px; padding: 2px 8px; border-radius: 6px; cursor: pointer; font-weight: 600;">✕ Delete</button>
-          </div>
+      <div class="glick-block-wrapper glick-shape-container" data-shape-type="${presetType}" style="margin: 18px 0; position: relative; max-width: 100%; width: 100%;">
+        <!-- Floating Hover Action Bar: Only appears when hovering over or focusing inside shape -->
+        <div contenteditable="false" class="glick-shape-floating-bar" style="position: absolute; top: -14px; right: 12px; display: flex; align-items: center; gap: 5px; z-index: 25; user-select: none;">
+          <button type="button" data-action="style-shape" title="Edit Fill, Border & Corner Styles" style="background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(8px); border: 1px solid rgba(99,102,241,0.3); color: #4f46e5; font-size: 11px; padding: 3px 9px; border-radius: 8px; cursor: pointer; font-weight: 700; box-shadow: 0 2px 8px rgba(0,0,0,0.08); display: flex; align-items: center; gap: 3px;">🎨 Style</button>
+          <button type="button" data-action="delete-block" title="Delete Shape" style="background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(8px); border: 1px solid rgba(239,68,68,0.3); color: #ef4444; font-size: 11px; padding: 3px 9px; border-radius: 8px; cursor: pointer; font-weight: 700; box-shadow: 0 2px 8px rgba(0,0,0,0.08); display: flex; align-items: center; gap: 3px;">✕ Delete</button>
         </div>
-        <div class="glick-shape-body" style="padding: 16px 20px; background: ${fill}; border: ${bWidth} ${bStyle} ${border}; border-radius: 0 0 ${bRadius} ${bRadius}; min-height: 60px; color: inherit; font-size: 14px; line-height: 1.6; outline: none; position: relative;">
+        <!-- Unified Shape Body (Full shape with uniform border, clean rounded corners and fill) -->
+        <div class="glick-shape-body" style="padding: 16px 20px; background: ${fill}; border: ${bWidth} ${bStyle} ${border}; border-radius: ${bRadius}; min-height: 60px; color: inherit; font-size: 14px; line-height: 1.6; outline: none; position: relative;">
           <p id="${focusId}">${defaultText}</p>
-          <div class="glick-corner-grip" title="Drag to resize shape" style="position: absolute; right: 4px; bottom: 4px; width: 14px; height: 14px; cursor: nwse-resize; opacity: 0.6;"></div>
         </div>
       </div>
       <p><br/></p>
@@ -2104,7 +2093,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     borderRadius?: string;
   }) => {
     if (!editingShapeEl) return;
-    const body = editingShapeEl.querySelector('.glick-shape-body') as HTMLElement;
+    const body = (editingShapeEl.querySelector('.glick-shape-body') || editingShapeEl) as HTMLElement;
     const header = editingShapeEl.querySelector('.glick-shape-header') as HTMLElement;
     if (!body) return;
 
@@ -2124,9 +2113,10 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       body.style.borderStyle = updates.borderStyle;
     }
     if (updates.borderRadius !== undefined) {
-      body.style.borderRadius = `0 0 ${updates.borderRadius} ${updates.borderRadius}`;
+      body.style.borderRadius = updates.borderRadius;
       if (header) {
         header.style.borderRadius = `${updates.borderRadius} ${updates.borderRadius} 0 0`;
+        body.style.borderRadius = `0 0 ${updates.borderRadius} ${updates.borderRadius}`;
       }
     }
 
@@ -3739,7 +3729,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   const insertImageBase64 = (base64: string, altName: string = 'Photo') => {
     ensureSelectionInsideEditor(true);
     const nextLineId = `img-next-${Date.now()}`;
-    const html = `<div class="glick-block-wrapper glick-image-container" style="position: relative; margin: 16px 0; text-align: center; user-select: none;" contenteditable="false"><div class="glick-image-resizable" style="position: relative; display: inline-block; max-width: 100%;"><img src="${base64}" alt="${altName}" style="max-width: 100%; max-height: 520px; border-radius: 14px; object-fit: contain; box-shadow: 0 4px 16px rgba(15,23,42,0.12); display: block;" /><button type="button" data-action="delete-block" title="Remove Photo" style="position: absolute; top: 10px; right: 10px; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.25); color: white; border-radius: 8px; padding: 4px 10px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px; z-index: 10;">✕ Remove</button><div class="glick-corner-grip" title="Drag corner to resize"></div></div></div><p id="${nextLineId}"><br/></p>`;
+    const html = `<div class="glick-block-wrapper glick-image-container" style="position: relative; margin: 16px 0; text-align: center; user-select: none;" contenteditable="false"><div class="glick-image-resizable" style="position: relative; display: inline-block; max-width: 100%;"><img src="${base64}" alt="${altName}" style="max-width: 100%; max-height: 520px; border-radius: 14px; object-fit: contain; box-shadow: 0 4px 16px rgba(15,23,42,0.12); display: block;" /><button type="button" data-action="delete-block" title="Remove Photo" style="position: absolute; top: 10px; right: 10px; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.25); color: white; border-radius: 8px; padding: 4px 10px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px; z-index: 10;">✕ Remove</button></div></div><p id="${nextLineId}"><br/></p>`;
 
     ensureSelectionInsideEditor(true);
     document.execCommand('insertHTML', false, html);
