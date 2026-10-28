@@ -231,10 +231,13 @@ export default function DrawingModal({
       if (!canvas || !container) return;
 
       const rect = container.getBoundingClientRect();
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
       const w = Math.floor(rect.width) || 880;
       const h = Math.floor(rect.height) || 540;
-      canvas.width = w;
-      canvas.height = h;
+      canvas.width = Math.round(w * dpr);
+      canvas.height = Math.round(h * dpr);
+      canvas.style.width = `${w}px`;
+      canvas.style.height = `${h}px`;
 
       if (initialImageData) {
         const img = new Image();
@@ -271,7 +274,7 @@ export default function DrawingModal({
     return () => clearTimeout(timer);
   }, [isOpen, initialImageData]);
 
-  // Helper: Convert screen mouse coords to canvas coords
+  // Helper: Convert screen mouse coords to canvas coords with smooth subpixel precision
   const getCanvasCoords = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
@@ -279,8 +282,8 @@ export default function DrawingModal({
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
     return {
-      x: Math.round(clientX - rect.left),
-      y: Math.round(clientY - rect.top)
+      x: clientX - rect.left,
+      y: clientY - rect.top
     };
   };
 
@@ -676,14 +679,29 @@ export default function DrawingModal({
       }
     } else if (type === 'pen' || type === 'highlighter') {
       if (obj?.points && obj.points.length > 0) {
-        ctx.beginPath();
-        ctx.moveTo(obj.points[0].x, obj.points[0].y);
-        for (let i = 1; i < obj.points.length; i++) {
-          ctx.lineTo(obj.points[i].x, obj.points[i].y);
-        }
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
-        ctx.stroke();
+        ctx.beginPath();
+        const pts = obj.points;
+        if (pts.length === 1) {
+          ctx.arc(pts[0].x, pts[0].y, Math.max(1, sWidth / 2), 0, Math.PI * 2);
+          ctx.fillStyle = stroke;
+          ctx.fill();
+        } else if (pts.length === 2) {
+          ctx.moveTo(pts[0].x, pts[0].y);
+          ctx.lineTo(pts[1].x, pts[1].y);
+          ctx.stroke();
+        } else {
+          ctx.moveTo(pts[0].x, pts[0].y);
+          for (let i = 1; i < pts.length - 1; i++) {
+            const xc = (pts[i].x + pts[i + 1].x) / 2;
+            const yc = (pts[i].y + pts[i + 1].y) / 2;
+            ctx.quadraticCurveTo(pts[i].x, pts[i].y, xc, yc);
+          }
+          const last = pts[pts.length - 1];
+          ctx.lineTo(last.x, last.y);
+          ctx.stroke();
+        }
       }
     } else if (type === 'text') {
       // Optional text box background if fillColor is not transparent
@@ -693,7 +711,7 @@ export default function DrawingModal({
       }
       ctx.fillStyle = stroke || '#0f172a';
       const fSize = obj?.fontSize || 22;
-      const fFamily = obj?.fontFamily || 'Outfit, sans-serif';
+      const fFamily = obj?.fontFamily || "'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
       const fWeight = (obj?.isBold ?? true) ? 'bold' : 'normal';
       const fStyle = obj?.isItalic ? 'italic' : 'normal';
       ctx.font = `${fStyle} ${fWeight} ${fSize}px ${fFamily}`;
@@ -736,7 +754,13 @@ export default function DrawingModal({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    ctx.save();
+    ctx.scale(dpr, dpr);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
 
     // Draw all objects in order
     objects.forEach(obj => {
@@ -820,7 +844,9 @@ export default function DrawingModal({
 
       ctx.restore();
     }
-  }, [objects, selectedId]);
+
+    ctx.restore();
+  }, [objects, selectedId, editingTextState]);
 
   useEffect(() => {
     renderAll();

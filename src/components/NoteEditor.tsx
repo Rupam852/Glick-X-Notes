@@ -110,7 +110,7 @@ const convertStrokesToSvg = (strokes: InkStroke[], width: number, height: number
       const fSize = s.fontSize || 22;
       const lines = (s.text || 'Text').split('\n');
       const textSpans = lines.map((line, idx) => `<tspan x="${x}" dy="${idx === 0 ? 0 : fSize * 1.35}">${line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</tspan>`).join('');
-      return `<text x="${x}" y="${y + fSize}" font-family="Outfit, sans-serif" font-size="${fSize}" font-weight="bold" fill="${s.color}">${textSpans}</text>`;
+      return `<text x="${x}" y="${y + fSize}" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="${fSize}" font-weight="bold" fill="${s.color}">${textSpans}</text>`;
     }
 
     // If it's a shape stroke
@@ -271,7 +271,7 @@ const convertStrokesToSvg = (strokes: InkStroke[], width: number, height: number
     return `<path d="${d}" stroke="${s.color}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="${opacity}" />`;
   }).join('');
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" style="width: 100%; height: 100%; display: block; overflow: visible;">${elements}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" shape-rendering="geometricPrecision" text-rendering="geometricPrecision" style="width: 100%; height: 100%; display: block; overflow: visible;">${elements}</svg>`;
 };
 
 // Helper to save selection
@@ -1959,7 +1959,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
           </div>
         </div>
         <div class="glick-image-resizable" style="position: relative; display: flex; justify-content: center; padding: 12px; background: transparent; overflow-x: auto;">
-          <img src="${dataUrl}" alt="Drawing" style="max-width: 100%; height: auto; display: block; border-radius: 8px;" />
+          <img src="${dataUrl}" alt="Drawing" style="max-width: 100%; height: auto; display: block; border-radius: 8px; image-rendering: -webkit-optimize-contrast;" />
         </div>
       </div>
       <p><br/></p>
@@ -2064,11 +2064,13 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     ctx.save();
     ctx.scale(dpr, dpr);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
 
     const allStrokes = [...inkStrokes];
     if (currentStrokeRef.current) {
@@ -2088,11 +2090,12 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         const x = stroke.shapeStart?.x || (stroke.points && stroke.points[0]?.x) || 50;
         const y = stroke.shapeStart?.y || (stroke.points && stroke.points[0]?.y) || 50;
         const fSize = stroke.fontSize || 22;
-        ctx.font = `bold ${fSize}px 'Outfit', sans-serif`;
+        ctx.font = `bold ${fSize}px 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`;
         ctx.fillStyle = stroke.color;
+        ctx.textBaseline = 'top';
         const lines = (stroke.text || 'Text').split('\n');
         lines.forEach((line, idx) => {
-          ctx.fillText(line, x, y + fSize + idx * fSize * 1.35);
+          ctx.fillText(line, x, y + idx * fSize * 1.35);
         });
         ctx.restore();
         continue;
@@ -2400,8 +2403,8 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     setShowInkShapeMenu(false);
 
     const rect = canvas.getBoundingClientRect();
-    const x = Math.round(e.clientX - rect.left);
-    const y = Math.round(e.clientY - rect.top);
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
 
     if (inkTool === 'eraser') {
       eraseStrokesAt(x, y);
@@ -2488,8 +2491,8 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const x = Math.round(e.clientX - rect.left);
-    const y = Math.round(e.clientY - rect.top);
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
 
     if (inkTool === 'eraser') {
       setEraserCursorPos({ x, y });
@@ -2562,7 +2565,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       } else {
         const pts = currentStrokeRef.current.points;
         const last = pts[pts.length - 1];
-        if (Math.hypot(x - last.x, y - last.y) >= 2) {
+        if (Math.hypot(x - last.x, y - last.y) >= 1.5) {
           pts.push({ x, y });
           renderInkCanvas();
         }
@@ -2729,12 +2732,12 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       if (!canvas || !editor) return;
 
       const rect = editor.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
       const w = Math.round(rect.width);
       const h = Math.max(600, Math.round(rect.height));
 
-      canvas.width = w * dpr;
-      canvas.height = h * dpr;
+      canvas.width = Math.round(w * dpr);
+      canvas.height = Math.round(h * dpr);
       canvas.style.width = `${w}px`;
       canvas.style.height = `${h}px`;
       renderInkCanvas();
