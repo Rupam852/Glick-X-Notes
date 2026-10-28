@@ -7029,7 +7029,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                       title="Select Tool (Click to select, drag to move, drag handles to resize)"
                     >
                       <MousePointer className="w-3.5 h-3.5 shrink-0" />
-                      <span className="hidden sm:inline">Select</span>
+                      {inkTool === 'select' && <span>Select</span>}
                     </button>
 
                     <button
@@ -7043,7 +7043,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                       title="Pen Tool (Crisp solid ink)"
                     >
                       <Pencil className="w-3.5 h-3.5 shrink-0" />
-                      <span className="hidden sm:inline">Pen</span>
+                      {inkTool === 'pen' && <span>Pen</span>}
                     </button>
 
                     <button
@@ -7057,7 +7057,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                       title="Highlighter Tool (Fluorescent transparent highlight)"
                     >
                       <Highlighter className="w-3.5 h-3.5 shrink-0" />
-                      <span className="hidden md:inline">Highlight</span>
+                      {inkTool === 'highlighter' && <span>Highlight</span>}
                     </button>
 
                     {/* Text Tool */}
@@ -7072,7 +7072,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                       title="Text Tool (Click anywhere on note to add editable text)"
                     >
                       <Type className="w-3.5 h-3.5 shrink-0" />
-                      <span className="hidden sm:inline">Text</span>
+                      {inkTool === 'text' && <span>Text</span>}
                     </button>
 
                     {/* Categorized Shapes Dropdown Selector */}
@@ -7088,22 +7088,24 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                         title="Draw Shapes (Lines, Arrows, Rectangles, Circle, Triangle, Star, Heart, Cloud, Speech Bubble)"
                       >
                         <Shapes className="w-3.5 h-3.5 shrink-0" />
-                        <span className="hidden md:inline">
-                          {inkTool === 'line' ? 'Line' :
-                           inkTool === 'arrow' ? 'Arrow' :
-                           inkTool === 'doubleArrow' ? '2-Way' :
-                           inkTool === 'rect' ? 'Box' :
-                           inkTool === 'roundedRect' ? 'Round' :
-                           inkTool === 'circle' ? 'Circle' :
-                           inkTool === 'triangle' ? 'Triangle' :
-                           inkTool === 'diamond' ? 'Diamond' :
-                           inkTool === 'parallelogram' ? 'Skew' :
-                           inkTool === 'star' ? 'Star' :
-                           inkTool === 'heart' ? 'Heart' :
-                           inkTool === 'cloud' ? 'Cloud' :
-                           inkTool === 'calloutRect' ? 'Callout' :
-                           inkTool === 'calloutRounded' ? 'Cloud Callout' : 'Shapes'}
-                        </span>
+                        {isInkShapeTool(inkTool) && (
+                          <span>
+                            {inkTool === 'line' ? 'Line' :
+                             inkTool === 'arrow' ? 'Arrow' :
+                             inkTool === 'doubleArrow' ? '2-Way' :
+                             inkTool === 'rect' ? 'Box' :
+                             inkTool === 'roundedRect' ? 'Round' :
+                             inkTool === 'circle' ? 'Circle' :
+                             inkTool === 'triangle' ? 'Triangle' :
+                             inkTool === 'diamond' ? 'Diamond' :
+                             inkTool === 'parallelogram' ? 'Skew' :
+                             inkTool === 'star' ? 'Star' :
+                             inkTool === 'heart' ? 'Heart' :
+                             inkTool === 'cloud' ? 'Cloud' :
+                             inkTool === 'calloutRect' ? 'Callout' :
+                             inkTool === 'calloutRounded' ? 'Cloud Callout' : 'Shapes'}
+                          </span>
+                        )}
                         <ChevronDown className="w-3 h-3 opacity-70 shrink-0" />
                       </button>
 
@@ -7229,7 +7231,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                       title="Realistic Eraser Tool (Touch any stroke or shape to erase with round ring cursor)"
                     >
                       <Eraser className="w-3.5 h-3.5 shrink-0" />
-                      <span className="hidden sm:inline">Eraser</span>
+                      {inkTool === 'eraser' && <span>Eraser</span>}
                     </button>
                   </div>
 
@@ -7275,7 +7277,6 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                           { name: 'Emerald', value: '#10b981' },
                           { name: 'Amber', value: '#f59e0b' },
                           { name: 'Purple', value: '#8b5cf6' },
-                          { name: 'Neon Yellow', value: '#fde047' },
                           { name: 'Pink', value: '#ec4899' },
                           { name: 'Sky Blue', value: '#0ea5e9' }
                         ].map(c => (
@@ -7289,7 +7290,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                                 renderInkCanvas();
                               }
                             }}
-                            className={`w-4.5 h-4.5 rounded-full border border-black/15 transition-transform hover:scale-125 cursor-pointer shrink-0 ${
+                            className={`w-4 h-4 rounded-full border border-black/15 transition-transform hover:scale-125 cursor-pointer shrink-0 ${
                               inkColor === c.value ? 'ring-2 ring-purple-500 scale-110' : ''
                             }`}
                             style={{ backgroundColor: c.value }}
@@ -7338,8 +7339,8 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                   {selectedInkStrokeId && (
                     <>
                       <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-0.5 shrink-0" />
-                      <div className="flex items-center gap-1 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 p-1 rounded-xl shrink-0">
-                        <span className="text-[10px] font-bold text-purple-700 dark:text-purple-300 px-1">Selected:</span>
+                      <div className="flex items-center gap-0.5 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 p-0.5 rounded-xl shrink-0">
+                        <span className="text-[10px] font-bold text-purple-700 dark:text-purple-300 px-1 hidden 2xl:inline">Selected:</span>
                         <button
                           type="button"
                           onClick={() => {
