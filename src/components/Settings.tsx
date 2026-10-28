@@ -371,7 +371,7 @@ export default function Settings({ user, onSignOut }: { user: FirebaseUser; onSi
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Configure smart assistance, test model latency, or connect your personal Gemini & OpenAI API keys.
+                Configure smart assistance, test model latency, or connect your personal Google Gemini API key.
               </p>
             </div>
           </div>
