@@ -38,7 +38,8 @@ export default function AIConfigModal({ isOpen, onClose }: AIConfigModalProps) {
       setConfig(current);
       setMode(current.mode);
       setGeminiModel(current.gemini.model);
-      setGeminiKey(current.gemini.apiKey);
+      // Never pre-fill the input with default key - only user custom key if saved
+      setGeminiKey(current.mode === 'custom' ? (current.gemini.apiKey || '') : '');
       setTestResults(null);
     }
   }, [isOpen]);
@@ -56,6 +57,10 @@ export default function AIConfigModal({ isOpen, onClose }: AIConfigModalProps) {
 
   // Save Custom Configuration
   const handleSave = () => {
+    if (!geminiKey.trim()) {
+      showToast('Please enter your personal Gemini API key.', 'error');
+      return;
+    }
     const updated: AIConfiguration = {
       mode: 'custom',
       gemini: {
@@ -66,7 +71,7 @@ export default function AIConfigModal({ isOpen, onClose }: AIConfigModalProps) {
     saveAIConfig(updated);
     setConfig(updated);
     setMode('custom');
-    showToast('Gemini AI Configuration saved to local storage!', 'success');
+    showToast('Custom Gemini configuration saved to browser!', 'success');
   };
 
   // Reset to Default Configuration
@@ -199,6 +204,8 @@ export default function AIConfigModal({ isOpen, onClose }: AIConfigModalProps) {
                 const def = getDefaultAIConfig();
                 saveAIConfig(def);
                 setConfig(def);
+                setGeminiKey('');
+                setTestResults(null);
                 showToast('Switched to Default Gemini Engine', 'info');
               }}
               className={`py-2.5 text-sm font-semibold rounded-lg flex items-center justify-center gap-2 transition-all ${
@@ -213,6 +220,9 @@ export default function AIConfigModal({ isOpen, onClose }: AIConfigModalProps) {
             <button
               onClick={() => {
                 setMode('custom');
+                const current = getAIConfig();
+                setGeminiKey(current.mode === 'custom' ? (current.gemini.apiKey || '') : '');
+                setTestResults(null);
                 showToast('Custom Gemini Key mode selected.', 'info');
               }}
               className={`py-2.5 text-sm font-semibold rounded-lg flex items-center justify-center gap-2 transition-all ${

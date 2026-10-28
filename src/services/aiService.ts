@@ -40,7 +40,7 @@ export function getDefaultAIConfig(): AIConfiguration {
     mode: 'default',
     gemini: {
       model: 'gemini-3.5-flash',
-      apiKey: (import.meta.env.VITE_GEMINI_API_KEY as string) || ''
+      apiKey: '' // Never expose the secret system key in client config
     }
   };
 }
@@ -58,13 +58,18 @@ export function getAIConfig(): AIConfiguration {
       geminiModel = 'gemini-3.5-flash';
     }
 
+    // Only return apiKey if user explicitly typed a custom key, never leak the system key
+    let userKey = parsed.mode === 'custom' ? (parsed.gemini?.apiKey || '').trim() : '';
+    const systemKey = ((import.meta.env.VITE_GEMINI_API_KEY as string) || '').trim();
+    if (userKey && systemKey && userKey === systemKey) {
+      userKey = ''; // Purge if system key was previously stored in local storage
+    }
+
     return {
       mode: parsed.mode === 'custom' ? 'custom' : 'default',
       gemini: {
         model: geminiModel,
-        apiKey: parsed.mode === 'custom' 
-          ? (parsed.gemini?.apiKey || '') 
-          : ((import.meta.env.VITE_GEMINI_API_KEY as string) || '')
+        apiKey: userKey
       }
     };
   } catch {
@@ -170,11 +175,14 @@ async function callGemini(apiKey: string, model: string, prompt: string, systemI
  */
 export async function executeAICompletion(prompt: string, systemInstruction?: string): Promise<{ text: string; providerUsed: string; modelUsed: string }> {
   const config = getAIConfig();
-  const key = config.mode === 'custom' 
-    ? config.gemini.apiKey 
-    : ((import.meta.env.VITE_GEMINI_API_KEY as string) || '');
+  const customKey = config.mode === 'custom' ? config.gemini.apiKey.trim() : '';
+  const systemKey = ((import.meta.env.VITE_GEMINI_API_KEY as string) || '').trim();
+  const key = customKey || systemKey;
   
   if (!key) {
+    if (config.mode === 'custom') {
+      throw new Error('Please enter your personal Google Gemini API key in AI Settings.');
+    }
     throw new Error('Google Gemini API key is missing. Please set VITE_GEMINI_API_KEY in Vercel or configure your key in Settings.');
   }
 
