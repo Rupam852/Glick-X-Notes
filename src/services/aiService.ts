@@ -1,3 +1,6 @@
+import { db } from '../firebase';
+import { doc, getDoc, setDoc, deleteField, serverTimestamp } from 'firebase/firestore';
+
 export interface AIModelConfig {
   model: string;
   apiKey: string;
@@ -83,6 +86,71 @@ export function saveAIConfig(config: AIConfiguration): void {
   } catch (err) {
     console.error('Failed to save AI config to localStorage:', err);
   }
+}
+
+/**
+ * Saves or updates custom Gemini API key in user's Firestore document.
+ * If apiKey is provided, it replaces/overwrites the old key in the database.
+ * If mode is 'default' or key is empty, it removes/deletes the custom key from the database.
+ */
+export async function saveAIConfigToDatabase(userId: string, config: AIConfiguration): Promise<void> {
+  // Always update local storage first
+  saveAIConfig(config);
+
+  if (!userId || !db) return;
+
+  try {
+    const userDocRef = doc(db, 'users', userId);
+    if (config.mode === 'custom' && config.gemini.apiKey.trim()) {
+      // Overwrite and replace old API key with new API key in database
+      await setDoc(userDocRef, {
+        customGeminiConfig: {
+          mode: 'custom',
+          model: config.gemini.model,
+          apiKey: config.gemini.apiKey.trim(),
+          updatedAt: serverTimestamp()
+        }
+      }, { merge: true });
+    } else {
+      // User switched to default or cleared key - delete previous key from database
+      await setDoc(userDocRef, {
+        customGeminiConfig: deleteField()
+      }, { merge: true });
+    }
+  } catch (err) {
+    console.error('Failed to sync AI config to Firestore database:', err);
+    throw err;
+  }
+}
+
+/**
+ * Fetches user's custom Gemini API key from database (if present) and syncs to local storage.
+ */
+export async function syncAIConfigFromDatabase(userId: string): Promise<AIConfiguration> {
+  if (!userId || !db) return getAIConfig();
+
+  try {
+    const userDoc = await getDoc(doc(db, 'users', userId));
+    if (userDoc.exists()) {
+      const data = userDoc.data();
+      const dbConfig = data?.customGeminiConfig;
+      if (dbConfig?.apiKey && dbConfig.apiKey.trim()) {
+        const syncedConfig: AIConfiguration = {
+          mode: 'custom',
+          gemini: {
+            model: dbConfig.model || 'gemini-3.5-flash',
+            apiKey: dbConfig.apiKey.trim()
+          }
+        };
+        saveAIConfig(syncedConfig);
+        return syncedConfig;
+      }
+    }
+  } catch (err) {
+    console.error('Failed to sync AI config from Firestore database:', err);
+  }
+
+  return getAIConfig();
 }
 
 export async function testGeminiModel(apiKey: string, model: string): Promise<ModelTestResult> {

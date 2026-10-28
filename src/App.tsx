@@ -23,6 +23,7 @@ import AuthTransitionModal from './components/AuthTransitionModal';
 import { Loader2 } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider, useToast } from './contexts/ToastContext';
+import { syncAIConfigFromDatabase } from './services/aiService';
 import { Note } from './types';
 import { sound } from './utils/sound';
 import SmartBackGesture from './components/SmartBackGesture';
@@ -117,6 +118,11 @@ function AppContent() {
       }
 
       if (currentUser) {
+        // Sync custom Gemini API key from database
+        syncAIConfigFromDatabase(currentUser.uid).catch((err) => {
+          console.error("Error syncing AI config from database on login:", err);
+        });
+
         // If logged in, check if the saved view is a valid logged-in view
         if (savedView === 'settings' || savedView === 'editor' || savedView === 'dashboard') {
           setView(savedView as any);

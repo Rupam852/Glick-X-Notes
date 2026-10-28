@@ -627,6 +627,7 @@ export default function Settings({ user, onSignOut }: { user: FirebaseUser; onSi
       <AIConfigModal 
         isOpen={showAIModal} 
         onClose={() => setShowAIModal(false)} 
+        userId={user?.uid}
       />
     </div>
   );

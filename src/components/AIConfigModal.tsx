@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Sparkles, Check, AlertCircle, Loader2, Key, Cpu, ShieldCheck, 
-  RotateCcw, Eye, EyeOff, X, Play, RefreshCw, Zap, ExternalLink, ArrowRight
+  RotateCcw, Eye, EyeOff, X, Play, RefreshCw, Zap, ExternalLink, ArrowRight,
+  Database, Trash2
 } from 'lucide-react';
 import { 
   getAIConfig, saveAIConfig, getDefaultAIConfig, 
   testGeminiModel, GEMINI_MODELS, WORKING_GEMINI_FALLBACK_CHAIN,
+  saveAIConfigToDatabase, syncAIConfigFromDatabase,
   AIConfiguration, ModelTestResult 
 } from '../services/aiService';
 import { useToast } from '../contexts/ToastContext';
@@ -13,9 +15,10 @@ import { useToast } from '../contexts/ToastContext';
 interface AIConfigModalProps {
   isOpen: boolean;
   onClose: () => void;
+  userId?: string;
 }
 
-export default function AIConfigModal({ isOpen, onClose }: AIConfigModalProps) {
+export default function AIConfigModal({ isOpen, onClose, userId }: AIConfigModalProps) {
   const { showToast } = useToast();
   const [config, setConfig] = useState<AIConfiguration>(getAIConfig());
   const [mode, setMode] = useState<'default' | 'custom'>(config.mode);
@@ -25,24 +28,37 @@ export default function AIConfigModal({ isOpen, onClose }: AIConfigModalProps) {
   const [geminiKey, setGeminiKey] = useState(config.gemini.apiKey);
   const [showGeminiKey, setShowGeminiKey] = useState(false);
 
+  // Saving state
+  const [saving, setSaving] = useState(false);
+
   // Testing & Cooldown State
   const [testingDefault, setTestingDefault] = useState(false);
   const [testingCustom, setTestingCustom] = useState(false);
   const [testResults, setTestResults] = useState<ModelTestResult[] | null>(null);
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
 
-  // Load fresh config when opening
+  // Load fresh config from local storage and sync with Firestore database when opening
   useEffect(() => {
     if (isOpen) {
-      const current = getAIConfig();
-      setConfig(current);
-      setMode(current.mode);
-      setGeminiModel(current.gemini.model);
-      // Never pre-fill the input with default key - only user custom key if saved
-      setGeminiKey(current.mode === 'custom' ? (current.gemini.apiKey || '') : '');
-      setTestResults(null);
+      const loadConfig = async () => {
+        let current = getAIConfig();
+        if (userId) {
+          try {
+            current = await syncAIConfigFromDatabase(userId);
+          } catch (e) {
+            console.error('Failed to sync AI config from DB:', e);
+          }
+        }
+        setConfig(current);
+        setMode(current.mode);
+        setGeminiModel(current.gemini.model);
+        // Never prefill system key: only set if custom key was saved by user
+        setGeminiKey(current.mode === 'custom' ? (current.gemini.apiKey || '') : '');
+        setTestResults(null);
+      };
+      loadConfig();
     }
-  }, [isOpen]);
+  }, [isOpen, userId]);
 
   // Cooldown timer
   useEffect(() => {
@@ -55,12 +71,14 @@ export default function AIConfigModal({ isOpen, onClose }: AIConfigModalProps) {
 
   if (!isOpen) return null;
 
-  // Save Custom Configuration
-  const handleSave = () => {
+  // Save Custom Configuration to Database (replaces old key with new key)
+  const handleSave = async () => {
     if (!geminiKey.trim()) {
       showToast('Please enter your personal Gemini API key.', 'error');
       return;
     }
+
+    setSaving(true);
     const updated: AIConfiguration = {
       mode: 'custom',
       gemini: {
@@ -68,22 +86,48 @@ export default function AIConfigModal({ isOpen, onClose }: AIConfigModalProps) {
         apiKey: geminiKey.trim()
       }
     };
-    saveAIConfig(updated);
-    setConfig(updated);
-    setMode('custom');
-    showToast('Custom Gemini configuration saved to browser!', 'success');
+
+    try {
+      if (userId) {
+        // Saves/overwrites new key and deletes any previous key in database
+        await saveAIConfigToDatabase(userId, updated);
+        showToast('API key updated and saved in your database account!', 'success');
+      } else {
+        saveAIConfig(updated);
+        showToast('Custom Gemini configuration saved to browser!', 'success');
+      }
+      setConfig(updated);
+      setMode('custom');
+    } catch (err: any) {
+      showToast('Error saving to database: ' + (err.message || 'Network error'), 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  // Reset to Default Configuration
-  const handleResetToDefault = () => {
+  // Reset to Default Configuration (deletes custom key from database)
+  const handleResetToDefault = async () => {
     const def = getDefaultAIConfig();
-    saveAIConfig(def);
-    setConfig(def);
-    setMode('default');
-    setGeminiModel(def.gemini.model);
-    setGeminiKey('');
-    setTestResults(null);
-    showToast('Reset to Default Gemini Configuration', 'info');
+    setSaving(true);
+    try {
+      if (userId) {
+        // Removes customGeminiConfig from Firestore database
+        await saveAIConfigToDatabase(userId, def);
+        showToast('Custom key deleted from database. Reverted to Default.', 'info');
+      } else {
+        saveAIConfig(def);
+        showToast('Reset to Default Gemini Configuration', 'info');
+      }
+      setConfig(def);
+      setMode('default');
+      setGeminiModel(def.gemini.model);
+      setGeminiKey('');
+      setTestResults(null);
+    } catch (err: any) {
+      showToast('Error resetting database config: ' + (err.message || 'Network error'), 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
   // Run Test for Default Gemini Models across Fallback Chain
@@ -181,8 +225,16 @@ export default function AIConfigModal({ isOpen, onClose }: AIConfigModalProps) {
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white">Google Gemini AI Engine</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Multi-Model Sequential Failover & Resilience System</p>
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white">Google Gemini AI Engine</h2>
+                {userId && (
+                  <span className="text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/60 px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <Database className="w-3 h-3" />
+                    Cloud Synced
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Multi-Model Sequential Failover & Database Sync</p>
             </div>
           </div>
           <button 
@@ -278,7 +330,7 @@ export default function AIConfigModal({ isOpen, onClose }: AIConfigModalProps) {
                   <div>
                     <h4 className="font-semibold text-blue-950 dark:text-blue-200">Google Gemini Built-In</h4>
                     <p className="text-xs text-blue-800/80 dark:text-blue-300/80 mt-1">
-                      Glick X Notes high-speed Google Gemini models use karta hai. Connectivity test karke aap sabhi models ka live status dekh sakte hain.
+                      Glick X Notes high-speed Google Gemini models use karta hai. Default mode me system API key background me secure rehti hai.
                     </p>
                   </div>
                 </div>
@@ -335,16 +387,24 @@ export default function AIConfigModal({ isOpen, onClose }: AIConfigModalProps) {
             <div className="space-y-5 animate-in fade-in duration-200">
               
               {/* Notice */}
-              <div className="p-3.5 rounded-xl bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400 flex items-center justify-between">
-                <span>🔒 Key aapke browser ke safe local storage me store hoti hai.</span>
-                <a 
-                  href="https://aistudio.google.com/app/apikey" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-semibold"
-                >
-                  Get free key <ExternalLink className="w-3 h-3" />
-                </a>
+              <div className="p-3.5 rounded-xl bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <Database className="w-3.5 h-3.5 text-blue-500" />
+                    Database Cloud Storage
+                  </span>
+                  <a 
+                    href="https://aistudio.google.com/app/apikey" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-semibold"
+                  >
+                    Get free key <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+                <p className="text-[11px] text-slate-500 leading-relaxed">
+                  Aapka custom key aapke account ke database me secure save hoga. Jab bhi aap naya key daal kar save karenge, purana key delete ho jayega aur naya key replace ho jayega!
+                </p>
               </div>
 
               {/* Model Selector */}
@@ -369,7 +429,7 @@ export default function AIConfigModal({ isOpen, onClose }: AIConfigModalProps) {
                     type={showGeminiKey ? 'text' : 'password'}
                     value={geminiKey}
                     onChange={(e) => setGeminiKey(e.target.value)}
-                    placeholder="Enter your Gemini API Key"
+                    placeholder="Enter your personal Gemini API Key"
                     className="w-full px-3 py-2.5 pr-10 text-sm bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white font-mono text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <button
@@ -387,15 +447,16 @@ export default function AIConfigModal({ isOpen, onClose }: AIConfigModalProps) {
                 <button
                   type="button"
                   onClick={handleSave}
-                  className="flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 transition"
+                  disabled={saving}
+                  className="flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 transition disabled:opacity-60"
                 >
-                  <Check className="w-4 h-4" />
-                  Save Configuration
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                  {saving ? 'Updating Database...' : 'Save & Update in Database'}
                 </button>
                 <button
                   type="button"
                   onClick={handleTestCustom}
-                  disabled={testingCustom}
+                  disabled={testingCustom || saving}
                   className="py-2.5 px-4 rounded-xl text-sm font-semibold border border-blue-200 dark:border-blue-800/80 hover:bg-blue-50 dark:hover:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center gap-2 transition"
                 >
                   {testingCustom ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
@@ -461,10 +522,11 @@ export default function AIConfigModal({ isOpen, onClose }: AIConfigModalProps) {
         <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between text-xs text-slate-500">
           <button
             onClick={handleResetToDefault}
-            className="flex items-center gap-1.5 hover:text-slate-800 dark:hover:text-slate-200 transition"
+            disabled={saving}
+            className="flex items-center gap-1.5 hover:text-slate-800 dark:hover:text-slate-200 transition text-rose-600/80 hover:text-rose-600 dark:text-rose-400/80 dark:hover:text-rose-400"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
-            Reset to Default
+            <Trash2 className="w-3.5 h-3.5" />
+            Delete Custom Key (Reset to Default)
           </button>
           <button
             onClick={onClose}
