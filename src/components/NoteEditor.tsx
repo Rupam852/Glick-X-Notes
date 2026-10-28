@@ -1046,14 +1046,29 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         }
       });
 
-      // 3.5 Hoist any blocks or diagrams mistakenly nested inside list items (prevents mobile text overlapping)
-      const nestedBlocksInLi = root.querySelectorAll('li > .glick-block-wrapper, li > .glick-diagram-container, li > .glick-callout, li > .glick-code-container, li > table, li > details');
+      // 3.5 Hoist any cards, flowcharts, or styled blocks nested inside list items
+      const nestedBlocksInLi = root.querySelectorAll('li > div, li > section, li > table, li > pre, li > details');
       nestedBlocksInLi.forEach((block) => {
+        // Skip tiny inline wrappers (like simple checkbox line)
+        if (block.querySelector('input[type="checkbox"]') && !block.textContent?.includes('Flowchart') && !block.textContent?.includes('AM')) return;
         const li = block.closest('li');
         const list = li?.closest('ul, ol');
         if (li && list && list.parentNode) {
           list.parentNode.insertBefore(block, list.nextSibling);
         }
+      });
+
+      // 3.6 If a major card or flowchart is trapped inside a callout, hoist it outside after the callout
+      const allCallouts = root.querySelectorAll('.glick-callout');
+      allCallouts.forEach((callout) => {
+        const nestedCards = callout.querySelectorAll('div[style*="border-radius"], div[style*="box-shadow"], .glick-diagram-container');
+        nestedCards.forEach((card) => {
+          if (card.textContent?.includes('Flowchart') || card.querySelector('div[style*="background"]')) {
+            if (callout.parentNode && card !== callout) {
+              callout.parentNode.insertBefore(card, callout.nextSibling);
+            }
+          }
+        });
       });
 
       // 4. Upgrade image containers to have Windows-style corner grip (3x3 dots)

@@ -816,81 +816,115 @@ details.glick-toggle[open] > summary .glick-toggle-arrow {
 
 
 /* =========================================================================
-   📱 Robust Block Isolation & Mobile Snippet Overflow Prevention
+   📱 100% Dynamic Responsive Snippets & Universal Card Scaling
    ========================================================================= */
 
-/* Ensure all blocks and snippet wrappers clear sibling text and never overlap */
-.glick-block-wrapper,
-.glick-callout,
-.glick-diagram-container,
-.glick-code-container,
-.glick-toggle,
-.glick-math-container,
-.glick-shape-container {
+/* Every card, block, snippet, callout, diagram must dynamically scale with screen size */
+.editor-content .glick-block-wrapper,
+.editor-content .glick-callout,
+.editor-content .glick-diagram-container,
+.editor-content .glick-code-container,
+.editor-content .glick-toggle,
+.editor-content .glick-math-container,
+.editor-content .glick-shape-container,
+.editor-content div[style*="border"],
+.editor-content div[style*="background"],
+.editor-content div[style*="box-shadow"],
+.editor-content div[style*="border-radius"] {
   display: block !important;
+  float: none !important;
   clear: both !important;
+  width: 100% !important;
   max-width: 100% !important;
+  min-width: 0 !important;
   box-sizing: border-box !important;
   position: relative !important;
-  margin-top: 14px !important;
-  margin-bottom: 14px !important;
-  overflow: visible !important;
+  margin-top: 18px !important;
+  margin-bottom: 18px !important;
+  top: auto !important;
+  bottom: auto !important;
+  overflow-x: auto !important;
+  overflow-y: visible !important;
+  -webkit-overflow-scrolling: touch !important;
 }
 
-/* Callout block layout: Natural vertical block flow so headers and bullet lists are never squeezed horizontally or cut off */
-.glick-callout {
+/* Callouts must be full-width dynamic block containers */
+.editor-content .glick-callout {
   display: block !important;
   width: 100% !important;
-  box-sizing: border-box !important;
+  max-width: 100% !important;
+  margin: 18px 0 !important;
+  padding: 16px 18px !important;
+  border-radius: 14px !important;
   overflow: visible !important;
-  position: relative !important;
-  padding: 14px 18px !important;
-  border-radius: 12px !important;
-  margin: 14px 0 !important;
+  height: auto !important;
+  min-height: auto !important;
+  max-height: none !important;
 }
 
-.glick-callout p,
-.glick-callout div,
-.glick-callout ul,
-.glick-callout ol {
-  display: block !important;
+/* Ensure callout children flow vertically and never get hidden or squashed */
+.editor-content .glick-callout p,
+.editor-content .glick-callout div,
+.editor-content .glick-callout ul,
+.editor-content .glick-callout ol,
+.editor-content .glick-callout li {
   width: 100% !important;
   max-width: 100% !important;
   overflow-wrap: break-word !important;
   word-break: break-word !important;
+  box-sizing: border-box !important;
 }
 
-.glick-callout ul,
-.glick-callout ol {
+.editor-content .glick-callout ul,
+.editor-content .glick-callout ol {
   padding-left: 1.5rem !important;
-  margin: 8px 0 !important;
+  margin: 10px 0 !important;
+  display: block !important;
 }
 
-/* Text and list items inside editor must wrap and clear */
-.editor-content p,
-.editor-content li,
+.editor-content .glick-callout li {
+  display: list-item !important;
+  margin-bottom: 8px !important;
+  line-height: 1.6 !important;
+}
+
+/* Force list items in editor to contain their content and never collapse */
 .editor-content ul,
 .editor-content ol {
-  overflow-wrap: break-word !important;
-  word-break: break-word !important;
-  box-sizing: border-box !important;
+  display: block !important;
+  clear: both !important;
+  overflow: visible !important;
 }
 
 .editor-content li {
+  display: list-item !important;
+  min-height: 1.6em !important;
+  margin-bottom: 6px !important;
   line-height: 1.6 !important;
-  margin-bottom: 4px !important;
+  clear: both !important;
+  overflow: visible !important;
+  overflow-wrap: break-word !important;
+  word-break: break-word !important;
 }
 
-/* If a diagram or block is placed inside a list item, force it to render as a distinct block */
-.editor-content li > .glick-block-wrapper,
-.editor-content li > .glick-diagram-container,
-.editor-content li > .glick-callout,
-.editor-content li > .glick-code-container,
+/* If a card or flowchart is nested inside li, make sure it clears and doesn't overlap text */
 .editor-content li > div {
   display: block !important;
   clear: both !important;
-  margin: 12px 0 !important;
+  margin: 14px 0 !important;
   width: 100% !important;
+  max-width: 100% !important;
+  position: relative !important;
+}
+
+/* Dynamic button / card nodes inside flowcharts (like Wake Up, Workout, Breakfast) */
+.editor-content div[style*="border-radius"] > div,
+.editor-content div[style*="border-radius"] > a,
+.editor-content div[style*="border-radius"] > p {
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
 }
 
 /* Mermaid / Flowchart Diagram container & SVG mobile styling */
@@ -938,28 +972,40 @@ details.glick-toggle[open] > summary .glick-toggle-arrow {
   .editor-content td {
     padding: 8px 10px !important;
     font-size: 13px !important;
-    min-width: 70px !important;
+    min-width: 65px !important;
     word-break: break-word !important;
   }
 
-  .glick-callout {
+  .editor-content .glick-callout {
     padding: 12px 14px !important;
     font-size: 14px !important;
-    margin: 12px 0 !important;
+    margin: 14px 0 !important;
     overflow: visible !important;
   }
 
-  .glick-callout ul {
-    padding-left: 1.25rem !important;
-    margin: 6px 0 !important;
+  .editor-content .glick-callout ul {
+    padding-left: 1.2rem !important;
+    margin: 8px 0 !important;
   }
 
-  .glick-callout span[contenteditable="false"] {
+  .editor-content .glick-callout span[contenteditable="false"] {
     font-size: 18px !important;
   }
 
   .glick-diagram-render {
     padding: 10px !important;
+  }
+
+  /* Any card / snippet adapts dynamically with comfortable padding on small screens */
+  .editor-content div[style*="border-radius"],
+  .editor-content div[style*="background"],
+  .editor-content .glick-callout,
+  .editor-content .glick-diagram-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 14px 0 !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
   }
 
   /* Prevent elements from bleeding out without breaking SVGs */
