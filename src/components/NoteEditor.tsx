@@ -28,7 +28,8 @@ import MathFormulaModal from './MathFormulaModal';
 import DrawingModal from './DrawingModal';
 import { 
   GitFork, Sigma, Printer, Indent, Outdent, CaseSensitive, Bookmark, 
-  Columns as Columns2, Subscript, Superscript, BookOpen, Palette, Square 
+  Columns as Columns2, Subscript, Superscript, BookOpen, Palette, Square,
+  Pencil, RotateCcw, RotateCw
 } from 'lucide-react';
 
 interface NoteEditorProps {
@@ -76,6 +77,39 @@ const extractTextFromHtml = (html: string): string => {
     .replace(/[ \t]+/g, ' ')
     .replace(/\n\s*\n/g, '\n')
     .trim();
+};
+
+// ✏️ Direct Inking / Pen Stroke Interface (OneNote style)
+export interface InkStroke {
+  id: string;
+  tool: 'pen' | 'highlighter';
+  color: string;
+  width: number;
+  points: { x: number; y: number }[];
+}
+
+const convertStrokesToSvg = (strokes: InkStroke[], width: number, height: number): string => {
+  if (strokes.length === 0) return '';
+  const paths = strokes.map(s => {
+    if (!s.points || s.points.length === 0) return '';
+    let d = `M ${s.points[0].x} ${s.points[0].y}`;
+    if (s.points.length === 1) {
+      d += ` m -0.5 0 a 0.5 0.5 0 1 0 1 0 a 0.5 0.5 0 1 0 -1 0`;
+    } else {
+      for (let i = 1; i < s.points.length - 1; i++) {
+        const xc = (s.points[i].x + s.points[i + 1].x) / 2;
+        const yc = (s.points[i].y + s.points[i + 1].y) / 2;
+        d += ` Q ${s.points[i].x} ${s.points[i].y}, ${xc} ${yc}`;
+      }
+      const last = s.points[s.points.length - 1];
+      d += ` L ${last.x} ${last.y}`;
+    }
+    const opacity = s.tool === 'highlighter' ? 0.38 : 1.0;
+    const strokeWidth = s.tool === 'highlighter' ? s.width * 4 : s.width;
+    return `<path d="${d}" stroke="${s.color}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="${opacity}" />`;
+  }).join('');
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" style="width: 100%; height: 100%; display: block; overflow: visible;">${paths}</svg>`;
 };
 
 // Helper to save selection
@@ -247,6 +281,19 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   const [showDrawingModal, setShowDrawingModal] = useState(false);
   const [editingDrawingEl, setEditingDrawingEl] = useState<HTMLElement | null>(null);
   const [initialDrawingData, setInitialDrawingData] = useState<string | undefined>(undefined);
+
+  // ✏️ Direct Note Inking / Pen Mode States (OneNote & Apple Notes style)
+  const [isInkingMode, setIsInkingMode] = useState(false);
+  const [inkTool, setInkTool] = useState<'pen' | 'highlighter' | 'eraser'>('pen');
+  const [inkColor, setInkColor] = useState('#6366f1');
+  const [inkWidth, setInkWidth] = useState(3);
+  const [inkStrokes, setInkStrokes] = useState<InkStroke[]>([]);
+  const [inkHistory, setInkHistory] = useState<InkStroke[][]>([]);
+  const [inkHistoryIndex, setInkHistoryIndex] = useState(-1);
+
+  const inkCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const currentStrokeRef = useRef<InkStroke | null>(null);
+  const editorWrapperRef = useRef<HTMLDivElement | null>(null);
 
   // 🎨 Pastel Highlight Palette definition
   const PASTEL_HIGHLIGHT_COLORS = [
@@ -860,6 +907,26 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       if (contentRef.current) {
         contentRef.current.innerHTML = note?.body || '';
         upgradeLegacyBlocks(contentRef.current);
+        const layer = contentRef.current.querySelector('.glick-page-ink-layer');
+        if (layer) {
+          const json = layer.getAttribute('data-ink-json');
+          if (json) {
+            try {
+              const parsed = JSON.parse(decodeURIComponent(json));
+              setInkStrokes(parsed);
+              setInkHistory([parsed]);
+              setInkHistoryIndex(0);
+            } catch {
+              setInkStrokes([]);
+              setInkHistory([]);
+              setInkHistoryIndex(-1);
+            }
+          }
+        } else {
+          setInkStrokes([]);
+          setInkHistory([]);
+          setInkHistoryIndex(-1);
+        }
       }
 
       // Always reset scroll to the very top so title and note header are cleanly visible
@@ -1746,6 +1813,266 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       pushToHistory(h);
     }
   };
+
+  // --- ✏️ ONE-NOTE / APPLE NOTES STYLE DIRECT NOTE INKING LOGIC ---
+  const renderInkCanvas = useCallback(() => {
+    const canvas = inkCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    ctx.save();
+    ctx.scale(dpr, dpr);
+
+    const allStrokes = [...inkStrokes];
+    if (currentStrokeRef.current) {
+      allStrokes.push(currentStrokeRef.current);
+    }
+
+    for (const stroke of allStrokes) {
+      if (!stroke.points || stroke.points.length === 0) continue;
+      ctx.save();
+      ctx.strokeStyle = stroke.color;
+      ctx.lineWidth = stroke.tool === 'highlighter' ? stroke.width * 4 : stroke.width;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.globalAlpha = stroke.tool === 'highlighter' ? 0.38 : 1.0;
+
+      ctx.beginPath();
+      const pts = stroke.points;
+      if (pts.length === 1) {
+        ctx.arc(pts[0].x, pts[0].y, ctx.lineWidth / 2, 0, Math.PI * 2);
+        ctx.fillStyle = stroke.color;
+        ctx.fill();
+      } else {
+        ctx.moveTo(pts[0].x, pts[0].y);
+        for (let i = 1; i < pts.length - 1; i++) {
+          const xc = (pts[i].x + pts[i + 1].x) / 2;
+          const yc = (pts[i].y + pts[i + 1].y) / 2;
+          ctx.quadraticCurveTo(pts[i].x, pts[i].y, xc, yc);
+        }
+        ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    ctx.restore();
+  }, [inkStrokes]);
+
+  const eraseStrokesAt = (x: number, y: number) => {
+    const remaining = inkStrokes.filter(stroke => {
+      return !stroke.points.some(pt => Math.hypot(pt.x - x, pt.y - y) <= 20);
+    });
+    if (remaining.length !== inkStrokes.length) {
+      setInkStrokes(remaining);
+      const nextHist = [...inkHistory.slice(0, inkHistoryIndex + 1), remaining];
+      setInkHistory(nextHist);
+      setInkHistoryIndex(nextHist.length - 1);
+    }
+  };
+
+  const handleInkPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = inkCanvasRef.current;
+    if (!canvas) return;
+    e.preventDefault();
+    canvas.setPointerCapture(e.pointerId);
+
+    const rect = canvas.getBoundingClientRect();
+    const x = Math.round(e.clientX - rect.left);
+    const y = Math.round(e.clientY - rect.top);
+
+    if (inkTool === 'eraser') {
+      eraseStrokesAt(x, y);
+      return;
+    }
+
+    currentStrokeRef.current = {
+      id: `stroke-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      tool: inkTool,
+      color: inkColor,
+      width: inkWidth,
+      points: [{ x, y }]
+    };
+    renderInkCanvas();
+  };
+
+  const handleInkPointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = inkCanvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = Math.round(e.clientX - rect.left);
+    const y = Math.round(e.clientY - rect.top);
+
+    if (inkTool === 'eraser' && (e.buttons & 1)) {
+      eraseStrokesAt(x, y);
+      return;
+    }
+
+    if (currentStrokeRef.current && (e.buttons & 1)) {
+      const pts = currentStrokeRef.current.points;
+      const last = pts[pts.length - 1];
+      if (Math.hypot(x - last.x, y - last.y) >= 2) {
+        pts.push({ x, y });
+        renderInkCanvas();
+      }
+    }
+  };
+
+  const handleInkPointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = inkCanvasRef.current;
+    if (!canvas) return;
+    try {
+      canvas.releasePointerCapture(e.pointerId);
+    } catch {}
+
+    if (currentStrokeRef.current) {
+      const finished = currentStrokeRef.current;
+      currentStrokeRef.current = null;
+      if (finished.points.length > 0) {
+        const nextStrokes = [...inkStrokes, finished];
+        setInkStrokes(nextStrokes);
+        const nextHist = [...inkHistory.slice(0, inkHistoryIndex + 1), nextStrokes];
+        setInkHistory(nextHist);
+        setInkHistoryIndex(nextHist.length - 1);
+      }
+    }
+  };
+
+  const handleInkUndo = () => {
+    if (inkHistoryIndex > 0) {
+      const targetIndex = inkHistoryIndex - 1;
+      setInkHistoryIndex(targetIndex);
+      const snapshot = inkHistory[targetIndex] || [];
+      setInkStrokes(snapshot);
+    } else if (inkHistoryIndex === 0) {
+      setInkHistoryIndex(-1);
+      setInkStrokes([]);
+    }
+  };
+
+  const handleInkRedo = () => {
+    if (inkHistoryIndex < inkHistory.length - 1) {
+      const targetIndex = inkHistoryIndex + 1;
+      setInkHistoryIndex(targetIndex);
+      const snapshot = inkHistory[targetIndex] || [];
+      setInkStrokes(snapshot);
+    }
+  };
+
+  const handleInkClearAll = () => {
+    setInkStrokes([]);
+    const nextHist = [...inkHistory.slice(0, inkHistoryIndex + 1), []];
+    setInkHistory(nextHist);
+    setInkHistoryIndex(nextHist.length - 1);
+  };
+
+  const saveInkToNote = useCallback((strokesToSave: InkStroke[]) => {
+    if (!contentRef.current) return;
+    let layer = contentRef.current.querySelector('.glick-page-ink-layer') as HTMLElement;
+
+    if (strokesToSave.length === 0) {
+      if (layer) {
+        layer.remove();
+        const h = contentRef.current.innerHTML;
+        latestContent.current = h;
+        setBody(h);
+        pushToHistory(h);
+      }
+      return;
+    }
+
+    const rect = contentRef.current.getBoundingClientRect();
+    const width = Math.max(300, Math.round(rect.width) || 800);
+    let maxY = 400;
+    for (const s of strokesToSave) {
+      for (const p of s.points) {
+        if (p.y > maxY) maxY = p.y;
+      }
+    }
+    const height = Math.max(Math.round(rect.height) || 600, maxY + 60);
+
+    const svg = convertStrokesToSvg(strokesToSave, width, height);
+
+    if (!layer) {
+      layer = document.createElement('div');
+      layer.className = 'glick-page-ink-layer';
+      layer.setAttribute('contenteditable', 'false');
+      layer.style.position = 'absolute';
+      layer.style.top = '0';
+      layer.style.left = '0';
+      layer.style.width = '100%';
+      layer.style.height = '100%';
+      layer.style.pointerEvents = 'none';
+      layer.style.zIndex = '10';
+      contentRef.current.appendChild(layer);
+    }
+
+    layer.setAttribute('data-ink-json', encodeURIComponent(JSON.stringify(strokesToSave)));
+    layer.innerHTML = svg;
+
+    const h = contentRef.current.innerHTML;
+    latestContent.current = h;
+    setBody(h);
+    pushToHistory(h);
+  }, []);
+
+  const toggleInkingMode = () => {
+    if (isInkingMode) {
+      setIsInkingMode(false);
+      saveInkToNote(inkStrokes);
+      showToast('Ink drawings saved on note!', 'success');
+    } else {
+      if (contentRef.current) {
+        const layer = contentRef.current.querySelector('.glick-page-ink-layer');
+        if (layer) {
+          const json = layer.getAttribute('data-ink-json');
+          if (json) {
+            try {
+              const parsed = JSON.parse(decodeURIComponent(json));
+              setInkStrokes(parsed);
+              setInkHistory([parsed]);
+              setInkHistoryIndex(0);
+            } catch {}
+          }
+        }
+      }
+      setIsInkingMode(true);
+      showToast('✏️ Draw Mode: Scribble, draw & highlight anywhere on the note!', 'info');
+    }
+  };
+
+  useEffect(() => {
+    if (!isInkingMode) return;
+    const updateCanvasSize = () => {
+      const canvas = inkCanvasRef.current;
+      const editor = contentRef.current;
+      if (!canvas || !editor) return;
+
+      const rect = editor.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      const w = Math.round(rect.width);
+      const h = Math.max(600, Math.round(rect.height));
+
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      canvas.style.width = `${w}px`;
+      canvas.style.height = `${h}px`;
+      renderInkCanvas();
+    };
+
+    updateCanvasSize();
+    const timer = setTimeout(updateCanvasSize, 50);
+    window.addEventListener('resize', updateCanvasSize);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', updateCanvasSize);
+    };
+  }, [isInkingMode, renderInkCanvas]);
 
   // --- AESTHETIC DECORATIVE DIVIDERS ---
   const handleInsertDivider = (type: 'gradient' | 'stars' | 'dots' | 'line') => {
@@ -4480,6 +4807,27 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
             <ChevronDown className="w-3 h-3 opacity-60" />
           </button>
 
+          {/* ✏️ Direct Note Inking / Pen Mode (OneNote style) */}
+          <button 
+            type="button"
+            onMouseDown={handleButtonMouseDown} 
+            onClick={toggleInkingMode} 
+            className={`px-3 py-1.5 h-9 rounded-xl flex items-center gap-1.5 shrink-0 font-bold text-xs transition-all cursor-pointer ${
+              isInkingMode 
+                ? 'bg-purple-600 text-white shadow-md shadow-purple-500/20 ring-2 ring-purple-300 dark:ring-purple-700' 
+                : inkStrokes.length > 0 
+                  ? 'bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800 hover:bg-purple-100' 
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-purple-600'
+            }`} 
+            title="Direct Pen & Inking Mode: Draw directly on your note canvas (OneNote style)"
+          >
+            <Pencil className="w-4 h-4" />
+            <span>Draw</span>
+            {inkStrokes.length > 0 && !isInkingMode && (
+              <span className="w-1.5 h-1.5 rounded-full bg-purple-500" title="Note has ink sketches" />
+            )}
+          </button>
+
           <div className="w-px h-5 bg-slate-250 dark:bg-slate-800 mx-1 shrink-0" />
 
           {/* Search tool */}
@@ -5379,6 +5727,25 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                     <button
                       type="button"
                       onMouseDown={handleButtonMouseDown}
+                      onClick={() => { setActivePopup(null); toggleInkingMode(); }}
+                      className="group flex items-start gap-3 p-2.5 rounded-xl hover:bg-white dark:hover:bg-slate-800 transition text-left cursor-pointer border border-transparent hover:border-slate-200 dark:hover:border-slate-700 shadow-xs hover:shadow-sm"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-950/40 text-purple-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+                        <Pencil className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-purple-600 dark:group-hover:text-purple-400 flex items-center gap-1">
+                          Direct Pen & Inking Mode
+                        </span>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                          OneNote style pen, highlighter & scribble on note page
+                        </p>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onMouseDown={handleButtonMouseDown}
                       onClick={() => { setActivePopup(null); handleOpenDrawingModal(); }}
                       className="group flex items-start gap-3 p-2.5 rounded-xl hover:bg-white dark:hover:bg-slate-800 transition text-left cursor-pointer border border-transparent hover:border-slate-200 dark:hover:border-slate-700 shadow-xs hover:shadow-sm"
                     >
@@ -5821,6 +6188,164 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
           
           <div ref={scrollContainerRef} className="flex-1 overflow-y-auto no-scrollbar relative px-2 sm:px-4 md:px-8 py-3 md:py-6">
             
+            {/* ✏️ Premium OneNote / Apple Notes Floating Inking Toolbar */}
+            <AnimatePresence>
+              {isInkingMode && (
+                <motion.div
+                  initial={{ opacity: 0, y: -20, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                  className="sticky top-2 z-50 mx-auto w-fit max-w-[95%] mb-4 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-purple-300 dark:border-purple-800 shadow-2xl shadow-purple-500/15 rounded-2xl p-2 flex flex-wrap items-center gap-1.5 sm:gap-2 select-none"
+                >
+                  {/* Tool Selector */}
+                  <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                    <button
+                      type="button"
+                      onClick={() => setInkTool('pen')}
+                      className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold transition cursor-pointer ${
+                        inkTool === 'pen'
+                          ? 'bg-purple-600 text-white shadow-xs'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                      }`}
+                      title="Pen Tool (Crisp solid ink)"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      <span>Pen</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setInkTool('highlighter')}
+                      className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold transition cursor-pointer ${
+                        inkTool === 'highlighter'
+                          ? 'bg-amber-400 text-slate-900 shadow-xs'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                      }`}
+                      title="Highlighter Tool (Fluorescent transparent highlight)"
+                    >
+                      <Highlighter className="w-3.5 h-3.5" />
+                      <span>Highlight</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setInkTool('eraser')}
+                      className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold transition cursor-pointer ${
+                        inkTool === 'eraser'
+                          ? 'bg-rose-500 text-white shadow-xs'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                      }`}
+                      title="Eraser Tool (Touch any stroke to erase)"
+                    >
+                      <Eraser className="w-3.5 h-3.5" />
+                      <span>Eraser</span>
+                    </button>
+                  </div>
+
+                  {/* Colors */}
+                  {inkTool !== 'eraser' && (
+                    <>
+                      <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-0.5 shrink-0" />
+                      <div className="flex items-center gap-1">
+                        {[
+                          { name: 'Dark Slate', value: '#0f172a' },
+                          { name: 'Indigo', value: '#6366f1' },
+                          { name: 'Crimson', value: '#ef4444' },
+                          { name: 'Emerald', value: '#10b981' },
+                          { name: 'Amber', value: '#f59e0b' },
+                          { name: 'Purple', value: '#8b5cf6' },
+                          { name: 'Neon Yellow', value: '#fde047' },
+                          { name: 'Pink', value: '#ec4899' },
+                          { name: 'Sky Blue', value: '#0ea5e9' }
+                        ].map(c => (
+                          <button
+                            key={c.value}
+                            type="button"
+                            onClick={() => setInkColor(c.value)}
+                            className={`w-6 h-6 rounded-full border border-black/15 transition-transform hover:scale-110 cursor-pointer ${
+                              inkColor === c.value ? 'ring-2 ring-purple-500 scale-110' : ''
+                            }`}
+                            style={{ backgroundColor: c.value }}
+                            title={c.name}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
+
+                  {/* Stroke Width */}
+                  {inkTool !== 'eraser' && (
+                    <>
+                      <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-0.5 shrink-0" />
+                      <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                        {[
+                          { label: 'Fine', w: 2 },
+                          { label: 'Medium', w: 4 },
+                          { label: 'Bold', w: 7 }
+                        ].map(t => (
+                          <button
+                            key={t.w}
+                            type="button"
+                            onClick={() => setInkWidth(t.w)}
+                            className={`px-2 py-1 rounded-lg text-[10px] font-bold transition cursor-pointer ${
+                              inkWidth === t.w
+                                ? 'bg-white dark:bg-slate-700 text-purple-600 dark:text-purple-400 shadow-xs'
+                                : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                            }`}
+                            title={`${t.label} thickness`}
+                          >
+                            {t.label}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+
+                  {/* Undo, Redo, Clear */}
+                  <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-0.5 shrink-0" />
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      disabled={inkHistoryIndex <= 0}
+                      onClick={handleInkUndo}
+                      className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-30 transition cursor-pointer"
+                      title="Undo stroke (Ctrl+Z)"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={inkHistoryIndex >= inkHistory.length - 1}
+                      onClick={handleInkRedo}
+                      className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-30 transition cursor-pointer"
+                      title="Redo stroke"
+                    >
+                      <RotateCw className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleInkClearAll}
+                      className="p-1.5 rounded-lg hover:bg-rose-50 text-rose-500 hover:text-rose-600 transition cursor-pointer"
+                      title="Clear all ink"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Done Button */}
+                  <button
+                    type="button"
+                    onClick={toggleInkingMode}
+                    className="ml-auto px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-purple-500/20 transition cursor-pointer"
+                    title="Done drawing - Return to text typing"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Done</span>
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* Eye-Care Warm Paper Document Sheet */}
             <div className={`${isA4Mode ? 'a4-page-mode' : 'max-w-4xl mx-auto bg-[#fafbfc] dark:bg-[#111726] rounded-2xl md:rounded-3xl border border-slate-200/70 dark:border-slate-800/80 shadow-[0_2px_16px_rgba(15,23,42,0.03)] p-5 sm:p-8 md:p-12 min-h-[calc(100vh-140px)]'} transition-all`}>
               
@@ -5844,11 +6369,23 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
               </div>
 
               {/* Center Content Editor container */}
-              <div className="w-full">
+              <div className="w-full relative min-h-[500px]" ref={editorWrapperRef}>
+                {/* Active Interactive Inking Canvas */}
+                {isInkingMode && (
+                  <canvas
+                    ref={inkCanvasRef}
+                    className="absolute top-0 left-0 z-30 touch-none select-none cursor-crosshair"
+                    style={{ background: 'transparent' }}
+                    onPointerDown={handleInkPointerDown}
+                    onPointerMove={handleInkPointerMove}
+                    onPointerUp={handleInkPointerUp}
+                    onPointerCancel={handleInkPointerUp}
+                  />
+                )}
                 
                 <div
                   ref={contentRef}
-                  contentEditable
+                  contentEditable={!isInkingMode}
                   onInput={handleInput}
                   onBlur={() => {
                     if (contentRef.current) {
