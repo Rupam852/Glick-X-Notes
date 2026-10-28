@@ -25,7 +25,10 @@ import { voiceDictation, audioReader } from '../utils/audioTools';
 import { convertMarkdownBadgesAndLinksToHtml } from '../services/aiService';
 import MermaidModal from './MermaidModal';
 import MathFormulaModal from './MathFormulaModal';
-import { GitFork, Sigma } from 'lucide-react';
+import { 
+  GitFork, Sigma, Printer, Indent, Outdent, CaseSensitive, Bookmark, 
+  Columns as Columns2, Subscript, Superscript, BookOpen 
+} from 'lucide-react';
 
 interface NoteEditorProps {
   user: FirebaseUser;
@@ -225,7 +228,9 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   const [slashMenuPos, setSlashMenuPos] = useState({ top: 0, left: 0 });
   const [slashQuery, setSlashQuery] = useState('');
 
-  const [activePopup, setActivePopup] = useState<'text' | 'paragraph' | 'table' | 'tableActions' | 'link' | 'highlighter' | 'divider' | null>(null);
+  const [activePopup, setActivePopup] = useState<'text' | 'paragraph' | 'table' | 'tableActions' | 'link' | 'highlighter' | 'divider' | 'columns' | null>(null);
+  const [isA4Mode, setIsA4Mode] = useState(false);
+  const [currentLineSpacing, setCurrentLineSpacing] = useState('1.6');
 
   // Mermaid Flowchart & Math Formula States
   const [showMermaidModal, setShowMermaidModal] = useState(false);
@@ -246,7 +251,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     { name: 'Rose Blush', value: '#fbcfe8', colorName: 'Rose' }
   ];
 
-  const togglePopup = (popupName: 'text' | 'paragraph' | 'table' | 'tableActions' | 'link' | 'highlighter' | 'divider' | null) => {
+  const togglePopup = (popupName: 'text' | 'paragraph' | 'table' | 'tableActions' | 'link' | 'highlighter' | 'divider' | 'columns' | null) => {
     setActivePopup(current => {
       const next = current === popupName ? null : popupName;
       if (next) {
@@ -1712,6 +1717,187 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     showToast('Aesthetic divider added!', 'success');
   };
 
+  // --- LINE SPACING & PARAGRAPH INDENTATION ---
+  const handleLineSpacing = (spacing: string) => {
+    setCurrentLineSpacing(spacing);
+    ensureSelectionInsideEditor();
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0 && contentRef.current) {
+      let node: Node | null = sel.getRangeAt(0).commonAncestorContainer;
+      while (node && node !== contentRef.current && (node.nodeType === Node.TEXT_NODE || (node as HTMLElement).tagName === 'SPAN')) {
+        node = node.parentNode;
+      }
+      if (node && node !== contentRef.current) {
+        (node as HTMLElement).style.lineHeight = spacing;
+      } else {
+        contentRef.current.style.lineHeight = spacing;
+      }
+      const h = contentRef.current.innerHTML;
+      latestContent.current = h;
+      setBody(h);
+      pushToHistory(h);
+      showToast(`Line spacing set to ${spacing}`, 'success');
+    }
+  };
+
+  const handleIndent = () => {
+    ensureSelectionInsideEditor();
+    document.execCommand('indent', false);
+    if (contentRef.current) {
+      const h = contentRef.current.innerHTML;
+      latestContent.current = h;
+      setBody(h);
+      pushToHistory(h);
+    }
+  };
+
+  const handleOutdent = () => {
+    ensureSelectionInsideEditor();
+    document.execCommand('outdent', false);
+    if (contentRef.current) {
+      const h = contentRef.current.innerHTML;
+      latestContent.current = h;
+      setBody(h);
+      pushToHistory(h);
+    }
+  };
+
+  // --- LETTER CAPITALIZATION (CHANGE CASE) ---
+  const handleChangeCase = (mode: 'uppercase' | 'lowercase' | 'title' | 'sentence') => {
+    ensureSelectionInsideEditor();
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0);
+    const text = range.toString();
+    if (!text) {
+      showToast('Select text first to change case', 'info');
+      return;
+    }
+    let converted = text;
+    if (mode === 'uppercase') {
+      converted = text.toUpperCase();
+    } else if (mode === 'lowercase') {
+      converted = text.toLowerCase();
+    } else if (mode === 'title') {
+      converted = text.replace(/\b\w/g, c => c.toUpperCase());
+    } else if (mode === 'sentence') {
+      converted = text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+    }
+    document.execCommand('insertText', false, converted);
+    if (contentRef.current) {
+      const h = contentRef.current.innerHTML;
+      latestContent.current = h;
+      setBody(h);
+      pushToHistory(h);
+    }
+    showToast(`Converted to ${mode} case`, 'success');
+  };
+
+  // --- A4 PRINT & PAGE BREAK ---
+  const handleInsertPageBreak = () => {
+    ensureSelectionInsideEditor(true);
+    const pageBreakHtml = `
+      <div class="glick-block-wrapper glick-page-break glick-page-break-visual" contenteditable="false">
+        <span class="glick-page-break-label">📄 PAGE BREAK (Ctrl+Enter)</span>
+      </div>
+      <p><br/></p>
+    `;
+    document.execCommand('insertHTML', false, pageBreakHtml);
+    if (contentRef.current) {
+      const h = contentRef.current.innerHTML;
+      latestContent.current = h;
+      setBody(h);
+      pushToHistory(h);
+    }
+    showToast('Page break inserted!', 'success');
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  // --- SMART WEB BOOKMARK CARDS ---
+  const handleInsertBookmark = (rawUrl: string) => {
+    let url = rawUrl.trim();
+    if (!url) return;
+    if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+    let hostname = url;
+    try {
+      hostname = new URL(url).hostname;
+    } catch (e) {
+      hostname = url;
+    }
+    const cleanHost = hostname.replace(/^www\./i, '');
+    const title = cleanHost.split('.')[0];
+    const capitalizedTitle = title.charAt(0).toUpperCase() + title.slice(1);
+
+    const bookmarkHtml = `
+      <div class="glick-block-wrapper glick-bookmark-container" style="margin: 16px 0;">
+        <div contenteditable="false" style="display: flex; align-items: center; justify-content: space-between; padding: 4px 10px; background: rgba(99,102,241,0.06); border-radius: 10px 10px 0 0; border: 1px solid rgba(99,102,241,0.2); border-bottom: none; user-select: none;">
+          <span style="font-size: 11px; font-weight: 700; color: #6366f1; display: flex; align-items: center; gap: 4px;">🔖 BOOKMARK CARD</span>
+          <button type="button" data-action="delete-block" style="background: transparent; border: none; color: #ef4444; font-size: 12px; cursor: pointer;" title="Delete Bookmark">✕</button>
+        </div>
+        <a href="${url}" target="_blank" rel="noopener noreferrer" contenteditable="false" class="glick-bookmark-card" style="display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border: 1px solid rgba(99,102,241,0.25); border-radius: 0 0 12px 12px; background: rgba(255,255,255,0.9); text-decoration: none; color: inherit; box-shadow: 0 2px 8px rgba(0,0,0,0.04); transition: transform 0.15s ease;">
+          <div style="flex: 1; min-width: 0; padding-right: 14px;">
+            <div style="font-size: 14px; font-weight: 700; color: #1e293b; margin-bottom: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${capitalizedTitle}</div>
+            <div style="font-size: 11px; color: #64748b; margin-bottom: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${url}</div>
+            <div style="display: flex; align-items: center; gap: 6px; font-size: 10.5px; color: #6366f1; font-weight: 600;">
+              <span>🌐 ${cleanHost}</span>
+              <span>↗ Open link</span>
+            </div>
+          </div>
+          <div style="width: 44px; height: 44px; border-radius: 10px; background: rgba(99,102,241,0.1); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;">
+            🔗
+          </div>
+        </a>
+      </div>
+      <p><br/></p>
+    `;
+    ensureSelectionInsideEditor(true);
+    document.execCommand('insertHTML', false, bookmarkHtml);
+    if (contentRef.current) {
+      const h = contentRef.current.innerHTML;
+      latestContent.current = h;
+      setBody(h);
+      pushToHistory(h);
+    }
+    togglePopup(null);
+    showToast('Smart Bookmark Card created!', 'success');
+  };
+
+  // --- MULTI-COLUMN SPLIT LAYOUT (2-COLUMN & 3-COLUMN) ---
+  const handleInsertColumns = (count: 2 | 3) => {
+    ensureSelectionInsideEditor(true);
+    const columnsHtml = `
+      <div class="glick-block-wrapper glick-columns-container glick-columns-${count}" style="display: grid; grid-template-columns: repeat(${count}, minmax(0, 1fr)); gap: 14px; margin: 18px 0; position: relative;">
+        <div contenteditable="false" style="grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; padding: 4px 10px; background: rgba(99,102,241,0.06); border-radius: 8px; border: 1px dashed rgba(99,102,241,0.25); user-select: none;">
+          <span style="font-size: 10.5px; font-weight: 700; color: #6366f1;">⚖️ ${count}-COLUMN LAYOUT (SIDE-BY-SIDE)</span>
+          <button type="button" data-action="delete-block" style="background: transparent; border: none; color: #ef4444; font-size: 12px; cursor: pointer;" title="Delete Columns">✕</button>
+        </div>
+        <div class="glick-column" style="min-height: 80px; padding: 12px; border: 1px dashed rgba(148, 163, 184, 0.35); border-radius: 10px; background: rgba(255,255,255,0.5);">
+          <p><strong>Column 1:</strong> Type ideas or notes here...</p>
+        </div>
+        <div class="glick-column" style="min-height: 80px; padding: 12px; border: 1px dashed rgba(148, 163, 184, 0.35); border-radius: 10px; background: rgba(255,255,255,0.5);">
+          <p><strong>Column 2:</strong> Type comparison or details here...</p>
+        </div>
+        ${count === 3 ? `
+        <div class="glick-column" style="min-height: 80px; padding: 12px; border: 1px dashed rgba(148, 163, 184, 0.35); border-radius: 10px; background: rgba(255,255,255,0.5);">
+          <p><strong>Column 3:</strong> Additional notes...</p>
+        </div>` : ''}
+      </div>
+      <p><br/></p>
+    `;
+    document.execCommand('insertHTML', false, columnsHtml);
+    if (contentRef.current) {
+      const h = contentRef.current.innerHTML;
+      latestContent.current = h;
+      setBody(h);
+      pushToHistory(h);
+    }
+    togglePopup(null);
+    showToast(`${count}-Column layout inserted!`, 'success');
+  };
+
   // --- AUDIO TOOLS (DICTATION & READER) ---
   const toggleVoiceDictation = () => {
     if (!voiceDictation.isSupported()) {
@@ -1838,6 +2024,18 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         break;
       case 'divider':
         togglePopup('divider');
+        break;
+      case 'bookmark':
+        togglePopup('link');
+        break;
+      case '2col':
+        handleInsertColumns(2);
+        break;
+      case '3col':
+        handleInsertColumns(3);
+        break;
+      case 'pagebreak':
+        handleInsertPageBreak();
         break;
       default:
         break;
@@ -3005,6 +3203,31 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
 
       // Normal Enter: DO NOT PREVENT DEFAULT! Browser creates natural clean new paragraph/line!
     }
+
+    // ⌨️ Tab and Shift+Tab indentation (Microsoft Word style)
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      if (e.shiftKey) {
+        handleOutdent();
+      } else {
+        handleIndent();
+      }
+      return;
+    }
+
+    // 📄 Ctrl+Enter / Cmd+Enter for Page Break
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      handleInsertPageBreak();
+      return;
+    }
+
+    // 🖨️ Ctrl+P / Cmd+P for Print Layout
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p') {
+      e.preventDefault();
+      handlePrint();
+      return;
+    }
   };
 
   // Load Attachments Subcollection
@@ -4010,11 +4233,45 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
             <Minus className="w-5 h-5" />
           </button>
 
+          {/* ⚖️ Multi-Column Split Layout */}
+          <button 
+            type="button"
+            onMouseDown={handleButtonMouseDown} 
+            onClick={() => togglePopup(activePopup === 'columns' ? null : 'columns')} 
+            className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-all ${activePopup === 'columns' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} 
+            title="Multi-Column Split Layout (⚖️)"
+          >
+            <Columns2 className="w-5 h-5" />
+          </button>
+
           <div className="w-px h-5 bg-slate-250 dark:bg-slate-800 mx-1 shrink-0" />
 
           {/* Search tool */}
           <button onMouseDown={handleButtonMouseDown} onClick={() => setShowFindReplace(prev => !prev)} className={`p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-colors ${showFindReplace ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Find and Replace">
             <Search className="w-5 h-5" />
+          </button>
+
+          {/* 📄 A4 Document View Toggle (Word Mode) */}
+          <button 
+            type="button"
+            onMouseDown={handleButtonMouseDown} 
+            onClick={() => setIsA4Mode(prev => !prev)} 
+            className={`p-1.5 h-9 px-2.5 flex items-center gap-1.5 rounded-xl shrink-0 text-xs font-bold transition-all cursor-pointer ${isA4Mode ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'}`} 
+            title="Toggle Microsoft Word A4 Page Layout"
+          >
+            <BookOpen className="w-4 h-4" />
+            <span className="hidden xl:inline text-[11px]">A4 View</span>
+          </button>
+
+          {/* 🖨️ Print / Save as PDF */}
+          <button 
+            type="button"
+            onMouseDown={handleButtonMouseDown} 
+            onClick={handlePrint} 
+            className="p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-indigo-600 transition-all cursor-pointer" 
+            title="Print or Save as PDF (Ctrl+P)"
+          >
+            <Printer className="w-4.5 h-4.5" />
           </button>
 
           {/* ⏱️ Live Reading Time & Word Count Pill */}
@@ -4224,12 +4481,109 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
           )}
           {activePopup === 'paragraph' && (
             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 absolute top-full left-0 w-full z-30 shadow-xl">
-              <div className="p-4 space-y-4">
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Text Alignment</p>
-                <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl max-w-xs">
-                  <button type="button" onMouseDown={handleButtonMouseDown} onClick={() => handleFormat('justifyLeft')} className={`flex-1 p-2 rounded-lg flex justify-center transition-all ${activeFormats.justifyLeft ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Align Left"><AlignLeft className="w-4 h-4" /></button>
-                  <button type="button" onMouseDown={handleButtonMouseDown} onClick={() => handleFormat('justifyCenter')} className={`flex-1 p-2 rounded-lg flex justify-center transition-all ${activeFormats.justifyCenter ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Align Center"><AlignCenter className="w-4 h-4" /></button>
-                  <button type="button" onMouseDown={handleButtonMouseDown} onClick={() => handleFormat('justifyRight')} className={`flex-1 p-2 rounded-lg flex justify-center transition-all ${activeFormats.justifyRight ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Align Right"><AlignRight className="w-4 h-4" /></button>
+              <div className="p-4 max-w-xl mx-auto space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Alignment */}
+                  <div>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1.5">Text Alignment</p>
+                    <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                      <button type="button" onMouseDown={handleButtonMouseDown} onClick={() => handleFormat('justifyLeft')} className={`flex-1 p-2 rounded-lg flex justify-center transition-all ${activeFormats.justifyLeft ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Align Left"><AlignLeft className="w-4 h-4" /></button>
+                      <button type="button" onMouseDown={handleButtonMouseDown} onClick={() => handleFormat('justifyCenter')} className={`flex-1 p-2 rounded-lg flex justify-center transition-all ${activeFormats.justifyCenter ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Align Center"><AlignCenter className="w-4 h-4" /></button>
+                      <button type="button" onMouseDown={handleButtonMouseDown} onClick={() => handleFormat('justifyRight')} className={`flex-1 p-2 rounded-lg flex justify-center transition-all ${activeFormats.justifyRight ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-500'}`} title="Align Right"><AlignRight className="w-4 h-4" /></button>
+                    </div>
+                  </div>
+
+                  {/* Line Spacing */}
+                  <div>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1.5">Line Spacing (Line Height)</p>
+                    <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                      {[
+                        { label: '1.0', value: '1.0', desc: 'Compact' },
+                        { label: '1.15', value: '1.15', desc: 'Normal' },
+                        { label: '1.5', value: '1.5', desc: 'Relaxed' },
+                        { label: '2.0', value: '2.0', desc: 'Double' }
+                      ].map(sp => (
+                        <button
+                          key={sp.value}
+                          type="button"
+                          onMouseDown={handleButtonMouseDown}
+                          onClick={() => handleLineSpacing(sp.value)}
+                          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${currentLineSpacing === sp.value ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+                          title={`${sp.desc} spacing (${sp.label})`}
+                        >
+                          {sp.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-slate-100 dark:border-slate-800 pt-3">
+                  {/* Indentation */}
+                  <div>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1.5">Indentation (Tab / Shift+Tab)</p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onMouseDown={handleButtonMouseDown}
+                        onClick={handleOutdent}
+                        className="flex-1 py-1.5 px-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-center gap-1.5 transition"
+                        title="Decrease Indent (Shift+Tab)"
+                      >
+                        <Outdent className="w-3.5 h-3.5 text-slate-500" />
+                        <span>Outdent</span>
+                      </button>
+                      <button
+                        type="button"
+                        onMouseDown={handleButtonMouseDown}
+                        onClick={handleIndent}
+                        className="flex-1 py-1.5 px-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-center gap-1.5 transition"
+                        title="Increase Indent (Tab)"
+                      >
+                        <Indent className="w-3.5 h-3.5 text-slate-500" />
+                        <span>Indent</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Change Case */}
+                  <div>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1.5">Change Case (Select text)</p>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <button
+                        type="button"
+                        onMouseDown={handleButtonMouseDown}
+                        onClick={() => handleChangeCase('uppercase')}
+                        className="py-1 px-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 hover:text-indigo-600 text-[11px] font-bold text-slate-700 dark:text-slate-300 transition"
+                      >
+                        UPPERCASE
+                      </button>
+                      <button
+                        type="button"
+                        onMouseDown={handleButtonMouseDown}
+                        onClick={() => handleChangeCase('lowercase')}
+                        className="py-1 px-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 hover:text-indigo-600 text-[11px] font-semibold text-slate-700 dark:text-slate-300 transition"
+                      >
+                        lowercase
+                      </button>
+                      <button
+                        type="button"
+                        onMouseDown={handleButtonMouseDown}
+                        onClick={() => handleChangeCase('title')}
+                        className="py-1 px-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 hover:text-indigo-600 text-[11px] font-semibold text-slate-700 dark:text-slate-300 transition"
+                      >
+                        Title Case
+                      </button>
+                      <button
+                        type="button"
+                        onMouseDown={handleButtonMouseDown}
+                        onClick={() => handleChangeCase('sentence')}
+                        className="py-1 px-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 hover:text-indigo-600 text-[11px] font-semibold text-slate-700 dark:text-slate-300 transition"
+                      >
+                        Sentence case
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </motion.div>
@@ -4239,25 +4593,33 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 absolute top-full left-0 w-full z-30 shadow-xl">
               <div className="p-4 max-w-sm mx-auto space-y-3">
                 <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">
-                  {selectedLinkUrl ? 'Edit Link' : 'Insert Link'}
+                  {selectedLinkUrl ? 'Edit Link' : 'Insert Web Link or Bookmark'}
                 </p>
+                <input
+                  type="text"
+                  placeholder="https://example.com..."
+                  value={linkUrl || selectedLinkUrl}
+                  onChange={(e) => setLinkUrl(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleLinkInsert(linkUrl || selectedLinkUrl);
+                  }}
+                  className="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs outline-none focus:border-indigo-500"
+                />
                 <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="Enter URL..."
-                    value={linkUrl || selectedLinkUrl}
-                    onChange={(e) => setLinkUrl(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleLinkInsert(linkUrl || selectedLinkUrl);
-                    }}
-                    className="flex-1 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs outline-none focus:border-indigo-500"
-                  />
                   <button
                     type="button"
                     onClick={() => handleLinkInsert(linkUrl || selectedLinkUrl)}
-                    className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-550 text-white rounded-lg text-xs font-bold transition-all"
+                    className="flex-1 py-1.5 bg-indigo-600 hover:bg-indigo-550 text-white rounded-lg text-xs font-bold transition-all cursor-pointer"
                   >
-                    Apply
+                    Inline Link
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleInsertBookmark(linkUrl || selectedLinkUrl)}
+                    className="flex-1 py-1.5 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer"
+                    title="Insert as rich Notion-style bookmark card"
+                  >
+                    <Bookmark className="w-3.5 h-3.5" /> Bookmark Card
                   </button>
                 </div>
                 {selectedLinkUrl && (
@@ -4507,6 +4869,49 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
               </div>
             </motion.div>
           )}
+
+          {activePopup === 'columns' && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 absolute top-full left-0 w-full z-30 shadow-xl p-4">
+              <div className="max-w-md mx-auto space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <Columns2 className="w-3.5 h-3.5 text-indigo-500" /> Multi-Column Split Layout
+                  </p>
+                  <span className="text-[10px] text-slate-400">Side-by-side editable blocks</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onMouseDown={handleButtonMouseDown}
+                    onClick={() => handleInsertColumns(2)}
+                    className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-600 bg-slate-50/50 dark:bg-slate-800/40 text-left transition hover:scale-102 cursor-pointer flex flex-col justify-between"
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="h-6 flex-1 bg-indigo-100 dark:bg-indigo-950/60 rounded border border-indigo-200 dark:border-indigo-800" />
+                      <div className="h-6 flex-1 bg-indigo-100 dark:bg-indigo-950/60 rounded border border-indigo-200 dark:border-indigo-800" />
+                    </div>
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">2 Columns (50% / 50%)</span>
+                    <span className="text-[10px] text-slate-400">Pros vs Cons, code & notes</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onMouseDown={handleButtonMouseDown}
+                    onClick={() => handleInsertColumns(3)}
+                    className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-600 bg-slate-50/50 dark:bg-slate-800/40 text-left transition hover:scale-102 cursor-pointer flex flex-col justify-between"
+                  >
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <div className="h-6 flex-1 bg-indigo-100 dark:bg-indigo-950/60 rounded border border-indigo-200 dark:border-indigo-800" />
+                      <div className="h-6 flex-1 bg-indigo-100 dark:bg-indigo-950/60 rounded border border-indigo-200 dark:border-indigo-800" />
+                      <div className="h-6 flex-1 bg-indigo-100 dark:bg-indigo-950/60 rounded border border-indigo-200 dark:border-indigo-800" />
+                    </div>
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">3 Columns (33% each)</span>
+                    <span className="text-[10px] text-slate-400">Triple comparison cards</span>
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
         </AnimatePresence>
       </div>
       )}
@@ -4737,12 +5142,12 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         )}
 
         {/* Content Pane with Eye-Care Paper Document Canvas */}
-        <div className="flex-1 flex flex-col bg-[#f2f4f7] dark:bg-[#0b0f19] overflow-hidden relative">
+        <div className={`flex-1 flex flex-col ${isA4Mode ? 'bg-[#cbd5e1] dark:bg-[#030712]' : 'bg-[#f2f4f7] dark:bg-[#0b0f19]'} overflow-hidden relative transition-colors`}>
           
           <div ref={scrollContainerRef} className="flex-1 overflow-y-auto no-scrollbar relative px-2 sm:px-4 md:px-8 py-3 md:py-6">
             
             {/* Eye-Care Warm Paper Document Sheet */}
-            <div className="max-w-4xl mx-auto bg-[#fafbfc] dark:bg-[#111726] rounded-2xl md:rounded-3xl border border-slate-200/70 dark:border-slate-800/80 shadow-[0_2px_16px_rgba(15,23,42,0.03)] p-5 sm:p-8 md:p-12 min-h-[calc(100vh-140px)] transition-colors">
+            <div className={`${isA4Mode ? 'a4-page-mode' : 'max-w-4xl mx-auto bg-[#fafbfc] dark:bg-[#111726] rounded-2xl md:rounded-3xl border border-slate-200/70 dark:border-slate-800/80 shadow-[0_2px_16px_rgba(15,23,42,0.03)] p-5 sm:p-8 md:p-12 min-h-[calc(100vh-140px)]'} transition-all`}>
               
               {/* Inline Title input (Prominent on document sheet with max length limit) */}
               <div className="w-full pb-3 mb-4 border-b border-slate-200/60 dark:border-slate-800/80">

@@ -373,4 +373,136 @@ details.glick-toggle:hover .glick-corner-grip,
   position: relative;
 }
 
+/* 📄 Microsoft Word A4 Page Mode & Print Layout */
+.a4-page-mode {
+  max-width: 820px !important;
+  min-height: 1123px !important;
+  padding: 64px 54px !important;
+  margin: 28px auto !important;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06) !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  border: 1px solid rgba(203, 213, 225, 0.8) !important;
+  transition: all 0.2s ease !important;
+}
+
+.dark .a4-page-mode {
+  background: #0f172a !important;
+  border-color: rgba(51, 65, 85, 0.8) !important;
+  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.45) !important;
+}
+
+/* 📄 Page Break visual line in Editor */
+.glick-page-break {
+  page-break-after: always;
+  break-after: page;
+}
+
+.glick-page-break-visual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 32px 0;
+  user-select: none;
+  position: relative;
+}
+
+.glick-page-break-visual::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  border-top: 2px dashed #a5b4fc;
+  z-index: 0;
+}
+
+.dark .glick-page-break-visual::before {
+  border-color: #4338ca;
+}
+
+.glick-page-break-label {
+  position: relative;
+  z-index: 1;
+  background: #e0e7ff;
+  color: #4338ca;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 9999px;
+  letter-spacing: 0.5px;
+}
+
+.dark .glick-page-break-label {
+  background: #312e81;
+  color: #c7d2fe;
+}
+
+/* 🖨️ Clean Window Print Styling */
+@media print {
+  body, html {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  header, nav, aside, .no-print, [role="toolbar"], button {
+    display: none !important;
+  }
+  .a4-page-mode, .editor-content {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+  }
+  .glick-page-break {
+    page-break-after: always !important;
+    break-after: page !important;
+    height: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+  }
+  .glick-page-break-visual {
+    display: none !important;
+  }
+}
+
+/* ⚖️ Multi-Column Split Blocks */
+.glick-columns-container {
+  display: grid;
+  gap: 16px;
+  margin: 18px 0;
+}
+
+.glick-columns-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.glick-columns-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 640px) {
+  .glick-columns-2, .glick-columns-3 {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+.glick-column {
+  min-height: 80px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  transition: border-color 0.15s ease;
+}
+
+.glick-column:focus-within {
+  border-color: #6366f1 !important;
+}
+
+/* 🔖 Smart Web Bookmark Cards */
+.glick-bookmark-card:hover {
+  border-color: #6366f1 !important;
+  transform: translateY(-1px);
+}
+
+
 

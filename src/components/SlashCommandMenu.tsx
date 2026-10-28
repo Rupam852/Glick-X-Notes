@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   CheckSquare, Heading1, Heading2, Heading3, Code, 
   Lightbulb, AlertTriangle, Target, ChevronRight, Table, 
-  Sparkles, Quote, List, Image as ImageIcon, GitFork, Sigma, Minus
+  Sparkles, Quote, List, Image as ImageIcon, GitFork, Sigma, Minus,
+  Bookmark, Columns as Columns2, FileText
 } from 'lucide-react';
 
 export interface SlashCommandItem {
@@ -152,6 +153,34 @@ export default function SlashCommandMenu({
       desc: 'Gradient fade, star break or dotted line',
       icon: <Minus className="w-4 h-4 text-purple-500" />,
       keywords: ['divider', 'hr', 'line', 'separator', 'break']
+    },
+    {
+      id: 'bookmark',
+      label: 'Web Bookmark Card',
+      desc: 'Notion-style web link preview card',
+      icon: <Bookmark className="w-4 h-4 text-amber-500" />,
+      keywords: ['bookmark', 'link', 'web', 'card', 'url', 'preview']
+    },
+    {
+      id: '2col',
+      label: '2-Column Split (50/50)',
+      desc: 'Side-by-side comparison columns',
+      icon: <Columns2 className="w-4 h-4 text-indigo-500" />,
+      keywords: ['column', 'columns', '2col', 'split', 'grid', 'side']
+    },
+    {
+      id: '3col',
+      label: '3-Column Split (33/33/33)',
+      desc: 'Triple column side-by-side blocks',
+      icon: <Columns2 className="w-4 h-4 text-blue-500" />,
+      keywords: ['column', 'columns', '3col', 'split', 'grid', 'triple']
+    },
+    {
+      id: 'pagebreak',
+      label: 'A4 Page Break',
+      desc: 'Insert page break for printing & PDF',
+      icon: <FileText className="w-4 h-4 text-emerald-500" />,
+      keywords: ['page', 'break', 'print', 'pdf', 'a4']
     }
   ];
 
