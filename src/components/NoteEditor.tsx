@@ -6877,10 +6877,10 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                   initial={{ opacity: 0, y: -20, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                  className="glick-floating-inking-bar no-print sticky top-2 z-50 mx-auto w-fit max-w-[95%] mb-4 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-purple-300 dark:border-purple-800 shadow-2xl shadow-purple-500/15 rounded-2xl p-2 flex flex-wrap items-center gap-1.5 sm:gap-2 select-none"
+                  className="glick-floating-inking-bar no-print sticky top-2 z-50 mx-auto w-fit max-w-[98%] mb-4 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-purple-300 dark:border-purple-800 shadow-2xl shadow-purple-500/15 rounded-2xl p-1.5 sm:p-2 flex flex-nowrap items-center gap-1 sm:gap-1.5 select-none overflow-x-auto no-scrollbar"
                 >
                   {/* Tool Selector */}
-                  <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                  <div className="flex items-center gap-0.5 sm:gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl shrink-0">
                     {/* Select / Move / Resize Tool */}
                     <button
                       type="button"
@@ -7130,7 +7130,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                   {inkTool !== 'eraser' && (
                     <>
                       <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-0.5 shrink-0" />
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 shrink-0">
                         {[
                           { name: 'Dark Slate', value: '#0f172a' },
                           { name: 'Indigo', value: '#6366f1' },
@@ -7152,7 +7152,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                                 renderInkCanvas();
                               }
                             }}
-                            className={`w-6 h-6 rounded-full border border-black/15 transition-transform hover:scale-110 cursor-pointer ${
+                            className={`w-5 h-5 rounded-full border border-black/15 transition-transform hover:scale-125 cursor-pointer shrink-0 ${
                               inkColor === c.value ? 'ring-2 ring-purple-500 scale-110' : ''
                             }`}
                             style={{ backgroundColor: c.value }}
@@ -7167,7 +7167,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                   {inkTool !== 'eraser' && (
                     <>
                       <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-0.5 shrink-0" />
-                      <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                      <div className="flex items-center gap-0.5 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl shrink-0">
                         {[
                           { label: 'Fine', w: 2 },
                           { label: 'Medium', w: 4 },
@@ -7183,7 +7183,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                                 renderInkCanvas();
                               }
                             }}
-                            className={`px-2 py-1 rounded-lg text-[10px] font-bold transition cursor-pointer ${
+                            className={`px-2 py-1 rounded-lg text-[10px] font-bold transition cursor-pointer shrink-0 ${
                               inkWidth === t.w
                                 ? 'bg-white dark:bg-slate-700 text-purple-600 dark:text-purple-400 shadow-xs'
                                 : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
@@ -7201,7 +7201,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                   {selectedInkStrokeId && (
                     <>
                       <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-0.5 shrink-0" />
-                      <div className="flex items-center gap-1 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 p-1 rounded-xl">
+                      <div className="flex items-center gap-1 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 p-1 rounded-xl shrink-0">
                         <span className="text-[10px] font-bold text-purple-700 dark:text-purple-300 px-1">Selected:</span>
                         <button
                           type="button"
@@ -7262,7 +7262,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
 
                   {/* Undo, Redo, Clear */}
                   <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-0.5 shrink-0" />
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-0.5 shrink-0">
                     <button
                       type="button"
                       disabled={inkHistoryIndex <= 0}
@@ -7270,7 +7270,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                       className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-30 transition cursor-pointer"
                       title="Undo stroke (Ctrl+Z)"
                     >
-                      <RotateCcw className="w-4 h-4" />
+                      <RotateCcw className="w-3.5 h-3.5" />
                     </button>
                     <button
                       type="button"
@@ -7279,7 +7279,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                       className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-30 transition cursor-pointer"
                       title="Redo stroke"
                     >
-                      <RotateCw className="w-4 h-4" />
+                      <RotateCw className="w-3.5 h-3.5" />
                     </button>
                     <button
                       type="button"
@@ -7287,15 +7287,16 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                       className="p-1.5 rounded-lg hover:bg-rose-50 text-rose-500 hover:text-rose-600 transition cursor-pointer"
                       title="Clear all ink"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
 
                   {/* Done Button */}
+                  <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-0.5 shrink-0" />
                   <button
                     type="button"
                     onClick={toggleInkingMode}
-                    className="ml-auto px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-purple-500/20 transition cursor-pointer"
+                    className="shrink-0 px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-purple-500/20 transition cursor-pointer"
                     title="Done drawing - Return to text typing"
                   >
                     <Check className="w-3.5 h-3.5" />
