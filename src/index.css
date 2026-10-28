@@ -1039,3 +1039,142 @@ details.glick-toggle[open] > summary .glick-toggle-arrow {
     box-sizing: border-box !important;
   }
 }
+
+/* ==========================================================================
+   📱 Touch Screen & Mobile Desktop-Site Toolbar Scaling
+   Enhances readability & touch target size on phones running in Desktop Mode
+   ========================================================================== */
+@media (pointer: coarse), (hover: none) {
+  .note-editor-toolbar,
+  .touch-device-toolbar {
+    padding-top: 3px !important;
+    padding-bottom: 3px !important;
+  }
+
+  /* Row 1 Touch-Friendly Scaling */
+  .note-editor-toolbar > div:first-child,
+  .touch-device-toolbar > div:first-child {
+    padding-top: 0.65rem !important;
+    padding-bottom: 0.65rem !important;
+    gap: 0.5rem !important;
+  }
+
+  .note-editor-toolbar button,
+  .touch-device-toolbar button {
+    min-height: 40px !important;
+    min-width: 40px !important;
+    padding: 0.45rem 0.65rem !important;
+    font-size: 0.875rem !important;
+    border-radius: 0.85rem !important;
+  }
+
+  .note-editor-toolbar button svg,
+  .touch-device-toolbar button svg {
+    width: 1.25rem !important;
+    height: 1.25rem !important;
+  }
+
+  /* Status badge, Folder selector, Font picker */
+  .note-editor-toolbar select,
+  .touch-device-toolbar select,
+  .note-editor-toolbar .folder-pill,
+  .touch-device-toolbar .folder-pill {
+    min-height: 40px !important;
+    font-size: 0.875rem !important;
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+
+  /* Row 2 (Formatting Tools) Touch-Friendly Scaling */
+  .note-editor-toolbar > div:nth-child(2),
+  .touch-device-toolbar > div:nth-child(2) {
+    padding-top: 0.6rem !important;
+    padding-bottom: 0.6rem !important;
+    gap: 0.45rem !important;
+  }
+
+  .note-editor-toolbar > div:nth-child(2) button,
+  .touch-device-toolbar > div:nth-child(2) button {
+    min-height: 42px !important;
+    min-width: 42px !important;
+    border-radius: 0.85rem !important;
+  }
+
+  .note-editor-toolbar > div:nth-child(2) button svg,
+  .touch-device-toolbar > div:nth-child(2) button svg {
+    width: 1.35rem !important;
+    height: 1.35rem !important;
+  }
+
+  /* Floating Inking Toolbar on Touch / Phone */
+  .glick-floating-inking-bar {
+    padding: 0.6rem 0.85rem !important;
+    border-radius: 1.35rem !important;
+    gap: 0.5rem !important;
+  }
+
+  .glick-floating-inking-bar button {
+    min-height: 40px !important;
+    min-width: 40px !important;
+    font-size: 0.875rem !important;
+    padding: 0.45rem 0.65rem !important;
+  }
+
+  .glick-floating-inking-bar button svg {
+    width: 1.25rem !important;
+    height: 1.25rem !important;
+  }
+
+  /* Popups (Text Styles, Paragraph, Highlighter, Divider, etc.) */
+  .note-editor-toolbar [role="menu"],
+  .touch-device-toolbar [role="menu"],
+  .note-editor-popover,
+  .toolbar-popup {
+    font-size: 0.95rem !important;
+    padding: 0.85rem !important;
+    border-radius: 1.35rem !important;
+  }
+
+  .note-editor-toolbar [role="menu"] button,
+  .touch-device-toolbar [role="menu"] button,
+  .note-editor-popover button,
+  .toolbar-popup button {
+    min-height: 44px !important;
+    font-size: 0.9rem !important;
+    padding: 0.6rem 0.85rem !important;
+  }
+}
+
+/* Also support via direct class for any browser emulating desktop mode */
+.touch-device-toolbar > div:first-child {
+  padding-top: 0.65rem !important;
+  padding-bottom: 0.65rem !important;
+  gap: 0.5rem !important;
+}
+
+.touch-device-toolbar button {
+  min-height: 40px !important;
+  min-width: 40px !important;
+  font-size: 0.875rem !important;
+}
+
+.touch-device-toolbar button svg {
+  width: 1.25rem !important;
+  height: 1.25rem !important;
+}
+
+.touch-device-toolbar > div:nth-child(2) {
+  padding-top: 0.6rem !important;
+  padding-bottom: 0.6rem !important;
+  gap: 0.45rem !important;
+}
+
+.touch-device-toolbar > div:nth-child(2) button {
+  min-height: 42px !important;
+  min-width: 42px !important;
+}
+
+.touch-device-toolbar > div:nth-child(2) button svg {
+  width: 1.35rem !important;
+  height: 1.35rem !important;
+}
