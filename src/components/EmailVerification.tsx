@@ -2,10 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { auth, db } from '../firebase';
 import { sendEmailVerification, signOut, deleteUser } from 'firebase/auth';
 import { deleteDoc, doc } from 'firebase/firestore';
-import { Mail, AlertCircle, ArrowLeft, RefreshCw, Loader2, Sun, Moon } from 'lucide-react';
+import { Mail, AlertCircle, ArrowLeft, RefreshCw, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useToast } from '../contexts/ToastContext';
-import { useTheme } from '../contexts/ThemeContext';
 
 interface EmailVerificationProps {
   onVerified: () => void;
@@ -13,7 +12,6 @@ interface EmailVerificationProps {
 
 export default function EmailVerification({ onVerified }: EmailVerificationProps) {
   const { showToast } = useToast();
-  const { theme, toggleTheme } = useTheme();
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [countdown, setCountdown] = useState(0);
@@ -99,26 +97,6 @@ export default function EmailVerification({ onVerified }: EmailVerificationProps
       <div className="absolute -top-40 -left-40 w-96 h-96 bg-indigo-500/15 dark:bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none animate-pulse duration-[8s]" />
       <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-pink-500/15 dark:bg-pink-500/10 rounded-full blur-[120px] pointer-events-none animate-pulse duration-[10s]" />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-purple-500/5 rounded-full blur-[140px] pointer-events-none" />
-
-      {/* Floating Theme Toggle Switch at Top-Right */}
-      <div className="absolute top-5 right-5 z-20">
-        <button
-          onClick={toggleTheme}
-          type="button"
-          aria-label="Toggle Light and Dark Mode"
-          className="p-2.5 rounded-xl bg-white/80 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 shadow-sm hover:shadow-md transition-all active:scale-95 flex items-center gap-2 cursor-pointer backdrop-blur-md"
-          title={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`}
-        >
-          {theme === 'light' ? (
-            <Moon className="w-4 h-4 text-slate-700" />
-          ) : (
-            <Sun className="w-4 h-4 text-amber-400" />
-          )}
-          <span className="text-xs font-bold hidden sm:inline">
-            {theme === 'light' ? 'Dark Mode' : 'Light Mode'}
-          </span>
-        </button>
-      </div>
 
       <motion.div
         initial={{ opacity: 0, y: 30 }}
