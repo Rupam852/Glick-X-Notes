@@ -25,7 +25,7 @@ export default function AuthLayout({ children, title, subtitle }: AuthLayoutProp
       >
         <div className="p-8 md:p-10">
           <div className="flex justify-center mb-6">
-            <img src="/favicon.png?v=5" alt="Logo" className="w-14 h-14 object-contain filter drop-shadow-[0_4px_16px_rgba(99,102,241,0.35)] select-none" />
+            <img src="/favicon.png?v=5" alt="Logo" className="w-14 h-14 object-contain select-none" />
           </div>
           
           <div className="text-center mb-8 space-y-2">

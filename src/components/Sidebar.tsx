@@ -90,7 +90,7 @@ export default function Sidebar({
       {/* Brand Logo & Title */}
       <div className="flex items-center gap-3 px-2 pt-1">
         <div className="w-9 h-9 flex items-center justify-center shrink-0">
-          <img src="/favicon.png?v=5" alt="Logo" className="w-full h-full object-contain filter drop-shadow-[0_2px_8px_rgba(99,102,241,0.35)] select-none" />
+          <img src="/favicon.png?v=5" alt="Logo" className="w-full h-full object-contain select-none" />
         </div>
         <div>
           <h1 className="text-lg font-black text-slate-900 dark:text-white tracking-tight leading-tight">

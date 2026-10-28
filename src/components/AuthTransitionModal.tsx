@@ -52,7 +52,7 @@ export default function AuthTransitionModal({ type, userName }: AuthTransitionMo
             <img 
               src="/favicon.png?v=5" 
               alt="Glick Logo" 
-              className="w-full h-full object-contain select-none filter drop-shadow-[0_3px_12px_rgba(99,102,241,0.4)]" 
+              className="w-full h-full object-contain select-none" 
             />
 
             {/* Corner status icon badge */}

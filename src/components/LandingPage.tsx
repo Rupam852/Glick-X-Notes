@@ -109,7 +109,7 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
               <img 
                 src="/favicon.png?v=5" 
                 alt="Glick X Notes" 
-                className="w-8 h-8 md:w-9 md:h-9 object-contain filter drop-shadow-[0_2px_8px_rgba(99,102,241,0.35)] shrink-0 select-none" 
+                className="w-8 h-8 md:w-9 md:h-9 object-contain shrink-0 select-none" 
               />
               <span className="text-base md:text-lg font-black tracking-tight bg-gradient-to-r from-slate-900 via-indigo-900 to-slate-800 dark:from-white dark:via-indigo-200 dark:to-slate-200 bg-clip-text text-transparent">
                 Glick X Notes
@@ -578,7 +578,7 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
               <img 
                 src="/favicon.png?v=5" 
                 alt="Glick X Notes" 
-                className="w-6 h-6 object-contain filter drop-shadow-[0_1px_5px_rgba(99,102,241,0.3)] shrink-0 select-none" 
+                className="w-6 h-6 object-contain shrink-0 select-none" 
               />
               <span className="text-sm font-black tracking-tight text-slate-800 dark:text-slate-200">
                 Glick X Notes

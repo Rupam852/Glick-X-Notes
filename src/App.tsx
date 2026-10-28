@@ -333,7 +333,7 @@ function AppContent() {
             <img 
               src="/favicon.png?v=5" 
               alt="Glick Notes" 
-              className="w-full h-full object-contain filter drop-shadow-[0_3px_12px_rgba(99,102,241,0.4)]" 
+              className="w-full h-full object-contain" 
             />
           </div>
         </div>
