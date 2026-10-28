@@ -85,7 +85,7 @@ export default function Sidebar({
   };
 
   return (
-    <aside className="hidden md:flex flex-col w-72 bg-[#f8f9fb]/95 dark:bg-[#0c1220]/95 backdrop-blur-xl border-r border-slate-200/70 dark:border-slate-800/80 h-screen sticky top-0 p-5 space-y-6 select-none shadow-[2px_0_12px_rgba(15,23,42,0.02)] transition-colors duration-200">
+    <aside className="hidden md:flex flex-col w-64 lg:w-72 bg-[#f8f9fb]/95 dark:bg-[#0c1220]/95 backdrop-blur-xl border-r border-slate-200/70 dark:border-slate-800/80 h-screen sticky top-0 p-4 lg:p-5 space-y-5 lg:space-y-6 select-none shadow-[2px_0_12px_rgba(15,23,42,0.02)] transition-colors duration-200">
       
       {/* Brand Logo & Title */}
       <div className="flex items-center gap-3 px-2 pt-1">

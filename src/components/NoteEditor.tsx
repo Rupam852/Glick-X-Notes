@@ -5057,7 +5057,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       {!zenMode && (
         <div ref={popupRef} onTouchStart={handleToolbarTouchStart} className="note-editor-toolbar sticky top-0 z-35 flex flex-col border-b border-slate-200/70 dark:border-slate-800 bg-[#f8f9fb]/95 dark:bg-[#0c1220]/95 backdrop-blur-md relative no-print">
                 {/* ROW 1: Navigation and status controls */}
-        <div className="flex items-center justify-between px-2.5 sm:px-3 md:px-4 py-2 border-b border-slate-200/60 dark:border-slate-800/60 gap-1.5 sm:gap-2 overflow-hidden">
+        <div className="flex items-center justify-between px-2.5 sm:px-3 md:px-4 py-2 border-b border-slate-200/60 dark:border-slate-800/60 gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar">
           <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 shrink-0">
             <button onClick={handleBackClick} className="p-1.5 md:p-2 hover:bg-slate-200/60 dark:hover:bg-slate-800 rounded-xl transition-all cursor-pointer text-slate-500 dark:text-slate-400 shrink-0">
               <ArrowLeft className="w-5 h-5" />
@@ -5224,7 +5224,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
           </div>
         </div>
 
-        <div className="flex md:flex-wrap items-center gap-1.5 p-2 bg-[#f4f6fa]/60 dark:bg-slate-900/50 overflow-x-auto no-scrollbar scroll-smooth">
+        <div className="flex items-center gap-1 sm:gap-1.5 p-1.5 sm:p-2 bg-[#f4f6fa]/60 dark:bg-slate-900/50 overflow-x-auto no-scrollbar scroll-smooth">
           
           {/* Undo and Redo buttons */}
           <button 
@@ -7324,7 +7324,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
             </AnimatePresence>
 
             {/* Eye-Care Warm Paper Document Sheet */}
-            <div className={`note-paper-sheet ${isA4Mode ? 'a4-page-mode' : 'max-w-4xl mx-auto bg-[#fafbfc] dark:bg-[#111726] rounded-2xl md:rounded-3xl border border-slate-200/70 dark:border-slate-800/80 shadow-[0_2px_16px_rgba(15,23,42,0.03)] p-5 sm:p-8 md:p-12 min-h-[calc(100vh-140px)]'} transition-all`}>
+            <div className={`note-paper-sheet ${isA4Mode ? 'a4-page-mode' : 'max-w-4xl mx-auto bg-[#fafbfc] dark:bg-[#111726] rounded-2xl md:rounded-3xl border border-slate-200/70 dark:border-slate-800/80 shadow-[0_2px_16px_rgba(15,23,42,0.03)] p-4 sm:p-6 md:p-8 lg:p-10 min-h-[calc(100vh-140px)]'} transition-all`}>
               
               {/* Clean print title */}
               <h1 className="note-print-title hidden font-black text-3xl pb-2 mb-4 border-b-2 border-slate-300 text-slate-900">

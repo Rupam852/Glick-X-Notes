@@ -504,7 +504,7 @@ export default function Dashboard({
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-7 select-none">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-5 sm:space-y-7 select-none">
       
       {/* 🌟 Modern Hero Banner with Soft Light / Dark Polish */}
       <div className="relative overflow-hidden bg-gradient-to-r from-indigo-50/70 via-sky-50/30 to-slate-100/60 dark:from-slate-900/40 dark:via-indigo-950/20 dark:to-slate-900/30 border border-slate-200/70 dark:border-slate-800/80 rounded-3xl p-6 md:p-8 backdrop-blur-2xl shadow-[0_4px_20px_rgba(99,102,241,0.03)]">
@@ -535,7 +535,7 @@ export default function Dashboard({
 
       {/* 🎛️ Control Panel (Search, Sort, View Toggle) */}
       <div className="bg-[#f8f9fb]/85 dark:bg-slate-900/30 border border-slate-200/70 dark:border-slate-800/80 p-3.5 rounded-2xl space-y-3 backdrop-blur-md shadow-xs">
-        <div className="flex flex-col lg:flex-row gap-3">
+        <div className="flex flex-col xl:flex-row gap-3">
           
           {/* Enhanced Search Input */}
           <div className="relative flex-1">
@@ -624,7 +624,7 @@ export default function Dashboard({
 
       {/* 🚀 Skeleton Shimmer Loading or Notes List */}
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-5 lg:gap-6">
           {[1, 2, 3, 4, 5, 6].map(i => (
             <div 
               key={i} 
@@ -654,7 +654,7 @@ export default function Dashboard({
                   <Star className="w-4 h-4 fill-amber-500 text-amber-500" />
                   <span>Pinned Notes ({pinnedNotes.length})</span>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-5 lg:gap-6">
                   <AnimatePresence mode="popLayout">
                     {pinnedNotes.map(renderNoteCard)}
                   </AnimatePresence>
@@ -670,7 +670,7 @@ export default function Dashboard({
                   <span>Other Notes ({otherNotes.length})</span>
                 </div>
               )}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-5 lg:gap-6">
                 <AnimatePresence mode="popLayout">
                   {otherNotes.map(renderNoteCard)}
                 </AnimatePresence>

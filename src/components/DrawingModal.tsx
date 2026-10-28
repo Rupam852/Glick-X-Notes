@@ -1544,22 +1544,22 @@ export default function DrawingModal({
           <button
             type="button"
             onClick={() => setActiveTool('select')}
-            className={`p-1.5 px-2 rounded-xl flex items-center gap-1 font-semibold transition ${activeTool === 'select' ? 'bg-indigo-600 text-white shadow-xs' : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300'}`}
+            className={`p-1.5 px-2 rounded-xl flex items-center gap-1 font-semibold transition cursor-pointer ${activeTool === 'select' ? 'bg-indigo-600 text-white shadow-xs' : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300'}`}
             title="Select tool: Click shape to move, resize, rotate"
           >
             <MousePointer className="w-4 h-4" />
-            <span className="hidden sm:inline">Select</span>
+            <span className="hidden xl:inline">Select</span>
           </button>
 
           {/* Freehand Pen */}
           <button
             type="button"
             onClick={() => { setActiveTool('pen'); setSelectedId(null); }}
-            className={`p-1.5 px-2 rounded-xl flex items-center gap-1 font-semibold transition ${activeTool === 'pen' ? 'bg-indigo-600 text-white shadow-xs' : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300'}`}
+            className={`p-1.5 px-2 rounded-xl flex items-center gap-1 font-semibold transition cursor-pointer ${activeTool === 'pen' ? 'bg-indigo-600 text-white shadow-xs' : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300'}`}
             title="Pen (Freehand sketch)"
           >
             <Pencil className="w-4 h-4" />
-            <span className="hidden sm:inline">Pen</span>
+            <span className="hidden xl:inline">Pen</span>
           </button>
 
           {/* Highlighter */}
@@ -1591,10 +1591,10 @@ export default function DrawingModal({
             <button
               type="button"
               onClick={() => setShowShapeMenu(prev => !prev)}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border font-semibold transition ${showShapeMenu || activeTool !== 'select' && activeTool !== 'pen' && activeTool !== 'highlighter' && activeTool !== 'eraser' && activeTool !== 'text' ? 'bg-indigo-50 border-indigo-300 text-indigo-600 dark:bg-indigo-950/40 dark:border-indigo-700' : 'border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border font-semibold transition cursor-pointer ${showShapeMenu || activeTool !== 'select' && activeTool !== 'pen' && activeTool !== 'highlighter' && activeTool !== 'eraser' && activeTool !== 'text' ? 'bg-indigo-50 border-indigo-300 text-indigo-600 dark:bg-indigo-950/40 dark:border-indigo-700' : 'border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
             >
               <Square className="w-4 h-4 text-indigo-500" />
-              <span>Shapes</span>
+              <span className="hidden sm:inline">Shapes</span>
               <ChevronDown className="w-3.5 h-3.5 opacity-60" />
             </button>
 
@@ -1787,40 +1787,40 @@ export default function DrawingModal({
           <button
             type="button"
             onClick={() => setActiveTool('text')}
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border font-semibold transition ${activeTool === 'text' ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border font-semibold transition cursor-pointer ${activeTool === 'text' ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
             title="Text Tool: Click anywhere on canvas to type"
           >
             <Type className="w-4 h-4" />
-            <span className="hidden sm:inline">Text</span>
+            <span className="hidden xl:inline">Text</span>
           </button>
 
           {/* Image Upload */}
           <label className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold transition cursor-pointer">
             <ImageIcon className="w-4 h-4 text-emerald-500" />
-            <span className="hidden sm:inline">Image</span>
+            <span className="hidden xl:inline">Image</span>
             <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
           </label>
 
           <div className="w-px h-5 bg-slate-200 dark:bg-slate-800 mx-1 shrink-0" />
 
           {/* Fill Color Picker */}
-          <div className="flex items-center gap-1 pl-1">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Fill:</span>
+          <div className="flex items-center gap-1 pl-1 shrink-0">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider hidden sm:inline">Fill:</span>
             <div className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={() => handleSelectFillColor('transparent')}
-                className={`w-5 h-5 rounded-md border text-[9px] font-bold flex items-center justify-center ${fillColor === 'transparent' ? 'ring-2 ring-indigo-500 border-indigo-500' : 'border-slate-300'}`}
+                className={`w-4.5 h-4.5 rounded-md border text-[9px] font-bold flex items-center justify-center cursor-pointer ${fillColor === 'transparent' ? 'ring-2 ring-indigo-500 border-indigo-500' : 'border-slate-300'}`}
                 title="Transparent Fill"
               >
                 ⊘
               </button>
-              {PRESET_COLORS.slice(0, 6).map(c => (
+              {PRESET_COLORS.slice(0, 5).map(c => (
                 <button
                   key={`fill-${c}`}
                   type="button"
                   onClick={() => handleSelectFillColor(c)}
-                  className={`w-5 h-5 rounded-md border border-black/15 transition-transform hover:scale-110 cursor-pointer ${fillColor === c ? 'ring-2 ring-indigo-500 scale-105' : ''}`}
+                  className={`w-4.5 h-4.5 rounded-md border border-black/15 transition-transform hover:scale-110 cursor-pointer ${fillColor === c ? 'ring-2 ring-indigo-500 scale-105' : ''}`}
                   style={{ backgroundColor: c }}
                   title={`Fill: ${c}`}
                 />
@@ -1829,17 +1829,17 @@ export default function DrawingModal({
           </div>
 
           {/* Border / Stroke Color Picker */}
-          <div className="flex items-center gap-1 pl-2">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              {objects.find(o => o.id === selectedId)?.type === 'text' ? 'Text Color:' : 'Border:'}
+          <div className="flex items-center gap-1 pl-1 shrink-0">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider hidden sm:inline">
+              {objects.find(o => o.id === selectedId)?.type === 'text' ? 'Color:' : 'Border:'}
             </span>
             <div className="flex items-center gap-1">
-              {PRESET_COLORS.slice(0, 6).map(c => (
+              {PRESET_COLORS.slice(0, 5).map(c => (
                 <button
                   key={`stroke-${c}`}
                   type="button"
                   onClick={() => handleSelectStrokeColor(c)}
-                  className={`w-5 h-5 rounded-full border border-black/15 transition-transform hover:scale-110 cursor-pointer ${strokeColor === c ? 'ring-2 ring-indigo-500 scale-105' : ''}`}
+                  className={`w-4.5 h-4.5 rounded-full border border-black/15 transition-transform hover:scale-110 cursor-pointer ${strokeColor === c ? 'ring-2 ring-indigo-500 scale-105' : ''}`}
                   style={{ backgroundColor: c }}
                   title={`Color: ${c}`}
                 />
