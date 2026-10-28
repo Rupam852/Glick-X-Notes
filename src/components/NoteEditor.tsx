@@ -83,76 +83,8 @@ const extractTextFromHtml = (html: string): string => {
 
 export type { InkShapeType, InkToolType, InkStroke };
 
-export const createDrawingCardHtml = (svgOrDataUrl: string): string => {
-  const dataUrl = svgOrDataUrl.startsWith('data:') 
-    ? svgOrDataUrl 
-    : `data:image/svg+xml;utf8,${encodeURIComponent(svgOrDataUrl)}`;
-
-  return `
-    <div class="glick-block-wrapper glick-drawing-container" data-drawing-src="${dataUrl}" style="margin: 18px 0; border-radius: 14px; overflow: hidden; border: 1px solid rgba(99,102,241,0.25); background: #ffffff; box-shadow: 0 4px 16px rgba(15,23,42,0.06); max-width: 100%; position: relative;">
-      <div contenteditable="false" style="display: flex; align-items: center; justify-content: space-between; padding: 6px 12px; background: #f8fafc; border-bottom: 1px solid rgba(99,102,241,0.15); user-select: none;">
-        <div style="display: flex; align-items: center; gap: 6px;">
-          <span style="font-size: 13px;">🎨</span>
-          <span style="font-size: 11px; font-weight: 700; color: #6366f1; font-family: monospace; letter-spacing: 0.5px;">DRAWING / SKETCH</span>
-        </div>
-        <div style="display: flex; align-items: center; gap: 6px;">
-          <button type="button" data-action="copy-drawing" title="Copy Drawing to Clipboard" style="background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.2); color: #6366f1; font-size: 11px; padding: 2px 8px; border-radius: 6px; cursor: pointer; font-weight: 600;">📋 Copy</button>
-          <button type="button" data-action="edit-drawing" title="Edit Drawing" style="background: #6366f1; border: 1px solid #4f46e5; color: #ffffff; font-size: 11px; padding: 2px 8px; border-radius: 6px; cursor: pointer; font-weight: 600;">✏️ Edit</button>
-          <button type="button" data-action="delete-block" title="Delete Drawing" style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25); color: #ef4444; font-size: 11px; padding: 2px 8px; border-radius: 6px; cursor: pointer; font-weight: 600;">✕ Delete</button>
-        </div>
-      </div>
-      <div class="glick-image-resizable" style="position: relative; display: flex; justify-content: center; padding: 14px; background: transparent; overflow-x: auto;">
-        <img src="${dataUrl}" alt="Drawing" style="max-width: 100%; height: auto; display: block; border-radius: 8px; image-rendering: -webkit-optimize-contrast;" />
-      </div>
-    </div>
-    <p><br/></p>
-  `;
-};
-
-export const convertStrokesToSvg = (strokes: InkStroke[], width: number = 800, height: number = 600, cropToContent: boolean = false): string => {
+export const convertStrokesToSvg = (strokes: InkStroke[], width: number, height: number): string => {
   if (strokes.length === 0) return '';
-
-  let vbX = 0;
-  let vbY = 0;
-  let vbW = width;
-  let vbH = height;
-
-  if (cropToContent) {
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    strokes.forEach(s => {
-      if (s.points && s.points.length > 0) {
-        s.points.forEach(p => {
-          if (p.x < minX) minX = p.x;
-          if (p.y < minY) minY = p.y;
-          if (p.x > maxX) maxX = p.x;
-          if (p.y > maxY) maxY = p.y;
-        });
-      }
-      if (s.shapeStart && s.shapeEnd) {
-        minX = Math.min(minX, s.shapeStart.x, s.shapeEnd.x);
-        minY = Math.min(minY, s.shapeStart.y, s.shapeEnd.y);
-        maxX = Math.max(maxX, s.shapeStart.x, s.shapeEnd.x);
-        maxY = Math.max(maxY, s.shapeStart.y, s.shapeEnd.y);
-      }
-      if (s.tool === 'text') {
-        const x = s.shapeStart?.x || (s.points && s.points[0]?.x) || 50;
-        const y = s.shapeStart?.y || (s.points && s.points[0]?.y) || 50;
-        minX = Math.min(minX, x);
-        minY = Math.min(minY, y);
-        maxX = Math.max(maxX, x + 150);
-        maxY = Math.max(maxY, y + 40);
-      }
-    });
-
-    if (isFinite(minX) && isFinite(minY) && isFinite(maxX) && isFinite(maxY)) {
-      const pad = 24;
-      vbX = Math.max(0, Math.floor(minX - pad));
-      vbY = Math.max(0, Math.floor(minY - pad));
-      vbW = Math.max(100, Math.ceil(maxX - minX + pad * 2));
-      vbH = Math.max(80, Math.ceil(maxY - minY + pad * 2));
-    }
-  }
-
   const elements = strokes.map(s => {
     // If it's a text stroke
     if (s.tool === 'text') {
@@ -322,7 +254,7 @@ export const convertStrokesToSvg = (strokes: InkStroke[], width: number = 800, h
     return `<path d="${d}" stroke="${s.color}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="${opacity}" />`;
   }).join('');
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vbX} ${vbY} ${vbW} ${vbH}" shape-rendering="geometricPrecision" text-rendering="geometricPrecision" style="width: 100%; height: auto; max-height: 520px; display: block; overflow: visible;">${elements}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" shape-rendering="geometricPrecision" text-rendering="geometricPrecision" style="width: 100%; height: 100%; display: block; overflow: visible;">${elements}</svg>`;
 };
 
 // Helper to save selection
@@ -1239,21 +1171,9 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
             }
             layer.remove();
           });
-        }
-
-        // 🎨 Option A: Auto-migrate any existing ink strokes into an inline responsive Drawing Card
-        if (loadedStrokes.length > 0) {
-          const hasExistingDrawing = contentRef.current.querySelector('.glick-drawing-container');
-          if (!hasExistingDrawing) {
-            const croppedSvg = convertStrokesToSvg(loadedStrokes, 800, 600, true);
-            const cardHtml = createDrawingCardHtml(croppedSvg);
-            contentRef.current.innerHTML += cardHtml;
-            upgradeLegacyBlocks(contentRef.current);
-          }
           const cleanHtml = contentRef.current.innerHTML;
           latestContent.current = cleanHtml;
           setBody(cleanHtml);
-          loadedStrokes = []; // Clear page overlay so it doesn't drift
         }
       }
 
@@ -2119,7 +2039,25 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   };
 
   const handleSaveDrawing = (dataUrl: string) => {
-    const drawingHtml = createDrawingCardHtml(dataUrl);
+    const drawingHtml = `
+      <div class="glick-block-wrapper glick-drawing-container" data-drawing-src="${dataUrl}" style="margin: 16px 0; border-radius: 14px; overflow: hidden; border: 1px solid rgba(99,102,241,0.25); background: #ffffff; box-shadow: 0 4px 16px rgba(15,23,42,0.08);">
+        <div contenteditable="false" style="display: flex; align-items: center; justify-content: space-between; padding: 6px 12px; background: #f8fafc; border-bottom: 1px solid rgba(99,102,241,0.2); user-select: none;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span style="font-size: 13px;">🎨</span>
+            <span style="font-size: 11px; font-weight: 700; color: #6366f1; font-family: monospace; letter-spacing: 0.5px;">DRAWING / SKETCH</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <button type="button" data-action="copy-drawing" title="Copy Drawing to Clipboard" style="background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.2); color: #6366f1; font-size: 11px; padding: 2px 8px; border-radius: 6px; cursor: pointer; font-weight: 600;">📋 Copy</button>
+            <button type="button" data-action="edit-drawing" title="Edit Drawing" style="background: #6366f1; border: 1px solid #4f46e5; color: #ffffff; font-size: 11px; padding: 2px 8px; border-radius: 6px; cursor: pointer; font-weight: 600;">✏️ Edit</button>
+            <button type="button" data-action="delete-block" title="Delete Drawing" style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25); color: #ef4444; font-size: 11px; padding: 2px 8px; border-radius: 6px; cursor: pointer; font-weight: 600;">✕ Delete</button>
+          </div>
+        </div>
+        <div class="glick-image-resizable" style="position: relative; display: flex; justify-content: center; padding: 12px; background: transparent; overflow-x: auto;">
+          <img src="${dataUrl}" alt="Drawing" style="max-width: 100%; height: auto; display: block; border-radius: 8px; image-rendering: -webkit-optimize-contrast;" />
+        </div>
+      </div>
+      <p><br/></p>
+    `;
 
     if (editingDrawingEl) {
       editingDrawingEl.outerHTML = drawingHtml;
@@ -4064,18 +4002,6 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       return;
     }
 
-    const drawingContainerImg = target.closest('.glick-drawing-container img') as HTMLElement;
-    if (drawingContainerImg && e.detail >= 2) {
-      e.preventDefault();
-      e.stopPropagation();
-      const container = drawingContainerImg.closest('.glick-drawing-container') as HTMLElement;
-      if (container) {
-        const src = container.getAttribute('data-drawing-src') || (drawingContainerImg as HTMLImageElement).src;
-        handleOpenDrawingModal(container, src || undefined);
-      }
-      return;
-    }
-
     // 4c. Shape / Text box style editor
     const styleShapeBtn = target.closest('[data-action="style-shape"]') as HTMLElement;
     if (styleShapeBtn) {
@@ -5886,16 +5812,25 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
             <ChevronDown className="w-3 h-3 opacity-60" />
           </button>
 
-          {/* 🎨 Dedicated Inline Drawing / Sketch Board (Option A) */}
+          {/* ✏️ Direct Note Inking / Pen Mode (OneNote style) */}
           <button 
             type="button"
             onMouseDown={handleButtonMouseDown} 
-            onClick={() => handleOpenDrawingModal()} 
-            className="px-3 py-1.5 h-9 rounded-xl flex items-center gap-1.5 shrink-0 font-bold text-xs transition-all cursor-pointer text-slate-600 dark:text-slate-400 hover:bg-purple-50 dark:hover:bg-purple-950/40 hover:text-purple-600 border border-transparent hover:border-purple-200 dark:hover:border-purple-800" 
-            title="Drawing & Sketch Canvas: Draw shapes, arrows, sketches & handwriting inline"
+            onClick={toggleInkingMode} 
+            className={`px-3 py-1.5 h-9 rounded-xl flex items-center gap-1.5 shrink-0 font-bold text-xs transition-all cursor-pointer ${
+              isInkingMode 
+                ? 'bg-purple-600 text-white shadow-md shadow-purple-500/20 ring-2 ring-purple-300 dark:ring-purple-700' 
+                : inkStrokes.length > 0 
+                  ? 'bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800 hover:bg-purple-100' 
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-purple-600'
+            }`} 
+            title="Direct Pen & Inking Mode: Draw directly on your note canvas (OneNote style)"
           >
-            <Pencil className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+            <Pencil className="w-4 h-4" />
             <span>Draw</span>
+            {inkStrokes.length > 0 && !isInkingMode && (
+              <span className="w-1.5 h-1.5 rounded-full bg-purple-500" title="Note has ink sketches" />
+            )}
           </button>
 
           <div className="w-px h-5 bg-slate-250 dark:bg-slate-800 mx-1 shrink-0" />
