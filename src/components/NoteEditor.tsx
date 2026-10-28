@@ -321,6 +321,19 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   const prevNoteIdRef = useRef<string | null>(note?.id || null);
   const isMountedRef = useRef(false);
 
+  // Cross-Device Real-Time Sync Refs
+  const isTypingLocallyRef = useRef(false);
+  const typingTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const isSavingLocallyRef = useRef(false);
+
+  const markLocalActivity = useCallback(() => {
+    isTypingLocallyRef.current = true;
+    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    typingTimerRef.current = setTimeout(() => {
+      isTypingLocallyRef.current = false;
+    }, 2200);
+  }, []);
+
   // --- STATE ---
   const [currentNoteId, setCurrentNoteId] = useState<string | null>(note?.id || null);
   const [title, setTitle] = useState(note?.title || '');
@@ -1069,6 +1082,16 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
             }
           }
         });
+
+        // Ensure callout text flows vertically so multi-word headers like "💡 Quick Health Tips:" never squeeze into a narrow vertical column
+        const firstChild = callout.firstElementChild;
+        if (firstChild && (firstChild.textContent?.trim().length || 0) > 3) {
+          (callout as HTMLElement).style.display = 'block';
+          (callout as HTMLElement).style.flexDirection = 'column';
+          (firstChild as HTMLElement).style.display = 'block';
+          (firstChild as HTMLElement).style.marginBottom = '8px';
+          (firstChild as HTMLElement).style.width = '100%';
+        }
       });
 
       // 4. Upgrade image containers to have Windows-style corner grip (3x3 dots)
@@ -1394,6 +1417,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
 
   // Handle Input Changes inside editor
   const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
+    markLocalActivity();
     const html = e.currentTarget.innerHTML;
     latestContent.current = html;
     setBody(html);
@@ -4124,6 +4148,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
 
   // Main KeyDown events + Shortcuts interceptor
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    markLocalActivity();
     if (e.key === ' ' || e.key === 'Enter') {
       setTimeout(() => {
         applyAutoLinks();
@@ -4665,9 +4690,87 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     return () => unsubscribe();
   }, [currentNoteId]);
 
+  // 🔄 Real-time Cross-Device Document Sync (PC <-> Phone)
+  useEffect(() => {
+    if (!currentNoteId || !user) return;
+
+    const noteDocRef = doc(db, 'notes', currentNoteId);
+    const unsubscribe = onSnapshot(noteDocRef, (snap) => {
+      if (!snap.exists()) return;
+      
+      // If we just saved locally, ignore the local echo snapshot
+      if (isSavingLocallyRef.current) return;
+
+      const remoteData = snap.data();
+      const remoteTitle = remoteData.title || '';
+      const remoteBody = remoteData.body || '';
+      const remoteTags = (remoteData.tags || []).join(', ');
+      const remoteFolder = remoteData.folder || 'all';
+      const remoteColor = remoteData.color || COLORS[0].value;
+      const remotePaperStyle = (remoteData.paperStyle as PaperStyle) || 'plain';
+      const remotePaperTone = (remoteData.paperTone as PaperTone) || 'default';
+      const remoteInkStrokes: InkStroke[] = Array.isArray(remoteData.inkStrokes) ? remoteData.inkStrokes : [];
+
+      const currentBody = contentRef.current ? contentRef.current.innerHTML : latestContent.current;
+      const isBodyDifferent = remoteBody && remoteBody !== currentBody;
+      const isTitleDifferent = remoteTitle !== title;
+      const isTagsDifferent = remoteTags !== tags;
+      const isFolderDifferent = remoteFolder !== folder;
+      const isColorDifferent = remoteColor !== color;
+      const isPaperStyleDifferent = remotePaperStyle !== paperStyle;
+      const isPaperToneDifferent = remotePaperTone !== paperTone;
+      const isInkDifferent = JSON.stringify(remoteInkStrokes) !== JSON.stringify(inkStrokes || []);
+
+      if (!isBodyDifferent && !isTitleDifferent && !isTagsDifferent && !isFolderDifferent && !isColorDifferent && !isPaperStyleDifferent && !isPaperToneDifferent && !isInkDifferent) {
+        return;
+      }
+
+      // If local device is actively typing, do not disrupt cursor or overwrite text mid-sentence
+      if (isTypingLocallyRef.current) return;
+
+      // Cleanly synchronize remote changes to local device
+      if (isTitleDifferent) setTitle(remoteTitle);
+      if (isTagsDifferent) setTags(remoteTags);
+      if (isFolderDifferent) setFolder(remoteFolder);
+      if (isColorDifferent) setColor(remoteColor);
+      if (isPaperStyleDifferent) setPaperStyle(remotePaperStyle);
+      if (isPaperToneDifferent) setPaperTone(remotePaperTone);
+      if (isInkDifferent) {
+        setInkStrokes(remoteInkStrokes);
+        inkStrokesRef.current = remoteInkStrokes;
+      }
+
+      if (isBodyDifferent && contentRef.current) {
+        contentRef.current.innerHTML = remoteBody;
+        upgradeLegacyBlocks(contentRef.current);
+        latestContent.current = contentRef.current.innerHTML;
+        setBody(contentRef.current.innerHTML);
+        undoStack.current.push(contentRef.current.innerHTML);
+      }
+
+      // Crucial: update snapshot so local autosave doesn't falsely overwrite PC data
+      setLastSavedSnapshot({
+        title: remoteTitle,
+        body: remoteBody,
+        tags: remoteTags,
+        folder: remoteFolder,
+        color: remoteColor,
+        paperStyle: remotePaperStyle,
+        paperTone: remotePaperTone,
+        inkStrokes: remoteInkStrokes
+      });
+      setLastSaved(new Date());
+    }, (error) => {
+      console.warn('Real-time sync snapshot error:', error);
+    });
+
+    return () => unsubscribe();
+  }, [currentNoteId, user, title, tags, folder, color, paperStyle, paperTone, inkStrokes]);
+
   // Save Note Callback
   const handleSave = useCallback(async () => {
     if (!user) return;
+    isSavingLocallyRef.current = true;
 
     let finalTitle = title.trim();
     const currentBody = contentRef.current ? contentRef.current.innerHTML : latestContent.current;
@@ -4769,6 +4872,9 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       showToast('Failed to save note', 'error');
     } finally {
       setSaving(false);
+      setTimeout(() => {
+        isSavingLocallyRef.current = false;
+      }, 800);
     }
   }, [currentNoteId, title, tags, folder, color, paperStyle, paperTone, inkStrokes, user, showToast, onSave, note]);
 
@@ -7045,7 +7151,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                       placeholder="Note Title"
                       maxLength={60}
                       value={title}
-                      onChange={(e) => setTitle(e.target.value.slice(0, 60))}
+                      onChange={(e) => { markLocalActivity(); setTitle(e.target.value.slice(0, 60)); }}
                       className="w-full text-base font-bold bg-transparent border-none outline-none text-slate-850 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-750"
                     />
                   </div>
@@ -7087,7 +7193,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                         type="text"
                         placeholder="work, life, ideas..."
                         value={tags}
-                        onChange={(e) => setTags(e.target.value)}
+                        onChange={(e) => { markLocalActivity(); setTags(e.target.value); }}
                         className="flex-1 bg-transparent border-none outline-none text-xs text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
                       />
                     </div>
@@ -7685,7 +7791,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                     placeholder="Note title (auto-generated if empty)..."
                     maxLength={60}
                     value={title}
-                    onChange={(e) => setTitle(e.target.value.slice(0, 60))}
+                    onChange={(e) => { markLocalActivity(); setTitle(e.target.value.slice(0, 60)); }}
                     className="w-full text-2xl md:text-3.5xl font-black bg-transparent border-none outline-none text-slate-850 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-700 tracking-tight"
                   />
                   {title.length > 35 && (
