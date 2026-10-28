@@ -167,11 +167,10 @@ export default function AIConfigModal({ isOpen, onClose, userId }: AIConfigModal
 
     const defaultGeminiKey = ((import.meta.env.VITE_GEMINI_API_KEY as string) || '__PROXY__');
 
-    const results: ModelTestResult[] = [];
-    for (const m of WORKING_GEMINI_FALLBACK_CHAIN) {
-      const res = await testGeminiModel(defaultGeminiKey, m);
-      results.push(res);
-    }
+    // Test all models simultaneously in parallel (instead of slow sequential loop)
+    const results: ModelTestResult[] = await Promise.all(
+      WORKING_GEMINI_FALLBACK_CHAIN.map(m => testGeminiModel(defaultGeminiKey, m))
+    );
 
     setTestResults(results);
     setTestingDefault(false);
@@ -210,11 +209,10 @@ export default function AIConfigModal({ isOpen, onClose, userId }: AIConfigModal
       ...WORKING_GEMINI_FALLBACK_CHAIN.filter(m => m !== geminiModel)
     ];
 
-    const results: ModelTestResult[] = [];
-    for (const m of sequence) {
-      const res = await testGeminiModel(geminiKey.trim(), m);
-      results.push(res);
-    }
+    // Test all models simultaneously in parallel (instant speed)
+    const results: ModelTestResult[] = await Promise.all(
+      sequence.map(m => testGeminiModel(geminiKey.trim(), m))
+    );
 
     setTestResults(results);
     setTestingCustom(false);
