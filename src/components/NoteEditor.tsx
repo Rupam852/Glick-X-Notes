@@ -71,10 +71,13 @@ const extractTextFromHtml = (html: string): string => {
 };
 
 // Helper to save selection
-function saveSelection(): Range | null {
+function saveSelection(container?: HTMLElement | null): Range | null {
   const sel = window.getSelection();
   if (sel && sel.rangeCount > 0) {
-    return sel.getRangeAt(0).cloneRange();
+    const range = sel.getRangeAt(0);
+    if (!container || container.contains(range.commonAncestorContainer)) {
+      return range.cloneRange();
+    }
   }
   return null;
 }
@@ -191,8 +194,11 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     setActivePopup(current => {
       const next = current === popupName ? null : popupName;
       if (next) {
-        // Save selection before opening the popup
-        savedSelectionRef.current = saveSelection();
+        // Save selection before opening the popup if inside editor
+        const validRange = saveSelection(contentRef.current);
+        if (validRange) {
+          savedSelectionRef.current = validRange;
+        }
         // On mobile/touch screens, blur active element to dismiss soft keyboard and prevent layout jumps
         if (window.innerWidth < 768) {
           (document.activeElement as HTMLElement)?.blur();
@@ -204,10 +210,9 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
           }, 50);
         }
       } else {
-        // When closing the popup, restore selection if available
-        if (savedSelectionRef.current) {
+        // When closing popup, restore focus if selection exists
+        if (savedSelectionRef.current && contentRef.current) {
           restoreSelection(savedSelectionRef.current);
-          savedSelectionRef.current = null;
         }
       }
       return next;
@@ -300,7 +305,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     };
   }, []);
 
-  // Document-level Selection Change Listener to dynamically update formats & font sizes
+  // Document-level Selection Change Listener to dynamically track latest cursor position & formats
   useEffect(() => {
     const handleSelectionChange = () => {
       // Only update if the active selection is inside our editor contentRef
@@ -308,6 +313,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       if (selection && selection.rangeCount > 0 && contentRef.current) {
         const range = selection.getRangeAt(0);
         if (contentRef.current.contains(range.commonAncestorContainer)) {
+          savedSelectionRef.current = range.cloneRange();
           updateFormatState();
         }
       }
@@ -318,6 +324,29 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       document.removeEventListener('selectionchange', handleSelectionChange);
     };
   }, []);
+
+  // Helper to ensure cursor is placed at the user's latest manual position before inserting any block/text
+  const ensureSelectionInsideEditor = () => {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0 && contentRef.current && contentRef.current.contains(sel.getRangeAt(0).commonAncestorContainer)) {
+      savedSelectionRef.current = sel.getRangeAt(0).cloneRange();
+      return;
+    }
+    if (savedSelectionRef.current && contentRef.current) {
+      restoreSelection(savedSelectionRef.current);
+      contentRef.current.focus();
+      return;
+    }
+    if (contentRef.current) {
+      contentRef.current.focus();
+      const range = document.createRange();
+      range.selectNodeContents(contentRef.current);
+      range.collapse(false);
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+      savedSelectionRef.current = range.cloneRange();
+    }
+  };
 
   // Drag-to-Resize Sidebar Event Handlers
   const startResizing = useCallback((e: React.MouseEvent) => {
@@ -1253,6 +1282,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   };
 
   const handleChecklist = () => {
+    ensureSelectionInsideEditor();
     if (contentRef.current) {
       pushToHistoryImmediate(contentRef.current.innerHTML);
     }
@@ -1263,12 +1293,16 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       setBody(html);
       pushToHistory(html);
       contentRef.current.focus();
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0) {
+        savedSelectionRef.current = sel.getRangeAt(0).cloneRange();
+      }
     }
   };
 
   // --- RICH CONTENT BLOCKS INSERTERS ---
   const handleInsertCallout = (type: 'tip' | 'warn' | 'goal') => {
-    restoreSelection(savedSelectionRef.current);
+    ensureSelectionInsideEditor();
     let border = '#6366f1';
     let bg = 'rgba(99, 102, 241, 0.08)';
     let emoji = '💡';
@@ -1298,7 +1332,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         sel?.removeAllRanges();
         sel?.addRange(range);
         contentRef.current.focus();
-        savedSelectionRef.current = saveSelection();
+        savedSelectionRef.current = saveSelection(contentRef.current);
       }
       const h = contentRef.current.innerHTML;
       latestContent.current = h;
@@ -1309,7 +1343,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   };
 
   const handleInsertCodeBlock = () => {
-    restoreSelection(savedSelectionRef.current);
+    ensureSelectionInsideEditor();
     const focusId = `code-focus-${Date.now()}`;
     const html = `<div class="glick-block-wrapper glick-code-container" style="margin: 12px 0; border-radius: 12px; overflow: hidden; border: 1px solid #334155; background: #0f172a;"><div style="display: flex; align-items: center; justify-content: space-between; padding: 6px 12px; background: #1e293b; border-bottom: 1px solid #334155; user-select: none;" contenteditable="false"><div style="display: flex; align-items: center; gap: 6px;"><span style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444; display: inline-block;"></span><span style="width: 10px; height: 10px; border-radius: 50%; background: #f59e0b; display: inline-block;"></span><span style="width: 10px; height: 10px; border-radius: 50%; background: #10b981; display: inline-block;"></span><span style="font-family: monospace; font-size: 11px; font-weight: 700; color: #94a3b8; margin-left: 6px;">CODE</span></div><div style="display: flex; align-items: center; gap: 8px;"><button type="button" data-action="copy-code" title="Copy code" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #cbd5e1; font-size: 11px; padding: 2px 8px; border-radius: 6px; cursor: pointer;">📋 Copy</button><button type="button" data-action="delete-block" title="Delete code block" style="background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; font-size: 11px; padding: 2px 8px; border-radius: 6px; cursor: pointer;">✕ Delete</button></div></div><pre class="glick-code-block" style="margin: 0; padding: 12px 14px; background: transparent; color: #f8fafc; font-family: monospace; font-size: 13px; line-height: 1.5; overflow-x: auto;"><code id="${focusId}">// Enter code snippet here...</code></pre></div><p><br/></p>`;
     document.execCommand('insertHTML', false, html);
@@ -1323,7 +1357,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         sel?.removeAllRanges();
         sel?.addRange(range);
         contentRef.current.focus();
-        savedSelectionRef.current = saveSelection();
+        savedSelectionRef.current = saveSelection(contentRef.current);
       }
       const h = contentRef.current.innerHTML;
       latestContent.current = h;
@@ -1334,7 +1368,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   };
 
   const handleInsertToggle = () => {
-    restoreSelection(savedSelectionRef.current);
+    ensureSelectionInsideEditor();
     const focusId = `toggle-focus-${Date.now()}`;
     const html = `<details class="glick-block-wrapper glick-toggle" style="position: relative; padding: 10px 14px; margin: 10px 0; border: 1px solid rgba(148, 163, 184, 0.35); border-radius: 12px; background: rgba(248, 250, 252, 0.5);"><summary style="font-weight: 700; font-size: 14px; cursor: pointer; outline: none; color: #4f46e5; display: flex; align-items: center; justify-content: space-between;"><span id="${focusId}">Toggle Section (Click to expand)</span><button type="button" data-action="delete-block" title="Delete toggle section" contenteditable="false" style="background: transparent; border: none; cursor: pointer; color: #94a3b8; padding: 2px 6px; border-radius: 6px; font-size: 14px; line-height: 1; user-select: none;">✕</button></summary><div style="margin-top: 8px; padding-left: 8px; font-size: 14px;"><p>Hidden notes, checklist, or deeper details go here...</p></div></details><p><br/></p>`;
     document.execCommand('insertHTML', false, html);
@@ -1348,7 +1382,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         sel?.removeAllRanges();
         sel?.addRange(range);
         contentRef.current.focus();
-        savedSelectionRef.current = saveSelection();
+        savedSelectionRef.current = saveSelection(contentRef.current);
       }
       const h = contentRef.current.innerHTML;
       latestContent.current = h;
@@ -1364,15 +1398,13 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       showToast('Speech Recognition not supported in this browser. Try Chrome, Edge, or Brave.', 'error');
       return;
     }
-    savedSelectionRef.current = saveSelection();
+    ensureSelectionInsideEditor();
     setShowVoiceModal(true);
   };
 
   const handleApplyVoiceText = (textToInsert: string) => {
     if (!textToInsert.trim()) return;
-    if (savedSelectionRef.current) {
-      restoreSelection(savedSelectionRef.current);
-    }
+    ensureSelectionInsideEditor();
     document.execCommand('insertText', false, textToInsert.trim() + ' ');
     if (contentRef.current) {
       const h = contentRef.current.innerHTML;
@@ -1467,13 +1499,13 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         handleInsertToggle();
         break;
       case 'table':
-        handleTableInsert(3, 3);
+        handleGridClick(2, 2);
         break;
       case 'bullet':
         handleFormat('insertUnorderedList');
         break;
       case 'quote':
-        handleBlockquote();
+        toggleBlock('blockquote', 'blockquote');
         break;
       default:
         break;
@@ -1510,6 +1542,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   };
 
   const handleGridClick = (r: number, c: number) => {
+    ensureSelectionInsideEditor();
     const rows = r + 1;
     const cols = c + 1;
     let html = '<table>';
@@ -1969,8 +2002,11 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     const target = e.target as HTMLElement;
     if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
 
-    // Save selection immediately on touch start before any blur occurs, then let touch events bubble naturally
-    savedSelectionRef.current = saveSelection();
+    // Save selection immediately on touch start before any blur occurs if inside editor
+    const validRange = saveSelection(contentRef.current);
+    if (validRange) {
+      savedSelectionRef.current = validRange;
+    }
   };
 
   // Main KeyDown events + Shortcuts interceptor
@@ -3900,8 +3936,27 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                   contentEditable
                   onInput={handleInput}
                   onKeyDown={handleKeyDown}
-                  onKeyUp={updateFormatState}
-                  onMouseUp={updateFormatState}
+                  onKeyUp={() => {
+                    const sel = window.getSelection();
+                    if (sel && sel.rangeCount > 0 && contentRef.current?.contains(sel.getRangeAt(0).commonAncestorContainer)) {
+                      savedSelectionRef.current = sel.getRangeAt(0).cloneRange();
+                    }
+                    updateFormatState();
+                  }}
+                  onMouseUp={() => {
+                    const sel = window.getSelection();
+                    if (sel && sel.rangeCount > 0 && contentRef.current?.contains(sel.getRangeAt(0).commonAncestorContainer)) {
+                      savedSelectionRef.current = sel.getRangeAt(0).cloneRange();
+                    }
+                    updateFormatState();
+                  }}
+                  onTouchEnd={() => {
+                    const sel = window.getSelection();
+                    if (sel && sel.rangeCount > 0 && contentRef.current?.contains(sel.getRangeAt(0).commonAncestorContainer)) {
+                      savedSelectionRef.current = sel.getRangeAt(0).cloneRange();
+                    }
+                    updateFormatState();
+                  }}
                   onClick={handleContentClick}
                   data-placeholder="Start writing your note..."
                   className={`editor-content flex-1 w-full bg-transparent border-none outline-none text-[17px] text-slate-750 dark:text-slate-250 leading-relaxed outline-transparent focus:ring-0 ${
