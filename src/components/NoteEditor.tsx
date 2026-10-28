@@ -84,7 +84,7 @@ const extractTextFromHtml = (html: string): string => {
 export type InkShapeType = 
   | 'line' | 'arrow' | 'doubleArrow'
   | 'rect' | 'roundedRect' | 'circle' | 'triangle' | 'diamond' | 'parallelogram'
-  | 'star' | 'heart' | 'cloud' | 'calloutRect';
+  | 'star' | 'heart' | 'cloud' | 'calloutRect' | 'calloutRounded';
 
 export type InkToolType = 'select' | 'pen' | 'highlighter' | 'eraser' | 'text' | InkShapeType;
 
@@ -218,6 +218,38 @@ const convertStrokesToSvg = (strokes: InkStroke[], width: number, height: number
                   `H ${minX + 6} Q ${minX} ${minY + bH} ${minX} ${minY + bH - 6} ` +
                   `V ${minY + 6} Q ${minX} ${minY} ${minX + 6} ${minY} Z`;
         return `<path d="${d}" stroke="${strokeColor}" stroke-width="${strokeWidth}" stroke-linejoin="round" fill="none" />`;
+      }
+      if (s.tool === 'calloutRounded') {
+        const bH = h * 0.78;
+        const cx = (minX + maxX) / 2;
+        const cy = minY + bH / 2;
+        const rx = w * 0.44;
+        const ry = bH * 0.44;
+        const puffs = 8;
+        let d = '';
+        for (let i = 0; i < puffs; i++) {
+          const a1 = (i * Math.PI * 2) / puffs;
+          const a2 = ((i + 1) * Math.PI * 2) / puffs;
+          const midA = (a1 + a2) / 2;
+          const p1x = cx + rx * Math.cos(a1);
+          const p1y = cy + ry * Math.sin(a1);
+          const p2x = cx + rx * Math.cos(a2);
+          const p2y = cy + ry * Math.sin(a2);
+          const ctrlX = cx + (rx * 1.25) * Math.cos(midA);
+          const ctrlY = cy + (ry * 1.25) * Math.sin(midA);
+          if (i === 0) d += `M ${p1x} ${p1y}`;
+          d += ` Q ${ctrlX} ${ctrlY} ${p2x} ${p2y}`;
+        }
+        d += ' Z';
+        const c1x = minX + w * 0.22;
+        const c1y = minY + bH + (h - bH) * 0.38;
+        const r1 = Math.max(3, Math.min(w, h) * 0.055);
+        const c2x = minX + w * 0.12;
+        const c2y = minY + bH + (h - bH) * 0.82;
+        const r2 = Math.max(2, Math.min(w, h) * 0.035);
+        return `<path d="${d}" stroke="${strokeColor}" stroke-width="${strokeWidth}" stroke-linejoin="round" fill="none" />` +
+               `<circle cx="${c1x}" cy="${c1y}" r="${r1}" stroke="${strokeColor}" stroke-width="${strokeWidth}" fill="none" />` +
+               `<circle cx="${c2x}" cy="${c2y}" r="${r2}" stroke="${strokeColor}" stroke-width="${strokeWidth}" fill="none" />`;
       }
     }
 
@@ -1958,7 +1990,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   const isInkShapeTool = (tool: string) => [
     'line', 'arrow', 'doubleArrow',
     'rect', 'roundedRect', 'circle', 'triangle', 'diamond', 'parallelogram',
-    'star', 'heart', 'cloud', 'calloutRect'
+    'star', 'heart', 'cloud', 'calloutRect', 'calloutRounded'
   ].includes(tool);
 
   const getStrokeBounds = (stroke: InkStroke): { minX: number; minY: number; maxX: number; maxY: number; width: number; height: number } => {
@@ -2220,6 +2252,43 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
           ctx.lineTo(minX, minY + 8);
           ctx.quadraticCurveTo(minX, minY, minX + 8, minY);
           ctx.closePath();
+        } else if (stroke.tool === 'calloutRounded') {
+          const bH = h * 0.78;
+          const cx = (minX + maxX) / 2;
+          const cy = minY + bH / 2;
+          const rx = w * 0.44;
+          const ry = bH * 0.44;
+          const puffs = 8;
+          ctx.beginPath();
+          for (let i = 0; i < puffs; i++) {
+            const a1 = (i * Math.PI * 2) / puffs;
+            const a2 = ((i + 1) * Math.PI * 2) / puffs;
+            const midA = (a1 + a2) / 2;
+            const p1x = cx + rx * Math.cos(a1);
+            const p1y = cy + ry * Math.sin(a1);
+            const p2x = cx + rx * Math.cos(a2);
+            const p2y = cy + ry * Math.sin(a2);
+            const ctrlX = cx + (rx * 1.25) * Math.cos(midA);
+            const ctrlY = cy + (ry * 1.25) * Math.sin(midA);
+            if (i === 0) ctx.moveTo(p1x, p1y);
+            ctx.quadraticCurveTo(ctrlX, ctrlY, p2x, p2y);
+          }
+          ctx.closePath();
+          ctx.stroke();
+
+          // Thought bubbles
+          const c1x = minX + w * 0.22;
+          const c1y = minY + bH + (h - bH) * 0.38;
+          const r1 = Math.max(3, Math.min(w, h) * 0.055);
+          ctx.beginPath();
+          ctx.arc(c1x, c1y, r1, 0, Math.PI * 2);
+          ctx.stroke();
+
+          const c2x = minX + w * 0.12;
+          const c2y = minY + bH + (h - bH) * 0.82;
+          const r2 = Math.max(2, Math.min(w, h) * 0.035);
+          ctx.beginPath();
+          ctx.arc(c2x, c2y, r2, 0, Math.PI * 2);
           ctx.stroke();
         }
         ctx.restore();
@@ -2521,6 +2590,17 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       const finished = currentStrokeRef.current;
       currentStrokeRef.current = null;
       if (finished.points.length > 0 || finished.shapeStart) {
+        if (isInkShapeTool(finished.tool) && finished.shapeStart && finished.shapeEnd) {
+          const w = Math.abs(finished.shapeEnd.x - finished.shapeStart.x);
+          const h = Math.abs(finished.shapeEnd.y - finished.shapeStart.y);
+          if (w < 15 && h < 15) {
+            const isLine = finished.tool === 'line' || finished.tool === 'arrow' || finished.tool === 'doubleArrow';
+            const defW = isLine ? 180 : 160;
+            const defH = isLine ? 0 : 110;
+            finished.shapeStart = { x: Math.round(finished.shapeStart.x - defW / 2), y: Math.round(finished.shapeStart.y - defH / 2) };
+            finished.shapeEnd = { x: finished.shapeStart.x + defW, y: finished.shapeStart.y + defH };
+          }
+        }
         const nextStrokes = [...inkStrokes, finished];
         setInkStrokes(nextStrokes);
         const nextHist = [...inkHistory.slice(0, inkHistoryIndex + 1), nextStrokes];
@@ -6885,7 +6965,8 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                            inkTool === 'star' ? 'Star' :
                            inkTool === 'heart' ? 'Heart' :
                            inkTool === 'cloud' ? 'Cloud' :
-                           inkTool === 'calloutRect' ? 'Speech Bubble' : 'Shapes'}
+                           inkTool === 'calloutRect' ? 'Square Callout' :
+                           inkTool === 'calloutRounded' ? 'Rounded Callout' : 'Shapes'}
                         </span>
                         <ChevronDown className="w-3 h-3 opacity-70" />
                       </button>
@@ -6970,7 +7051,8 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                                 { id: 'star', label: 'Star', icon: Star },
                                 { id: 'heart', label: 'Heart', icon: Heart },
                                 { id: 'cloud', label: 'Cloud', icon: Cloud },
-                                { id: 'calloutRect', label: 'Speech Bubble', icon: MessageSquare },
+                                { id: 'calloutRect', label: 'Square Callout', icon: MessageSquare },
+                                { id: 'calloutRounded', label: 'Rounded Callout', icon: Cloud },
                               ].map(sh => {
                                 const IconComponent = sh.icon;
                                 return (

@@ -556,22 +556,67 @@ export default function DrawingModal({
       ctx.closePath();
       if (fill !== 'transparent') ctx.fill();
       if (sWidth > 0 && stroke !== 'transparent') ctx.stroke();
-    } else if (type === 'calloutRect' || type === 'calloutRounded') {
+    } else if (type === 'calloutRect') {
       ctx.beginPath();
-      const bH = h * 0.8;
-      const rad = type === 'calloutRounded' ? Math.min(14, w / 4, bH / 4) : 0;
+      const bH = h * 0.78;
+      const rad = Math.min(12, w / 6, bH / 6);
       ctx.moveTo(rad, 0);
       ctx.lineTo(w - rad, 0);
-      if (rad) ctx.quadraticCurveTo(w, 0, w, rad);
+      ctx.quadraticCurveTo(w, 0, w, rad);
       ctx.lineTo(w, bH - rad);
-      if (rad) ctx.quadraticCurveTo(w, bH, w - rad, bH);
-      ctx.lineTo(w * 0.4, bH);
-      ctx.lineTo(w * 0.18, h);
-      ctx.lineTo(w * 0.25, bH);
+      ctx.quadraticCurveTo(w, bH, w - rad, bH);
+      ctx.lineTo(w * 0.42, bH);
+      ctx.lineTo(w * 0.16, h);
+      ctx.lineTo(w * 0.26, bH);
       ctx.lineTo(rad, bH);
-      if (rad) ctx.quadraticCurveTo(0, bH, 0, bH - rad);
+      ctx.quadraticCurveTo(0, bH, 0, bH - rad);
       ctx.lineTo(0, rad);
-      if (rad) ctx.quadraticCurveTo(0, 0, rad, 0);
+      ctx.quadraticCurveTo(0, 0, rad, 0);
+      ctx.closePath();
+      if (fill !== 'transparent') ctx.fill();
+      if (sWidth > 0 && stroke !== 'transparent') ctx.stroke();
+    } else if (type === 'calloutRounded') {
+      // 💭 Thought Bubble Callout with Cloud Puffs and Trailing Circles
+      const bH = h * 0.78;
+      const cx = w * 0.5;
+      const cy = bH * 0.5;
+      const rx = w * 0.44;
+      const ry = bH * 0.44;
+
+      ctx.beginPath();
+      const puffs = 8;
+      for (let i = 0; i < puffs; i++) {
+        const a1 = (i * Math.PI * 2) / puffs;
+        const a2 = ((i + 1) * Math.PI * 2) / puffs;
+        const midA = (a1 + a2) / 2;
+        const p1x = cx + rx * Math.cos(a1);
+        const p1y = cy + ry * Math.sin(a1);
+        const p2x = cx + rx * Math.cos(a2);
+        const p2y = cy + ry * Math.sin(a2);
+        const ctrlX = cx + (rx * 1.25) * Math.cos(midA);
+        const ctrlY = cy + (ry * 1.25) * Math.sin(midA);
+        if (i === 0) ctx.moveTo(p1x, p1y);
+        ctx.quadraticCurveTo(ctrlX, ctrlY, p2x, p2y);
+      }
+      ctx.closePath();
+      if (fill !== 'transparent') ctx.fill();
+      if (sWidth > 0 && stroke !== 'transparent') ctx.stroke();
+
+      // Trailing Thought Bubbles
+      const c1x = w * 0.22;
+      const c1y = bH + (h - bH) * 0.38;
+      const r1 = Math.max(3, Math.min(w, h) * 0.055);
+      ctx.beginPath();
+      ctx.arc(c1x, c1y, r1, 0, Math.PI * 2);
+      ctx.closePath();
+      if (fill !== 'transparent') ctx.fill();
+      if (sWidth > 0 && stroke !== 'transparent') ctx.stroke();
+
+      const c2x = w * 0.12;
+      const c2y = bH + (h - bH) * 0.82;
+      const r2 = Math.max(2, Math.min(w, h) * 0.035);
+      ctx.beginPath();
+      ctx.arc(c2x, c2y, r2, 0, Math.PI * 2);
       ctx.closePath();
       if (fill !== 'transparent') ctx.fill();
       if (sWidth > 0 && stroke !== 'transparent') ctx.stroke();
@@ -1053,15 +1098,40 @@ export default function DrawingModal({
 
     const wasDrawingText = dragModeRef.current === 'draw' && activeTool === 'text';
 
-    // If we were drawing a shape or text, switch back to 'select' mode so user can immediately resize/rotate!
+    // If we were drawing a shape or text, ensure visible default size if user clicked without dragging
     if (dragModeRef.current === 'draw' && activeTool !== 'pen' && activeTool !== 'highlighter') {
+      setObjects(currentObjs => {
+        const lastIdx = currentObjs.length - 1;
+        if (lastIdx >= 0) {
+          const last = currentObjs[lastIdx];
+          if (last.width < 15 || last.height < 15) {
+            const isLine = last.type === 'line' || last.type === 'arrowLine' || last.type === 'doubleArrowLine';
+            const defW = isLine ? 180 : 160;
+            const defH = isLine ? 2 : 110;
+            const updated = {
+              ...last,
+              x: Math.max(10, Math.round(last.x - defW / 2)),
+              y: Math.max(10, Math.round(last.y - defH / 2)),
+              width: defW,
+              height: defH
+            };
+            const next = [...currentObjs];
+            next[lastIdx] = updated;
+            pushHistory(next);
+            return next;
+          }
+        }
+        pushHistory(currentObjs);
+        return currentObjs;
+      });
       setActiveTool('select');
+    } else {
+      pushHistory(objects);
     }
 
     dragModeRef.current = null;
     initialObjectSnapshotRef.current = null;
     activeDrawPointsRef.current = [];
-    pushHistory(objects);
 
     if (wasDrawingText) {
       setObjects(currentObjs => {
