@@ -5675,15 +5675,6 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
             <Printer className="w-4.5 h-4.5" />
           </button>
 
-          {/* ⏱️ Live Reading Time & Word Count Pill */}
-          <div 
-            className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 text-[11px] font-semibold text-slate-500 dark:text-slate-400 select-none shrink-0 border border-slate-200/50 dark:border-slate-700/50 ml-auto"
-            title="Live note statistics"
-          >
-            <span>⏱️ {readingTime || 1} min read</span>
-            <span className="text-slate-350 dark:text-slate-600">·</span>
-            <span>{wordCount} words</span>
-          </div>
 
           <input type="file" id="image-upload" className="hidden" accept="image/*" onChange={handleImageUpload} />
         </div>
