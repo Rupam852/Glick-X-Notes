@@ -31,7 +31,13 @@ import {
   Instagram,
   Github,
   Mail,
-  X
+  X,
+  Bot,
+  Network,
+  Sigma,
+  PenTool,
+  FileDown,
+  Cpu
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { sound } from '../utils/sound';
@@ -365,6 +371,156 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
                   <span className="px-2.5 py-0.5 rounded-md bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[10px] font-bold">#urgent</span>
                   <span className="px-2.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">#ideas</span>
                 </div>
+              </div>
+            </div>
+
+            {/* Bento Cell: Multi-Provider AI Assistant (Spans 2 columns) */}
+            <div className="md:col-span-2 group relative rounded-3xl p-7 md:p-8 bg-white/90 dark:bg-[#0c1220]/90 border border-slate-200/90 dark:border-slate-800/90 hover:border-violet-500/50 dark:hover:border-violet-400/50 shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:shadow-[0_12px_36px_rgba(139,92,246,0.08)] transition-all duration-300 flex flex-col justify-between overflow-hidden">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-violet-500/10 text-violet-600 dark:text-violet-400 flex items-center justify-center font-bold">
+                    <Bot className="w-5 h-5" />
+                  </div>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wider uppercase bg-gradient-to-r from-violet-500/10 to-indigo-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/20">
+                    BYOK Multi-Model AI
+                  </span>
+                </div>
+                <h3 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white">
+                  Multi-Provider AI Intelligence
+                </h3>
+                <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400 max-w-lg leading-relaxed">
+                  Supercharge your thoughts with Google Gemini, Groq (Llama 3), or Hugging Face. Summarize meetings, extract actionable checklists, enhance writing tone, and generate smart tags with zero latency.
+                </p>
+              </div>
+
+              {/* Interactive AI Preview Pill */}
+              <div className="mt-6 pt-5 border-t border-slate-100 dark:border-slate-800/80 space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-violet-50 dark:bg-violet-950/40 border border-violet-200/80 dark:border-violet-800/60 text-[11px] font-bold text-violet-700 dark:text-violet-300">
+                    <Sparkles className="w-3.5 h-3.5 text-violet-500" />
+                    <span>Gemini 2.0 Flash</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 text-[11px] font-bold text-amber-700 dark:text-amber-300">
+                    <Zap className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Groq Llama 3.3</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/60 text-[11px] font-bold text-indigo-700 dark:text-indigo-300">
+                    <Cpu className="w-3.5 h-3.5 text-indigo-500" />
+                    <span>Hugging Face</span>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200/60 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300 flex items-start gap-2.5">
+                  <Sparkles className="w-4 h-4 text-violet-500 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <span className="font-bold text-slate-900 dark:text-white">Instant AI Assistants:</span>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      "Summarize in 3 bullet points" • "Convert notes to task list" • "Professional grammar polish"
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Bento Cell: Live Mermaid & Architecture Diagrams (1 column) */}
+            <div className="group relative rounded-3xl p-7 md:p-8 bg-white/90 dark:bg-[#0c1220]/90 border border-slate-200/90 dark:border-slate-800/90 hover:border-teal-500/50 dark:hover:border-teal-400/50 shadow-[0_4px_20px_rgba(0,0,0,0.02)] transition-all flex flex-col justify-between">
+              <div className="space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center font-bold">
+                  <Network className="w-5 h-5" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                  Live Mermaid Diagrams
+                </h3>
+                <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Generate flowcharts, sequence diagrams, mindmaps, and architecture schematics directly from plain text with interactive live preview.
+                </p>
+              </div>
+
+              {/* Diagram Flow Visual Pill */}
+              <div className="mt-6 p-3 rounded-2xl bg-teal-500/5 dark:bg-teal-950/20 border border-teal-500/20 space-y-2">
+                <div className="flex items-center justify-between text-[11px] font-bold text-teal-700 dark:text-teal-300">
+                  <span className="px-2 py-0.5 bg-white dark:bg-slate-900 rounded-md shadow-xs border border-teal-500/20">Idea</span>
+                  <span>→</span>
+                  <span className="px-2 py-0.5 bg-teal-500 text-white rounded-md shadow-xs">Flowchart</span>
+                  <span>→</span>
+                  <span className="px-2 py-0.5 bg-white dark:bg-slate-900 rounded-md shadow-xs border border-teal-500/20">Deploy</span>
+                </div>
+                <p className="text-[10px] text-teal-600/80 dark:text-teal-400/80 text-center font-medium">
+                  Flowcharts • Sequence • Mindmaps • Git
+                </p>
+              </div>
+            </div>
+
+            {/* Bento Cell: LaTeX Math & Scientific Formulas (1 column) */}
+            <div className="group relative rounded-3xl p-7 md:p-8 bg-white/90 dark:bg-[#0c1220]/90 border border-slate-200/90 dark:border-slate-800/90 hover:border-indigo-500/50 dark:hover:border-indigo-400/50 shadow-[0_4px_20px_rgba(0,0,0,0.02)] transition-all flex flex-col justify-between">
+              <div className="space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold">
+                  <Sigma className="w-5 h-5" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                  LaTeX Math Formulas
+                </h3>
+                <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Typeset complex scientific notation, calculus formulas, and matrices with sub-millisecond KaTeX engine rendering.
+                </p>
+              </div>
+
+              {/* Math Formula Mockup */}
+              <div className="mt-6 p-3 rounded-2xl bg-indigo-500/5 dark:bg-indigo-950/20 border border-indigo-500/20 flex items-center justify-center">
+                <span className="font-serif italic text-sm md:text-base tracking-wide text-indigo-900 dark:text-indigo-200">
+                  f(x) = ∫₀^∞ e^(−x²) dx = √π / 2
+                </span>
+              </div>
+            </div>
+
+            {/* Bento Cell: Freehand Sketch & Drawing Board (1 column) */}
+            <div className="group relative rounded-3xl p-7 md:p-8 bg-white/90 dark:bg-[#0c1220]/90 border border-slate-200/90 dark:border-slate-800/90 hover:border-fuchsia-500/50 dark:hover:border-fuchsia-400/50 shadow-[0_4px_20px_rgba(0,0,0,0.02)] transition-all flex flex-col justify-between">
+              <div className="space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400 flex items-center justify-center font-bold">
+                  <PenTool className="w-5 h-5" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                  Freehand Sketch Board
+                </h3>
+                <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Sketch wireframes, doodle ideas, or scribble quick handwriting annotations directly onto an embedded canvas board.
+                </p>
+              </div>
+
+              {/* Sketch Palette Pill */}
+              <div className="mt-6 p-3 rounded-2xl bg-fuchsia-500/5 dark:bg-fuchsia-950/20 border border-fuchsia-500/20 flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-full bg-indigo-500" />
+                  <span className="w-3 h-3 rounded-full bg-pink-500" />
+                  <span className="w-3 h-3 rounded-full bg-amber-500" />
+                  <span className="w-3 h-3 rounded-full bg-emerald-500" />
+                </div>
+                <span className="text-[11px] font-bold text-fuchsia-600 dark:text-fuchsia-400">
+                  Canvas & Brush
+                </span>
+              </div>
+            </div>
+
+            {/* Bento Cell: Universal Multi-Format Export (1 column) */}
+            <div className="group relative rounded-3xl p-7 md:p-8 bg-white/90 dark:bg-[#0c1220]/90 border border-slate-200/90 dark:border-slate-800/90 hover:border-sky-500/50 dark:hover:border-sky-400/50 shadow-[0_4px_20px_rgba(0,0,0,0.02)] transition-all flex flex-col justify-between">
+              <div className="space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center font-bold">
+                  <FileDown className="w-5 h-5" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                  Universal Export
+                </h3>
+                <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Never get locked in. Export any note with a single click to high-fidelity PDF, Markdown (.md), clean HTML, or JSON backup.
+                </p>
+              </div>
+
+              {/* Export Formats Pills */}
+              <div className="mt-6 flex flex-wrap items-center gap-1.5">
+                <span className="px-2 py-1 rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 text-[10px] font-black border border-red-500/20">PDF</span>
+                <span className="px-2 py-1 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-black border border-blue-500/20">MD</span>
+                <span className="px-2 py-1 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-black border border-amber-500/20">HTML</span>
+                <span className="px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-black border border-emerald-500/20">JSON</span>
               </div>
             </div>
 
