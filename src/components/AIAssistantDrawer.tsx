@@ -21,6 +21,7 @@ interface AgentChatMessage {
   actionContent?: string;
   newTitle?: string;
   applied?: boolean;
+  previousContent?: string;
 }
 
 interface AIAssistantDrawerProps {
@@ -307,6 +308,24 @@ export default function AIAssistantDrawer({
         chatMessages.map(m => ({ role: m.role, content: m.content }))
       );
 
+      // Auto-apply if modification/addition was requested
+      const previous = noteHtml || '';
+      let autoApplied = false;
+
+      if (result.action === 'replace_content' && result.content && onReplaceContent) {
+        onReplaceContent(result.content);
+        autoApplied = true;
+        showToast('AI Agent ne note me changes apply kar diye!', 'success');
+      } else if (result.action === 'append_content' && result.content) {
+        onInsertText(result.content);
+        autoApplied = true;
+        showToast('AI Agent ne naya section note me add kar diya!', 'success');
+      } else if (result.action === 'update_title' && result.newTitle) {
+        onApplyTitle(result.newTitle);
+        autoApplied = true;
+        showToast(`AI Agent ne title badal diya: "${result.newTitle}"!`, 'success');
+      }
+
       const assistantMsg: AgentChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
@@ -314,7 +333,8 @@ export default function AIAssistantDrawer({
         action: result.action,
         actionContent: result.content,
         newTitle: result.newTitle,
-        applied: false
+        applied: autoApplied,
+        previousContent: previous
       };
 
       setChatMessages([...newHistory, assistantMsg]);
@@ -347,6 +367,14 @@ export default function AIAssistantDrawer({
     }
 
     setChatMessages(prev => prev.map(m => m.id === msg.id ? { ...m, applied: true } : m));
+  };
+
+  const handleUndoAgentAction = (msg: AgentChatMessage) => {
+    if (msg.previousContent && onReplaceContent) {
+      onReplaceContent(msg.previousContent);
+      showToast('Changes reverted back to original note!', 'info');
+      setChatMessages(prev => prev.map(m => m.id === msg.id ? { ...m, applied: false } : m));
+    }
   };
 
   return (
@@ -741,17 +769,17 @@ export default function AIAssistantDrawer({
 
                     {/* ⚡ Interactive Agent Action Card */}
                     {msg.action && msg.action !== 'none' && (
-                      <div className="mt-2 p-2.5 rounded-xl bg-white dark:bg-slate-950 border border-indigo-200/90 dark:border-indigo-900/60 space-y-2 shadow-xs">
+                      <div className="mt-2.5 p-2.5 rounded-xl bg-white dark:bg-slate-950 border border-indigo-200/90 dark:border-indigo-900/60 space-y-2 shadow-xs">
                         <div className="flex items-center justify-between">
                           <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide flex items-center gap-1">
                             <Sparkles className="w-3 h-3" />
-                            {msg.action === 'replace_content' && 'Proposed Note Modification'}
-                            {msg.action === 'append_content' && 'New Section to Add'}
-                            {msg.action === 'update_title' && 'Proposed Note Title'}
+                            {msg.action === 'replace_content' && 'Note Modification'}
+                            {msg.action === 'append_content' && 'New Section Added'}
+                            {msg.action === 'update_title' && 'Title Changed'}
                           </span>
                           {msg.applied && (
                             <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded-md flex items-center gap-1">
-                              <Check className="w-2.5 h-2.5" /> Applied
+                              <Check className="w-2.5 h-2.5" /> Applied to Note
                             </span>
                           )}
                         </div>
@@ -759,7 +787,7 @@ export default function AIAssistantDrawer({
                         {/* Rendered HTML Preview */}
                         {msg.actionContent && (
                           <div 
-                            className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-[11px] text-slate-700 dark:text-slate-300 max-h-36 overflow-y-auto leading-relaxed"
+                            className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-[11px] text-slate-700 dark:text-slate-300 max-h-40 overflow-y-auto leading-relaxed"
                             dangerouslySetInnerHTML={{ __html: msg.actionContent }}
                           />
                         )}
@@ -770,21 +798,35 @@ export default function AIAssistantDrawer({
                           </p>
                         )}
 
-                        {/* 1-Click Apply Button */}
-                        {!msg.applied ? (
-                          <button
-                            type="button"
-                            onClick={() => handleApplyAgentAction(msg)}
-                            className="w-full py-1.5 px-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold rounded-lg flex items-center justify-center gap-1.5 text-xs shadow-xs transition cursor-pointer"
-                          >
-                            <Check className="w-3.5 h-3.5" />
-                            {msg.action === 'replace_content' ? 'Apply Changes to Note' : msg.action === 'append_content' ? 'Append to Note' : 'Update Note Title'}
-                          </button>
-                        ) : (
-                          <div className="w-full py-1 text-center text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                            ✓ Note successfully updated by AI Agent
-                          </div>
-                        )}
+                        {/* Buttons: Revert if applied, or Apply if not applied */}
+                        <div className="flex items-center gap-1.5 pt-1 border-t border-slate-100 dark:border-slate-800">
+                          {msg.applied ? (
+                            <>
+                              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex-1">
+                                ✓ Synced into note editor
+                              </span>
+                              {msg.previousContent && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleUndoAgentAction(msg)}
+                                  className="py-1 px-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg text-[10px] font-bold flex items-center gap-1 transition cursor-pointer border border-slate-200 dark:border-slate-800"
+                                  title="Revert note back to before this change"
+                                >
+                                  <RefreshCw className="w-2.5 h-2.5" /> Revert
+                                </button>
+                              )}
+                            </>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleApplyAgentAction(msg)}
+                              className="w-full py-1.5 px-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold rounded-lg flex items-center justify-center gap-1.5 text-xs shadow-xs transition cursor-pointer"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                              {msg.action === 'replace_content' ? 'Apply Changes to Note' : msg.action === 'append_content' ? 'Append to Note' : 'Update Title'}
+                            </button>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>

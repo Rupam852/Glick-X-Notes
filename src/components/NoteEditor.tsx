@@ -4510,7 +4510,9 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         }}
         onInsertText={(text) => {
           if (contentRef.current) {
-            contentRef.current.innerHTML += text.replace(/\n/g, '<br/>');
+            const isHtml = /<[a-z][\s\S]*>/i.test(text);
+            const formatted = isHtml ? text : text.replace(/\n/g, '<br/>');
+            contentRef.current.innerHTML += formatted;
             upgradeLegacyBlocks(contentRef.current);
             const html = contentRef.current.innerHTML;
             latestContent.current = html;

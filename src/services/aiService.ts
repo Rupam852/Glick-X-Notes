@@ -544,6 +544,70 @@ export interface AIAgentChatResult {
 }
 
 /**
+ * Resilient JSON extractor for LLM outputs.
+ * Parses JSON even if unescaped newlines, backticks, or quotes break JSON.parse.
+ */
+function extractJsonFromAIResponse(rawText: string): any {
+  if (!rawText) return null;
+  let clean = rawText.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
+
+  // 1. Direct JSON.parse
+  try {
+    return JSON.parse(clean);
+  } catch (e) {}
+
+  // 2. Locate outermost braces { ... }
+  const firstBrace = clean.indexOf('{');
+  const lastBrace = clean.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    clean = clean.slice(firstBrace, lastBrace + 1);
+  }
+
+  try {
+    return JSON.parse(clean);
+  } catch (e) {}
+
+  // 3. Robust regex-based field extractor (handles unescaped literal newlines/quotes)
+  let reply = '';
+  let action = 'none';
+  let content = '';
+  let newTitle = '';
+
+  const actionMatch = clean.match(/"action"\s*:\s*"(replace_content|append_content|update_title|none)"/i);
+  if (actionMatch) {
+    action = actionMatch[1];
+  }
+
+  const replyMatch = clean.match(/"reply"\s*:\s*"([\s\S]*?)"\s*,\s*"(?:action|content|newTitle)"/i)
+    || clean.match(/"reply"\s*:\s*"([\s\S]*?)"\s*[,}]/i);
+  if (replyMatch) {
+    reply = replyMatch[1];
+  }
+
+  const contentMatch = clean.match(/"content"\s*:\s*"([\s\S]*)"\s*,\s*"newTitle"/i)
+    || clean.match(/"content"\s*:\s*"([\s\S]*)"\s*}/i);
+  if (contentMatch) {
+    content = contentMatch[1];
+  }
+
+  const titleMatch = clean.match(/"newTitle"\s*:\s*"([\s\S]*?)"\s*}/i);
+  if (titleMatch) {
+    newTitle = titleMatch[1];
+  }
+
+  if (reply || content || action !== 'none') {
+    return {
+      reply: reply.replace(/\\"/g, '"').replace(/\\n/g, '\n'),
+      action,
+      content: content.replace(/\\"/g, '"').replace(/\\n/g, '\n'),
+      newTitle: newTitle.replace(/\\"/g, '"')
+    };
+  }
+
+  return null;
+}
+
+/**
  * 5. AI Note Agent:
  * Can answer questions AND directly modify, format, append to, or rewrite
  * the specific note based on conversational text or voice instructions.
@@ -575,18 +639,21 @@ ${history.length > 0 ? `RECENT CHAT HISTORY:\n${history.slice(-4).map(h => `${h.
 
 CRITICAL AGENT RULES:
 1. DETERMINE THE ACTION TYPE:
-   - "none": User asked a purely informational question or requested advice without wanting to change the note.
-   - "replace_content": User asked to edit, fix, rewrite, polish, simplify, format (add bold, colors, list styling), or restructure the note content. Provide the full new rich HTML in "content". Preserve all existing bold tags (<b>, <strong>), tables, toggles, and images.
-   - "append_content": User asked to add something new (e.g., "add conclusion", "add table", "add 3 action items", "add toggle section"). Provide the new rich HTML snippet in "content".
+   - "none": User asked a purely informational question or asked for an explanation without wanting to change the note.
+   - "replace_content": User asked to edit, fix, rewrite, polish, simplify, format, or update the existing note content. Provide the full new rich HTML in "content". Preserve all existing bold tags (<b>, <strong>), tables, toggles, and images.
+   - "append_content": User asked to add something new (e.g. "add toggle snippet", "add code snippet", "add conclusion", "add table", "add 3 action items"). Provide the new rich HTML snippet in "content".
    - "update_title": User asked to rename or change the note title. Provide "newTitle".
 
-2. FORMATTING IN "content":
-   - Use clean, standard HTML tags: <p>, <b>, <strong>, <i>, <u>, <ul>, <ol>, <li>, <table>, <tr>, <td>, <th>, <details>, <summary>, <blockquote>.
-   - Do NOT wrap in markdown code blocks (\`\`\`html).
-   - Do NOT output raw markdown asterisks (*, **) or hashes (#).
+2. RICH COMPONENT SNIPPET TEMPLATES:
+   - When asked for a Toggle / Collapsible snippet:
+     <details class="glick-block-wrapper glick-toggle" style="margin: 12px 0; padding: 10px 14px; border: 1px solid rgba(148, 163, 184, 0.35); border-radius: 12px; background: rgba(248, 250, 252, 0.5);"><summary style="font-weight: 700; cursor: pointer; color: #4f46e5; display: flex; align-items: center; gap: 8px;"><span class="glick-toggle-arrow" contenteditable="false">▶</span> Toggle Title</summary><div style="margin-top: 8px; padding-left: 24px;"><p>Details here...</p></div></details>
+   - When asked for a Code snippet:
+     <div class="glick-block-wrapper glick-code-container" style="margin: 12px 0; border-radius: 12px; overflow: hidden; border: 1px solid #334155; background: #0f172a;"><div style="padding: 6px 12px; background: #1e293b; color: #94a3b8; font-size: 11px; font-weight: 700;">CODE</div><pre style="margin: 0; padding: 12px; color: #e2e8f0; font-family: monospace; font-size: 13px;"><code>// Your code here</code></pre></div>
+   - When asked for a Callout box:
+     <div class="glick-block-wrapper glick-callout" style="margin: 12px 0; padding: 12px 16px; border-radius: 12px; background: rgba(99, 102, 241, 0.08); border-left: 4px solid #6366f1;"><p style="margin: 0; font-weight: 700; color: #6366f1;">💡 Important Note</p><p style="margin-top: 4px;">...</p></div>
 
 3. RESPONSE FORMAT:
-Respond ONLY with a valid JSON object (no markdown code blocks, no text before or after):
+Respond ONLY with a valid JSON object:
 {
   "reply": "Conversational reply in the user's language (English/Hindi/Hinglish) explaining what was done or answering their question",
   "action": "none" | "replace_content" | "append_content" | "update_title",
@@ -599,11 +666,9 @@ Respond ONLY with a valid JSON object (no markdown code blocks, no text before o
     'You are an expert AI Note Agent. Output ONLY a valid JSON object with keys "reply", "action", "content", "newTitle".'
   );
 
-  try {
-    const cleanJson = res.text.replace(/```json/gi, '').replace(/```/g, '').trim();
-    const parsed = JSON.parse(cleanJson);
-
-    let content = parsed.content ? String(parsed.content).trim() : '';
+  const extracted = extractJsonFromAIResponse(res.text);
+  if (extracted) {
+    let content = extracted.content ? String(extracted.content).trim() : '';
     if (content) {
       content = content.replace(/^```(?:html)?\s*\n?/i, '').replace(/\n?```$/i, '').trim();
       const bodyMatch = content.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
@@ -611,22 +676,35 @@ Respond ONLY with a valid JSON object (no markdown code blocks, no text before o
       content = content.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
     }
 
-    const action = ['replace_content', 'append_content', 'update_title', 'none'].includes(parsed.action) 
-      ? parsed.action 
-      : 'none';
+    const action = ['replace_content', 'append_content', 'update_title', 'none'].includes(extracted.action)
+      ? extracted.action
+      : (content ? 'replace_content' : 'none');
+
+    // Make sure reply does not display raw JSON
+    let cleanReply = extracted.reply ? sanitizeAIText(extracted.reply) : 'Aapke kehne par note me changes kar diye gaye hain.';
+    if (cleanReply.startsWith('{') && cleanReply.includes('"reply"')) {
+      cleanReply = 'Aapke instructions ke anusaar note update kar diya gaya hai.';
+    }
 
     return {
-      reply: sanitizeAIText(parsed.reply || res.text),
+      reply: cleanReply,
       action: action as any,
       content: content || undefined,
-      newTitle: parsed.newTitle ? sanitizeAIText(parsed.newTitle) : undefined
-    };
-  } catch (e) {
-    return {
-      reply: sanitizeAIText(res.text),
-      action: 'none'
+      newTitle: extracted.newTitle ? sanitizeAIText(extracted.newTitle) : undefined
     };
   }
+
+  // If response was not JSON:
+  let fallbackReply = sanitizeAIText(res.text);
+  if (fallbackReply.startsWith('{') && fallbackReply.includes('"reply"')) {
+    const m = fallbackReply.match(/"reply"\s*:\s*"([\s\S]*?)"/i);
+    fallbackReply = m ? m[1] : 'Note updated with requested changes.';
+  }
+
+  return {
+    reply: fallbackReply,
+    action: 'none'
+  };
 }
 
 export interface NoteAuditResult {
