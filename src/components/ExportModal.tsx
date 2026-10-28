@@ -112,9 +112,31 @@ export default function ExportModal({
             .content img { max-width: 100%; border-radius: 8px; }
             .content blockquote { border-left: 3px solid #6366f1; padding-left: 14px; margin: 16px 0; color: #475569; }
             .content pre { background: #0f172a; color: #f8fafc; padding: 12px; border-radius: 8px; font-family: monospace; }
-            .badge { display: inline-block; background: #e0e7ff; color: #4338ca; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; margin-right: 4px; }
             @media print {
-              body { padding: 0; }
+              @page { size: auto; margin: 15mm 20mm; }
+              body { padding: 0; max-width: 100%; color: #0f172a; }
+              .glick-page-break {
+                display: block !important;
+                page-break-after: always !important;
+                break-after: page !important;
+                height: 0 !important;
+                visibility: hidden !important;
+              }
+              p, blockquote, pre, table, tr, img, .glick-callout, .glick-code-container, .glick-shape-container {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+              }
+              h1, h2, h3, h4, h5, h6 {
+                page-break-after: avoid !important;
+                break-after: avoid !important;
+              }
+            }
+            .glick-page-break {
+              page-break-after: always;
+              break-after: page;
+            }
+            .glick-page-break-visual {
+              display: none !important;
             }
           </style>
         </head>

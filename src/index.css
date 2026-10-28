@@ -466,33 +466,165 @@ details.glick-toggle[open] > summary .glick-toggle-arrow {
   color: #c7d2fe;
 }
 
-/* 🖨️ Clean Window Print Styling */
+/* 🖨️ Clean Multi-Page Window Print Styling */
 @media print {
-  body, html {
+  @page {
+    size: auto;
+    margin: 15mm 20mm 15mm 20mm;
+  }
+
+  html, body {
     background: #ffffff !important;
-    color: #000000 !important;
+    color: #0f172a !important;
+    height: auto !important;
+    min-height: 100% !important;
+    overflow: visible !important;
+    overflow-x: visible !important;
+    overflow-y: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
-  header, nav, aside, .no-print, [role="toolbar"], button {
+
+  /* Force all wrapper containers to unclamp height and unclamp overflow */
+  #root,
+  .app-container,
+  .note-editor-root,
+  .note-editor-layout,
+  .note-editor-content-pane,
+  .note-editor-scroll-container {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    overflow-x: visible !important;
+    overflow-y: visible !important;
+    position: static !important;
+    display: block !important;
+    flex: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Hide app chrome, sidebars, navigations, toolbars and non-printable elements */
+  header,
+  nav,
+  aside,
+  [role="toolbar"],
+  button,
+  canvas,
+  .no-print,
+  .note-editor-toolbar,
+  .note-editor-sidebar,
+  .glick-shape-floating-bar,
+  .glick-shape-header,
+  .glick-shape-resize-handle,
+  .glick-floating-inking-bar,
+  .glick-page-break-visual,
+  .smart-back-indicator,
+  .toast-container,
+  input[type="file"] {
     display: none !important;
+    visibility: hidden !important;
   }
-  .a4-page-mode, .editor-content {
+
+  /* Paper sheet styling for print */
+  .note-paper-sheet,
+  .a4-page-mode {
     box-shadow: none !important;
     border: none !important;
     padding: 0 !important;
     margin: 0 !important;
+    width: 100% !important;
     max-width: 100% !important;
+    min-height: auto !important;
+    height: auto !important;
+    background: transparent !important;
+    position: relative !important;
   }
+
+  /* Clean print title */
+  .note-print-title {
+    display: block !important;
+    font-size: 24pt !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+    margin: 0 0 16pt 0 !important;
+    padding-bottom: 8pt !important;
+    border-bottom: 2px solid #cbd5e1 !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+
+  .note-screen-title {
+    display: none !important;
+  }
+
+  /* Editor content typography and unconstrained flow */
+  .editor-content {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    font-size: 11pt !important;
+    line-height: 1.6 !important;
+    color: #1e293b !important;
+  }
+
+  /* Ensure page breaks cleanly split pages */
   .glick-page-break {
+    display: block !important;
     page-break-after: always !important;
     break-after: page !important;
     height: 0 !important;
+    min-height: 0 !important;
     margin: 0 !important;
+    padding: 0 !important;
     border: none !important;
+    visibility: hidden !important;
   }
-  .glick-page-break-visual {
-    display: none !important;
+
+  /* Avoid orphan headers and broken elements across pages */
+  p, blockquote, pre, .glick-callout, .glick-code-container, 
+  .glick-shape-container, .glick-bookmark-card, table, tr, img, .glick-column {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Table print optimization */
+  table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+  }
+  th, td {
+    border: 1px solid #cbd5e1 !important;
+    padding: 6pt 8pt !important;
+  }
+
+  /* Multi-column blocks in print */
+  .glick-columns-container {
+    display: grid !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 }
+
 
 /* ⚖️ Multi-Column Split Blocks */
 .glick-columns-container {

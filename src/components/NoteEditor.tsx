@@ -2194,7 +2194,14 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   };
 
   const handlePrint = () => {
-    window.print();
+    setActivePopup(null);
+    setShowFindReplace(false);
+    setEditingShapeEl(null);
+    setShowFontSizeMenu(false);
+    setShowFontMenu(false);
+    setTimeout(() => {
+      window.print();
+    }, 50);
   };
 
   // --- SMART WEB BOOKMARK CARDS ---
@@ -4241,7 +4248,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
 
   return (
     <div 
-      className="h-screen overflow-hidden bg-[#f2f4f7] dark:bg-[#0b0f19] flex flex-col relative text-slate-800 dark:text-slate-200 font-sans"
+      className="note-editor-root h-screen overflow-hidden bg-[#f2f4f7] dark:bg-[#0b0f19] flex flex-col relative text-slate-800 dark:text-slate-200 font-sans"
       onDragOver={handleDragOver}
       onDragEnter={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -4356,9 +4363,9 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         )}
       </AnimatePresence>
 
-      {/* 2-Row Adaptive Toolbar (Hidden in Zen Mode) */}
+      {/* 2-Row Adaptive Toolbar (Hidden in Zen Mode & Print) */}
       {!zenMode && (
-        <div ref={popupRef} onTouchStart={handleToolbarTouchStart} className="sticky top-0 z-35 flex flex-col border-b border-slate-200/70 dark:border-slate-800 bg-[#f8f9fb]/95 dark:bg-[#0c1220]/95 backdrop-blur-md relative">
+        <div ref={popupRef} onTouchStart={handleToolbarTouchStart} className="note-editor-toolbar sticky top-0 z-35 flex flex-col border-b border-slate-200/70 dark:border-slate-800 bg-[#f8f9fb]/95 dark:bg-[#0c1220]/95 backdrop-blur-md relative no-print">
                 {/* ROW 1: Navigation and status controls */}
         <div className="flex items-center justify-between px-2.5 sm:px-3 md:px-4 py-2 border-b border-slate-200/60 dark:border-slate-800/60 gap-1.5 sm:gap-2 overflow-hidden">
           <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 shrink-0">
@@ -6014,12 +6021,12 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         )}
       </AnimatePresence>
 
-      <div className="flex-1 flex flex-row overflow-hidden relative">
+      <div className="note-editor-layout flex-1 flex flex-row overflow-hidden relative">
         
         {/* REDESIGNED LEFT SIDEBAR (with drag-to-resize support) */}
         {!focusMode && (
           <div 
-            className="hidden md:flex flex-col border-r border-slate-150 dark:border-slate-800 overflow-y-auto select-none bg-slate-50/60 dark:bg-slate-900/40 relative group/sidebar"
+            className="note-editor-sidebar hidden md:flex flex-col border-r border-slate-150 dark:border-slate-800 overflow-y-auto select-none bg-slate-50/60 dark:bg-slate-900/40 relative group/sidebar no-print"
             style={{ width: `${sidebarWidth}px` }}
           >
             {/* Note details card */}
@@ -6184,9 +6191,9 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         )}
 
         {/* Content Pane with Eye-Care Paper Document Canvas */}
-        <div className={`flex-1 flex flex-col ${isA4Mode ? 'bg-[#cbd5e1] dark:bg-[#030712]' : 'bg-[#f2f4f7] dark:bg-[#0b0f19]'} overflow-hidden relative transition-colors`}>
+        <div className={`note-editor-content-pane flex-1 flex flex-col ${isA4Mode ? 'bg-[#cbd5e1] dark:bg-[#030712]' : 'bg-[#f2f4f7] dark:bg-[#0b0f19]'} overflow-hidden relative transition-colors`}>
           
-          <div ref={scrollContainerRef} className="flex-1 overflow-y-auto no-scrollbar relative px-2 sm:px-4 md:px-8 py-3 md:py-6">
+          <div ref={scrollContainerRef} className="note-editor-scroll-container flex-1 overflow-y-auto no-scrollbar relative px-2 sm:px-4 md:px-8 py-3 md:py-6">
             
             {/* ✏️ Premium OneNote / Apple Notes Floating Inking Toolbar */}
             <AnimatePresence>
@@ -6195,7 +6202,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                   initial={{ opacity: 0, y: -20, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                  className="sticky top-2 z-50 mx-auto w-fit max-w-[95%] mb-4 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-purple-300 dark:border-purple-800 shadow-2xl shadow-purple-500/15 rounded-2xl p-2 flex flex-wrap items-center gap-1.5 sm:gap-2 select-none"
+                  className="glick-floating-inking-bar no-print sticky top-2 z-50 mx-auto w-fit max-w-[95%] mb-4 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-purple-300 dark:border-purple-800 shadow-2xl shadow-purple-500/15 rounded-2xl p-2 flex flex-wrap items-center gap-1.5 sm:gap-2 select-none"
                 >
                   {/* Tool Selector */}
                   <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
@@ -6347,10 +6354,15 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
             </AnimatePresence>
 
             {/* Eye-Care Warm Paper Document Sheet */}
-            <div className={`${isA4Mode ? 'a4-page-mode' : 'max-w-4xl mx-auto bg-[#fafbfc] dark:bg-[#111726] rounded-2xl md:rounded-3xl border border-slate-200/70 dark:border-slate-800/80 shadow-[0_2px_16px_rgba(15,23,42,0.03)] p-5 sm:p-8 md:p-12 min-h-[calc(100vh-140px)]'} transition-all`}>
+            <div className={`note-paper-sheet ${isA4Mode ? 'a4-page-mode' : 'max-w-4xl mx-auto bg-[#fafbfc] dark:bg-[#111726] rounded-2xl md:rounded-3xl border border-slate-200/70 dark:border-slate-800/80 shadow-[0_2px_16px_rgba(15,23,42,0.03)] p-5 sm:p-8 md:p-12 min-h-[calc(100vh-140px)]'} transition-all`}>
               
+              {/* Clean print title */}
+              <h1 className="note-print-title hidden font-black text-3xl pb-2 mb-4 border-b-2 border-slate-300 text-slate-900">
+                {title || 'Untitled Note'}
+              </h1>
+
               {/* Inline Title input (Prominent on document sheet with max length limit) */}
-              <div className="w-full pb-3 mb-4 border-b border-slate-200/60 dark:border-slate-800/80">
+              <div className="note-screen-title w-full pb-3 mb-4 border-b border-slate-200/60 dark:border-slate-800/80">
                 <div className="flex items-center justify-between gap-3">
                   <input
                     type="text"
