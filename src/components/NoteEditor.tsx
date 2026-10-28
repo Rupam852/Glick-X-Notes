@@ -522,6 +522,87 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     });
   };
 
+  // Helper to upgrade older notes' snippets, callouts, and toggles with delete & copy buttons
+  const upgradeLegacyBlocks = (root: HTMLElement) => {
+    try {
+      // 1. Upgrade legacy code blocks
+      const legacyPres = root.querySelectorAll('pre.glick-code-block, pre');
+      legacyPres.forEach((pre) => {
+        if (!pre.closest('.glick-code-container')) {
+          const wrapper = document.createElement('div');
+          wrapper.className = 'glick-block-wrapper glick-code-container';
+          wrapper.setAttribute('style', 'margin: 12px 0; border-radius: 12px; overflow: hidden; border: 1px solid #334155; background: #0f172a;');
+          
+          const header = document.createElement('div');
+          header.setAttribute('style', 'display: flex; align-items: center; justify-content: space-between; padding: 6px 12px; background: #1e293b; border-bottom: 1px solid #334155; user-select: none;');
+          header.setAttribute('contenteditable', 'false');
+          header.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444; display: inline-block;"></span>
+              <span style="width: 10px; height: 10px; border-radius: 50%; background: #f59e0b; display: inline-block;"></span>
+              <span style="width: 10px; height: 10px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
+              <span style="font-family: monospace; font-size: 11px; font-weight: 700; color: #94a3b8; margin-left: 6px;">CODE</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <button type="button" data-action="copy-code" title="Copy code" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #cbd5e1; font-size: 11px; padding: 2px 8px; border-radius: 6px; cursor: pointer;">📋 Copy</button>
+              <button type="button" data-action="delete-block" title="Delete code block" style="background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; font-size: 11px; padding: 2px 8px; border-radius: 6px; cursor: pointer;">✕ Delete</button>
+            </div>
+          `;
+          pre.parentNode?.insertBefore(wrapper, pre);
+          wrapper.appendChild(header);
+          wrapper.appendChild(pre);
+        }
+      });
+
+      // 2. Upgrade legacy callouts without delete button
+      const callouts = root.querySelectorAll('.glick-callout');
+      callouts.forEach((callout) => {
+        callout.classList.add('glick-block-wrapper');
+        if (!callout.querySelector('[data-action="delete-block"]')) {
+          const strong = callout.querySelector('strong');
+          if (strong && strong.parentElement) {
+            const headerDiv = document.createElement('div');
+            headerDiv.setAttribute('style', 'display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;');
+            headerDiv.setAttribute('contenteditable', 'false');
+            
+            const deleteBtn = document.createElement('button');
+            deleteBtn.type = 'button';
+            deleteBtn.setAttribute('data-action', 'delete-block');
+            deleteBtn.title = 'Delete Callout';
+            deleteBtn.setAttribute('style', 'background: transparent; border: none; cursor: pointer; color: #94a3b8; padding: 2px 6px; border-radius: 6px; font-size: 14px; line-height: 1; user-select: none;');
+            deleteBtn.textContent = '✕';
+            
+            strong.parentElement.insertBefore(headerDiv, strong);
+            headerDiv.appendChild(strong);
+            headerDiv.appendChild(deleteBtn);
+          }
+        }
+      });
+
+      // 3. Upgrade legacy toggles without delete button
+      const toggles = root.querySelectorAll('details.glick-toggle, details');
+      toggles.forEach((details) => {
+        details.classList.add('glick-block-wrapper');
+        if (!details.querySelector('[data-action="delete-block"]')) {
+          const summary = details.querySelector('summary');
+          if (summary) {
+            summary.setAttribute('style', 'font-weight: 700; font-size: 14px; cursor: pointer; outline: none; color: #4f46e5; display: flex; align-items: center; justify-content: space-between;');
+            const deleteBtn = document.createElement('button');
+            deleteBtn.type = 'button';
+            deleteBtn.setAttribute('data-action', 'delete-block');
+            deleteBtn.title = 'Delete toggle section';
+            deleteBtn.setAttribute('contenteditable', 'false');
+            deleteBtn.setAttribute('style', 'background: transparent; border: none; cursor: pointer; color: #94a3b8; padding: 2px 6px; border-radius: 6px; font-size: 14px; line-height: 1; user-select: none; margin-left: 8px;');
+            deleteBtn.textContent = '✕';
+            summary.appendChild(deleteBtn);
+          }
+        }
+      });
+    } catch (e) {
+      console.warn('Block upgrade notice:', e);
+    }
+  };
+
   // Sync state when note prop changes from parent (e.g. switching notes)
   useEffect(() => {
     const targetNoteId = note?.id || null;
@@ -553,6 +634,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
 
       if (contentRef.current) {
         contentRef.current.innerHTML = note?.body || '';
+        upgradeLegacyBlocks(contentRef.current);
       }
 
       // Always reset scroll to the very top so title and note header are cleanly visible

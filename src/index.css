@@ -198,3 +198,53 @@ html.dark ::-webkit-scrollbar-thumb {
   background: rgba(99, 102, 241, 0.5);
 }
 
+/* 🎯 Subtle Action Buttons: Cancel (✕) and Copy buttons only reveal on hover or cursor focus */
+.glick-block-wrapper [data-action="delete-block"],
+.glick-callout [data-action="delete-block"],
+.glick-toggle [data-action="delete-block"],
+.glick-code-container [data-action="delete-block"],
+.glick-code-container [data-action="copy-code"] {
+  opacity: 0 !important;
+  visibility: hidden;
+  transform: scale(0.92);
+  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.2s;
+}
+
+/* When mouse hovers over snippet OR when cursor/selection is focused inside snippet */
+.glick-block-wrapper:hover [data-action="delete-block"],
+.glick-block-wrapper:focus-within [data-action="delete-block"],
+.glick-callout:hover [data-action="delete-block"],
+.glick-callout:focus-within [data-action="delete-block"],
+.glick-toggle:hover [data-action="delete-block"],
+.glick-toggle:focus-within [data-action="delete-block"],
+.glick-code-container:hover [data-action="delete-block"],
+.glick-code-container:focus-within [data-action="delete-block"],
+.glick-code-container:hover [data-action="copy-code"],
+.glick-code-container:focus-within [data-action="copy-code"] {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: scale(1) !important;
+}
+
+/* Hover state enhancement for the delete (✕) button */
+[data-action="delete-block"]:hover {
+  background-color: rgba(239, 68, 68, 0.15) !important;
+  color: #ef4444 !important;
+}
+
+/* On mobile / touch devices where hover does not exist, reveal whenever focused */
+@media (hover: none) {
+  .glick-block-wrapper [data-action="delete-block"],
+  .glick-code-container [data-action="delete-block"],
+  .glick-code-container [data-action="copy-code"] {
+    opacity: 0.5 !important;
+    visibility: visible !important;
+  }
+  .glick-block-wrapper:focus-within [data-action="delete-block"],
+  .glick-code-container:focus-within [data-action="delete-block"],
+  .glick-code-container:focus-within [data-action="copy-code"] {
+    opacity: 1 !important;
+  }
+}
+
+
