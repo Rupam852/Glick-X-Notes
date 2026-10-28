@@ -804,7 +804,12 @@ details.glick-toggle[open] > summary .glick-toggle-arrow {
   background-color: #0d131f !important;
 }
 
+/* 📱 Mobile Inking & Viewport Fit: Prevent any horizontal overflow */
+.note-editor-scroll-container {
+  overflow-x: hidden !important;
+  max-width: 100vw;
+}
 
-
-
-
+.glick-floating-inking-bar {
+  max-width: calc(100vw - 16px) !important;
+}

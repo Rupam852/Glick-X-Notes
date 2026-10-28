@@ -7149,7 +7149,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         {/* Content Pane with Eye-Care Paper Document Canvas */}
         <div className={`note-editor-content-pane flex-1 flex flex-col ${isA4Mode ? 'bg-[#cbd5e1] dark:bg-[#030712]' : 'bg-[#f2f4f7] dark:bg-[#0b0f19]'} overflow-hidden relative transition-colors`}>
           
-          <div ref={scrollContainerRef} className="note-editor-scroll-container flex-1 overflow-y-auto no-scrollbar relative px-2 sm:px-4 md:px-8 py-3 md:py-6">
+          <div ref={scrollContainerRef} className="note-editor-scroll-container flex-1 overflow-y-auto overflow-x-hidden no-scrollbar relative px-2 sm:px-4 md:px-8 py-3 md:py-6">
             
             {/* ✏️ Premium OneNote / Apple Notes Floating Inking Toolbar */}
             <AnimatePresence>
@@ -7158,233 +7158,269 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className="glick-floating-inking-bar no-print sticky top-2 z-50 mx-auto w-fit max-w-[98%] mb-4 bg-white dark:bg-slate-900 border border-purple-300 dark:border-purple-800 shadow-2xl shadow-purple-500/15 rounded-2xl p-1 sm:p-1.5 flex flex-nowrap items-center gap-1 select-none"
+                  className="glick-floating-inking-bar no-print sticky top-2 z-50 mx-auto w-fit max-w-[calc(100vw-16px)] mb-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-purple-300/80 dark:border-purple-800/80 shadow-2xl shadow-purple-500/15 rounded-2xl p-1 sm:p-1.5 flex flex-col md:flex-row items-center gap-1 md:gap-1.5 select-none"
                   style={{ overflow: 'visible' }}
                 >
-                  {/* Tool Selector */}
-                  <div className="flex items-center gap-0.5 sm:gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 sm:p-1 rounded-xl shrink-0" style={{ overflow: 'visible' }}>
-                    {/* Select / Move / Resize Tool */}
-                    <button
-                      type="button"
-                      onClick={() => { setInkTool('select'); setShowInkShapeMenu(false); }}
-                      className={`px-2 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold transition cursor-pointer shrink-0 ${
-                        inkTool === 'select'
-                          ? 'bg-purple-600 text-white shadow-xs'
-                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                      }`}
-                      title="Select Tool (Click to select, drag to move, drag handles to resize)"
-                    >
-                      <MousePointer className="w-3.5 h-3.5 shrink-0" />
-                      {inkTool === 'select' && <span>Select</span>}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => { setInkTool('pen'); setShowInkShapeMenu(false); }}
-                      className={`px-2 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold transition cursor-pointer shrink-0 ${
-                        inkTool === 'pen'
-                          ? 'bg-purple-600 text-white shadow-xs'
-                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                      }`}
-                      title="Pen Tool (Crisp solid ink)"
-                    >
-                      <Pencil className="w-3.5 h-3.5 shrink-0" />
-                      {inkTool === 'pen' && <span>Pen</span>}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => { setInkTool('highlighter'); setShowInkShapeMenu(false); }}
-                      className={`px-2 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold transition cursor-pointer shrink-0 ${
-                        inkTool === 'highlighter'
-                          ? 'bg-amber-400 text-slate-900 shadow-xs'
-                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                      }`}
-                      title="Highlighter Tool (Fluorescent transparent highlight)"
-                    >
-                      <Highlighter className="w-3.5 h-3.5 shrink-0" />
-                      {inkTool === 'highlighter' && <span>Highlight</span>}
-                    </button>
-
-                    {/* Text Tool */}
-                    <button
-                      type="button"
-                      onClick={() => { setInkTool('text'); setShowInkShapeMenu(false); }}
-                      className={`px-2 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold transition cursor-pointer shrink-0 ${
-                        inkTool === 'text'
-                          ? 'bg-purple-600 text-white shadow-xs'
-                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                      }`}
-                      title="Text Tool (Click anywhere on note to add editable text)"
-                    >
-                      <Type className="w-3.5 h-3.5 shrink-0" />
-                      {inkTool === 'text' && <span>Text</span>}
-                    </button>
-
-                    {/* Categorized Shapes Dropdown Selector */}
-                    <div className="glick-ink-shapes-dropdown-container relative shrink-0" style={{ overflow: 'visible' }}>
+                  {/* Row 1 on Mobile / Left Group on Desktop: Tools + Mobile Undo/Done */}
+                  <div className="flex items-center gap-1 w-full md:w-auto justify-between md:justify-start" style={{ overflow: 'visible' }}>
+                    {/* Tool Selector */}
+                    <div className="flex items-center gap-0.5 sm:gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 sm:p-1 rounded-xl shrink-0" style={{ overflow: 'visible' }}>
+                      {/* Select / Move / Resize Tool */}
                       <button
                         type="button"
-                        onClick={() => setShowInkShapeMenu(prev => !prev)}
-                        className={`px-2 py-1.5 rounded-lg flex items-center gap-1 text-xs font-bold transition cursor-pointer ${
-                          isInkShapeTool(inkTool)
+                        onClick={() => { setInkTool('select'); setShowInkShapeMenu(false); }}
+                        className={`px-2 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold transition cursor-pointer shrink-0 ${
+                          inkTool === 'select'
                             ? 'bg-purple-600 text-white shadow-xs'
                             : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                         }`}
-                        title="Draw Shapes (Lines, Arrows, Rectangles, Circle, Triangle, Star, Heart, Cloud, Speech Bubble)"
+                        title="Select Tool (Click to select, drag to move, drag handles to resize)"
                       >
-                        <Shapes className="w-3.5 h-3.5 shrink-0" />
-                        {isInkShapeTool(inkTool) && (
-                          <span>
-                            {inkTool === 'line' ? 'Line' :
-                             inkTool === 'arrow' ? 'Arrow' :
-                             inkTool === 'doubleArrow' ? '2-Way' :
-                             inkTool === 'rect' ? 'Box' :
-                             inkTool === 'roundedRect' ? 'Round' :
-                             inkTool === 'circle' ? 'Circle' :
-                             inkTool === 'triangle' ? 'Triangle' :
-                             inkTool === 'diamond' ? 'Diamond' :
-                             inkTool === 'parallelogram' ? 'Skew' :
-                             inkTool === 'star' ? 'Star' :
-                             inkTool === 'heart' ? 'Heart' :
-                             inkTool === 'cloud' ? 'Cloud' :
-                             inkTool === 'calloutRect' ? 'Callout' :
-                             inkTool === 'calloutRounded' ? 'Cloud Callout' : 'Shapes'}
-                          </span>
-                        )}
-                        <ChevronDown className="w-3 h-3 opacity-70 shrink-0" />
+                        <MousePointer className="w-3.5 h-3.5 shrink-0" />
+                        {inkTool === 'select' && <span className="hidden sm:inline">Select</span>}
                       </button>
 
-                      {showInkShapeMenu && (
-                        <div 
-                          onPointerDown={(e) => e.stopPropagation()}
-                          className="absolute top-full left-0 mt-2 p-2 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col gap-2 z-[100] min-w-[210px] animate-in fade-in slide-in-from-top-1 duration-150 max-h-[380px] overflow-y-auto no-scrollbar"
-                          style={{ boxShadow: '0 20px 40px -10px rgba(0,0,0,0.3), 0 0 0 1px rgba(0,0,0,0.1)' }}
+                      <button
+                        type="button"
+                        onClick={() => { setInkTool('pen'); setShowInkShapeMenu(false); }}
+                        className={`px-2 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold transition cursor-pointer shrink-0 ${
+                          inkTool === 'pen'
+                            ? 'bg-purple-600 text-white shadow-xs'
+                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                        }`}
+                        title="Pen Tool (Crisp solid ink)"
+                      >
+                        <Pencil className="w-3.5 h-3.5 shrink-0" />
+                        {inkTool === 'pen' && <span className="hidden sm:inline">Pen</span>}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => { setInkTool('highlighter'); setShowInkShapeMenu(false); }}
+                        className={`px-2 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold transition cursor-pointer shrink-0 ${
+                          inkTool === 'highlighter'
+                            ? 'bg-amber-400 text-slate-900 shadow-xs'
+                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                        }`}
+                        title="Highlighter Tool (Fluorescent transparent highlight)"
+                      >
+                        <Highlighter className="w-3.5 h-3.5 shrink-0" />
+                        {inkTool === 'highlighter' && <span className="hidden sm:inline">Highlight</span>}
+                      </button>
+
+                      {/* Text Tool */}
+                      <button
+                        type="button"
+                        onClick={() => { setInkTool('text'); setShowInkShapeMenu(false); }}
+                        className={`px-2 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold transition cursor-pointer shrink-0 ${
+                          inkTool === 'text'
+                            ? 'bg-purple-600 text-white shadow-xs'
+                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                        }`}
+                        title="Text Tool (Click anywhere on note to add editable text)"
+                      >
+                        <Type className="w-3.5 h-3.5 shrink-0" />
+                        {inkTool === 'text' && <span className="hidden sm:inline">Text</span>}
+                      </button>
+
+                      {/* Categorized Shapes Dropdown Selector */}
+                      <div className="glick-ink-shapes-dropdown-container relative shrink-0" style={{ overflow: 'visible' }}>
+                        <button
+                          type="button"
+                          onClick={() => setShowInkShapeMenu(prev => !prev)}
+                          className={`px-2 py-1.5 rounded-lg flex items-center gap-1 text-xs font-bold transition cursor-pointer ${
+                            isInkShapeTool(inkTool)
+                              ? 'bg-purple-600 text-white shadow-xs'
+                              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                          }`}
+                          title="Draw Shapes (Lines, Arrows, Rectangles, Circle, Triangle, Star, Heart, Cloud, Speech Bubble)"
                         >
-                          {/* Lines & Arrows */}
-                          <div>
-                            <p className="px-2 py-0.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Lines & Connectors</p>
-                            <div className="flex flex-col gap-0.5 mt-0.5">
-                              {[
-                                { id: 'line', label: 'Line', icon: Minus },
-                                { id: 'arrow', label: 'Single Arrow', icon: ArrowRight },
-                                { id: 'doubleArrow', label: 'Double Arrow', icon: ArrowLeftRight },
-                              ].map(sh => {
-                                const IconComponent = sh.icon;
-                                return (
-                                  <button
-                                    key={sh.id}
-                                    type="button"
-                                    onClick={() => {
-                                      setInkTool(sh.id as InkToolType);
-                                      setShowInkShapeMenu(false);
-                                    }}
-                                    className={`flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium rounded-lg text-left transition cursor-pointer ${
-                                      inkTool === sh.id
-                                        ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300 font-bold'
-                                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                                    }`}
-                                  >
-                                    <IconComponent className="w-3.5 h-3.5 shrink-0" />
-                                    <span>{sh.label}</span>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
+                          <Shapes className="w-3.5 h-3.5 shrink-0" />
+                          {isInkShapeTool(inkTool) && (
+                            <span className="hidden sm:inline">
+                              {inkTool === 'line' ? 'Line' :
+                               inkTool === 'arrow' ? 'Arrow' :
+                               inkTool === 'doubleArrow' ? '2-Way' :
+                               inkTool === 'rect' ? 'Box' :
+                               inkTool === 'roundedRect' ? 'Round' :
+                               inkTool === 'circle' ? 'Circle' :
+                               inkTool === 'triangle' ? 'Triangle' :
+                               inkTool === 'diamond' ? 'Diamond' :
+                               inkTool === 'parallelogram' ? 'Skew' :
+                               inkTool === 'star' ? 'Star' :
+                               inkTool === 'heart' ? 'Heart' :
+                               inkTool === 'cloud' ? 'Cloud' :
+                               inkTool === 'calloutRect' ? 'Callout' :
+                               inkTool === 'calloutRounded' ? 'Cloud Callout' : 'Shapes'}
+                            </span>
+                          )}
+                          <ChevronDown className="w-3 h-3 opacity-70 shrink-0" />
+                        </button>
 
-                          {/* Basic Geometric */}
-                          <div className="pt-1 border-t border-slate-100 dark:border-slate-800">
-                            <p className="px-2 py-0.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Basic Shapes</p>
-                            <div className="flex flex-col gap-0.5 mt-0.5">
-                              {[
-                                { id: 'rect', label: 'Rectangle', icon: Square },
-                                { id: 'roundedRect', label: 'Rounded Box', icon: Square },
-                                { id: 'circle', label: 'Circle / Oval', icon: Circle },
-                                { id: 'triangle', label: 'Triangle', icon: Triangle },
-                                { id: 'diamond', label: 'Diamond', icon: GitFork },
-                                { id: 'parallelogram', label: 'Parallelogram', icon: Square },
-                              ].map(sh => {
-                                const IconComponent = sh.icon;
-                                return (
-                                  <button
-                                    key={sh.id}
-                                    type="button"
-                                    onClick={() => {
-                                      setInkTool(sh.id as InkToolType);
-                                      setShowInkShapeMenu(false);
-                                    }}
-                                    className={`flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium rounded-lg text-left transition cursor-pointer ${
-                                      inkTool === sh.id
-                                        ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300 font-bold'
-                                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                                    }`}
-                                  >
-                                    <IconComponent className="w-3.5 h-3.5 shrink-0" />
-                                    <span>{sh.label}</span>
-                                  </button>
-                                );
-                              })}
+                        {showInkShapeMenu && (
+                          <div 
+                            onPointerDown={(e) => e.stopPropagation()}
+                            className="absolute top-full left-0 mt-2 p-2 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col gap-2 z-[100] min-w-[210px] animate-in fade-in slide-in-from-top-1 duration-150 max-h-[380px] overflow-y-auto no-scrollbar"
+                            style={{ boxShadow: '0 20px 40px -10px rgba(0,0,0,0.3), 0 0 0 1px rgba(0,0,0,0.1)' }}
+                          >
+                            {/* Lines & Arrows */}
+                            <div>
+                              <p className="px-2 py-0.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Lines & Connectors</p>
+                              <div className="flex flex-col gap-0.5 mt-0.5">
+                                {[
+                                  { id: 'line', label: 'Line', icon: Minus },
+                                  { id: 'arrow', label: 'Single Arrow', icon: ArrowRight },
+                                  { id: 'doubleArrow', label: 'Double Arrow', icon: ArrowLeftRight },
+                                ].map(sh => {
+                                  const IconComponent = sh.icon;
+                                  return (
+                                    <button
+                                      key={sh.id}
+                                      type="button"
+                                      onClick={() => {
+                                        setInkTool(sh.id as InkToolType);
+                                        setShowInkShapeMenu(false);
+                                      }}
+                                      className={`flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium rounded-lg text-left transition cursor-pointer ${
+                                        inkTool === sh.id
+                                          ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300 font-bold'
+                                          : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                                      }`}
+                                    >
+                                      <IconComponent className="w-3.5 h-3.5 shrink-0" />
+                                      <span>{sh.label}</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
                             </div>
-                          </div>
 
-                          {/* Badges & Callouts */}
-                          <div className="pt-1 border-t border-slate-100 dark:border-slate-800">
-                            <p className="px-2 py-0.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Symbols & Callouts</p>
-                            <div className="flex flex-col gap-0.5 mt-0.5">
-                              {[
-                                { id: 'star', label: 'Star', icon: Star },
-                                { id: 'heart', label: 'Heart', icon: Heart },
-                                { id: 'cloud', label: 'Cloud', icon: Cloud },
-                                { id: 'calloutRect', label: 'Square Callout', icon: MessageSquare },
-                                { id: 'calloutRounded', label: 'Rounded Callout', icon: Cloud },
-                              ].map(sh => {
-                                const IconComponent = sh.icon;
-                                return (
-                                  <button
-                                    key={sh.id}
-                                    type="button"
-                                    onClick={() => {
-                                      setInkTool(sh.id as InkToolType);
-                                      setShowInkShapeMenu(false);
-                                    }}
-                                    className={`flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium rounded-lg text-left transition cursor-pointer ${
-                                      inkTool === sh.id
-                                        ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300 font-bold'
-                                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                                    }`}
-                                  >
-                                    <IconComponent className="w-3.5 h-3.5 shrink-0" />
-                                    <span>{sh.label}</span>
-                                  </button>
-                                );
-                              })}
+                            {/* Basic Geometric */}
+                            <div className="pt-1 border-t border-slate-100 dark:border-slate-800">
+                              <p className="px-2 py-0.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Basic Shapes</p>
+                              <div className="flex flex-col gap-0.5 mt-0.5">
+                                {[
+                                  { id: 'rect', label: 'Rectangle', icon: Square },
+                                  { id: 'roundedRect', label: 'Rounded Box', icon: Square },
+                                  { id: 'circle', label: 'Circle / Oval', icon: Circle },
+                                  { id: 'triangle', label: 'Triangle', icon: Triangle },
+                                  { id: 'diamond', label: 'Diamond', icon: GitFork },
+                                  { id: 'parallelogram', label: 'Parallelogram', icon: Square },
+                                ].map(sh => {
+                                  const IconComponent = sh.icon;
+                                  return (
+                                    <button
+                                      key={sh.id}
+                                      type="button"
+                                      onClick={() => {
+                                        setInkTool(sh.id as InkToolType);
+                                        setShowInkShapeMenu(false);
+                                      }}
+                                      className={`flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium rounded-lg text-left transition cursor-pointer ${
+                                        inkTool === sh.id
+                                          ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300 font-bold'
+                                          : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                                      }`}
+                                    >
+                                      <IconComponent className="w-3.5 h-3.5 shrink-0" />
+                                      <span>{sh.label}</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+
+                            {/* Badges & Callouts */}
+                            <div className="pt-1 border-t border-slate-100 dark:border-slate-800">
+                              <p className="px-2 py-0.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Symbols & Callouts</p>
+                              <div className="flex flex-col gap-0.5 mt-0.5">
+                                {[
+                                  { id: 'star', label: 'Star', icon: Star },
+                                  { id: 'heart', label: 'Heart', icon: Heart },
+                                  { id: 'cloud', label: 'Cloud', icon: Cloud },
+                                  { id: 'calloutRect', label: 'Square Callout', icon: MessageSquare },
+                                  { id: 'calloutRounded', label: 'Rounded Callout', icon: Cloud },
+                                ].map(sh => {
+                                  const IconComponent = sh.icon;
+                                  return (
+                                    <button
+                                      key={sh.id}
+                                      type="button"
+                                      onClick={() => {
+                                        setInkTool(sh.id as InkToolType);
+                                        setShowInkShapeMenu(false);
+                                      }}
+                                      className={`flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium rounded-lg text-left transition cursor-pointer ${
+                                        inkTool === sh.id
+                                          ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300 font-bold'
+                                          : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                                      }`}
+                                    >
+                                      <IconComponent className="w-3.5 h-3.5 shrink-0" />
+                                      <span>{sh.label}</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      )}
+                        )}
+                      </div>
+
+                      {/* Realistic Eraser Tool Button */}
+                      <button
+                        type="button"
+                        onClick={() => { setInkTool('eraser'); setShowInkShapeMenu(false); }}
+                        className={`px-2 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold transition cursor-pointer shrink-0 ${
+                          inkTool === 'eraser'
+                            ? 'bg-rose-500 text-white shadow-xs'
+                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                        }`}
+                        title="Realistic Eraser Tool (Touch any stroke or shape to erase with round ring cursor)"
+                      >
+                        <Eraser className="w-3.5 h-3.5 shrink-0" />
+                        {inkTool === 'eraser' && <span className="hidden sm:inline">Eraser</span>}
+                      </button>
                     </div>
 
-                    {/* Realistic Eraser Tool Button */}
-                    <button
-                      type="button"
-                      onClick={() => { setInkTool('eraser'); setShowInkShapeMenu(false); }}
-                      className={`px-2 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold transition cursor-pointer shrink-0 ${
-                        inkTool === 'eraser'
-                          ? 'bg-rose-500 text-white shadow-xs'
-                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                      }`}
-                      title="Realistic Eraser Tool (Touch any stroke or shape to erase with round ring cursor)"
-                    >
-                      <Eraser className="w-3.5 h-3.5 shrink-0" />
-                      {inkTool === 'eraser' && <span>Eraser</span>}
-                    </button>
+                    {/* Mobile Only: Undo, Redo & Done right next to tools */}
+                    <div className="flex md:hidden items-center gap-1 shrink-0">
+                      <div className="flex items-center gap-0.5 shrink-0">
+                        <button
+                          type="button"
+                          disabled={inkHistoryIndex <= 0}
+                          onClick={handleInkUndo}
+                          className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-30 transition cursor-pointer"
+                          title="Undo stroke (Ctrl+Z)"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={inkHistoryIndex >= inkHistory.length - 1}
+                          onClick={handleInkRedo}
+                          className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-30 transition cursor-pointer"
+                          title="Redo stroke"
+                        >
+                          <RotateCw className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={toggleInkingMode}
+                        className="px-2.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center gap-1 shadow-md shadow-purple-500/20 transition cursor-pointer"
+                        title="Done drawing - Return to text typing"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Done</span>
+                      </button>
+                    </div>
                   </div>
 
-                  {/* Realistic Eraser Size Selector */}
-                  {inkTool === 'eraser' && (
-                    <>
-                      <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-0.5 shrink-0" />
+                  {/* Row 2 on Mobile / Right Group on Desktop: Colors, Width, Eraser Size, Clear, and Desktop Done */}
+                  <div className="flex items-center gap-1 w-full md:w-auto justify-center md:justify-start pt-1 md:pt-0 border-t md:border-t-0 border-slate-150 dark:border-slate-800">
+                    {/* Realistic Eraser Size Selector */}
+                    {inkTool === 'eraser' && (
                       <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl shrink-0">
                         <span className="text-[10px] font-bold text-slate-500 uppercase px-1">Size</span>
                         {[
@@ -7408,163 +7444,142 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                           </button>
                         ))}
                       </div>
-                    </>
-                  )}
+                    )}
 
-                  {/* Colors */}
-                  {inkTool !== 'eraser' && (
-                    <>
-                      <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-0.5 shrink-0" />
-                      <div className="flex items-center gap-1 shrink-0">
-                        {[
-                          { name: 'Dark Slate', value: '#0f172a' },
-                          { name: 'Indigo', value: '#6366f1' },
-                          { name: 'Crimson', value: '#ef4444' },
-                          { name: 'Emerald', value: '#10b981' },
-                          { name: 'Amber', value: '#f59e0b' },
-                          { name: 'Purple', value: '#8b5cf6' },
-                          { name: 'Pink', value: '#ec4899' },
-                          { name: 'Sky Blue', value: '#0ea5e9' }
-                        ].map(c => (
+                    {/* Colors */}
+                    {inkTool !== 'eraser' && (
+                      <>
+                        <div className="hidden md:block w-px h-5 bg-slate-200 dark:bg-slate-700 mx-0.5 shrink-0" />
+                        <div className="flex items-center gap-1 shrink-0">
+                          {[
+                            { name: 'Dark Slate', value: '#0f172a' },
+                            { name: 'Indigo', value: '#6366f1' },
+                            { name: 'Crimson', value: '#ef4444' },
+                            { name: 'Emerald', value: '#10b981' },
+                            { name: 'Amber', value: '#f59e0b' },
+                            { name: 'Purple', value: '#8b5cf6' },
+                            { name: 'Pink', value: '#ec4899' },
+                            { name: 'Sky Blue', value: '#0ea5e9' }
+                          ].map(c => (
+                            <button
+                              key={c.value}
+                              type="button"
+                              onClick={() => {
+                                setInkColor(c.value);
+                                if (selectedInkStrokeId) {
+                                  setInkStrokes(prev => prev.map(s => s.id === selectedInkStrokeId ? { ...s, color: c.value } : s));
+                                  renderInkCanvas();
+                                }
+                              }}
+                              className={`w-4 h-4 rounded-full border border-black/15 transition-transform hover:scale-125 cursor-pointer shrink-0 ${
+                                inkColor === c.value ? 'ring-2 ring-purple-500 scale-110' : ''
+                              }`}
+                              style={{ backgroundColor: c.value }}
+                              title={c.name}
+                            />
+                          ))}
+                        </div>
+                      </>
+                    )}
+
+                    {/* Stroke Width */}
+                    {inkTool !== 'eraser' && (
+                      <>
+                        <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-0.5 shrink-0" />
+                        <div className="flex items-center gap-0.5 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl shrink-0">
+                          {[
+                            { label: 'Fine', w: 2, dotClass: 'w-1 h-1' },
+                            { label: 'Medium', w: 4, dotClass: 'w-2 h-2' },
+                            { label: 'Bold', w: 7, dotClass: 'w-3 h-3' }
+                          ].map(t => (
+                            <button
+                              key={t.w}
+                              type="button"
+                              onClick={() => {
+                                setInkWidth(t.w);
+                                if (selectedInkStrokeId) {
+                                  setInkStrokes(prev => prev.map(s => s.id === selectedInkStrokeId ? { ...s, width: t.w } : s));
+                                  renderInkCanvas();
+                                }
+                              }}
+                              className={`w-6 h-6 flex items-center justify-center rounded-lg transition cursor-pointer shrink-0 ${
+                                inkWidth === t.w
+                                  ? 'bg-white dark:bg-slate-700 text-purple-600 dark:text-purple-400 shadow-xs'
+                                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                              }`}
+                              title={`${t.label} stroke thickness (${t.w}px)`}
+                            >
+                              <span className={`rounded-full bg-current ${t.dotClass}`} />
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+
+                    {/* Selected Shape Quick Action Bar */}
+                    {selectedInkStrokeId && (
+                      <>
+                        <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-0.5 shrink-0" />
+                        <div className="flex items-center gap-0.5 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 p-0.5 rounded-xl shrink-0">
                           <button
-                            key={c.value}
                             type="button"
                             onClick={() => {
-                              setInkColor(c.value);
-                              if (selectedInkStrokeId) {
-                                setInkStrokes(prev => prev.map(s => s.id === selectedInkStrokeId ? { ...s, color: c.value } : s));
+                              const target = inkStrokes.find(s => s.id === selectedInkStrokeId);
+                              if (target) {
+                                const dup: InkStroke = {
+                                  ...JSON.parse(JSON.stringify(target)),
+                                  id: `stroke-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+                                  shapeStart: target.shapeStart ? { x: target.shapeStart.x + 24, y: target.shapeStart.y + 24 } : undefined,
+                                  shapeEnd: target.shapeEnd ? { x: target.shapeEnd.x + 24, y: target.shapeEnd.y + 24 } : undefined,
+                                  points: target.points.map(p => ({ x: p.x + 24, y: p.y + 24 }))
+                                };
+                                const nextStrokes = [...inkStrokes, dup];
+                                setInkStrokes(nextStrokes);
+                                setSelectedInkStrokeId(dup.id);
+                                const nextHist = [...inkHistory.slice(0, inkHistoryIndex + 1), nextStrokes];
+                                setInkHistory(nextHist);
+                                setInkHistoryIndex(nextHist.length - 1);
                                 renderInkCanvas();
                               }
                             }}
-                            className={`w-4 h-4 rounded-full border border-black/15 transition-transform hover:scale-125 cursor-pointer shrink-0 ${
-                              inkColor === c.value ? 'ring-2 ring-purple-500 scale-110' : ''
-                            }`}
-                            style={{ backgroundColor: c.value }}
-                            title={c.name}
-                          />
-                        ))}
-                      </div>
-                    </>
-                  )}
-
-                  {/* Stroke Width */}
-                  {inkTool !== 'eraser' && (
-                    <>
-                      <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-0.5 shrink-0" />
-                      <div className="flex items-center gap-0.5 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl shrink-0">
-                        {[
-                          { label: 'Fine', w: 2, dotClass: 'w-1 h-1' },
-                          { label: 'Medium', w: 4, dotClass: 'w-2 h-2' },
-                          { label: 'Bold', w: 7, dotClass: 'w-3 h-3' }
-                        ].map(t => (
-                          <button
-                            key={t.w}
-                            type="button"
-                            onClick={() => {
-                              setInkWidth(t.w);
-                              if (selectedInkStrokeId) {
-                                setInkStrokes(prev => prev.map(s => s.id === selectedInkStrokeId ? { ...s, width: t.w } : s));
-                                renderInkCanvas();
-                              }
-                            }}
-                            className={`w-6 h-6 flex items-center justify-center rounded-lg transition cursor-pointer shrink-0 ${
-                              inkWidth === t.w
-                                ? 'bg-white dark:bg-slate-700 text-purple-600 dark:text-purple-400 shadow-xs'
-                                : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-                            }`}
-                            title={`${t.label} stroke thickness (${t.w}px)`}
+                            className="p-1.5 text-slate-600 dark:text-slate-300 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-white dark:hover:bg-slate-800 rounded-lg transition cursor-pointer"
+                            title="Duplicate shape (Ctrl+D)"
                           >
-                            <span className={`rounded-full bg-current ${t.dotClass}`} />
+                            <Copy className="w-3.5 h-3.5" />
                           </button>
-                        ))}
-                      </div>
-                    </>
-                  )}
-
-                  {/* Selected Shape Quick Action Bar */}
-                  {selectedInkStrokeId && (
-                    <>
-                      <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-0.5 shrink-0" />
-                      <div className="flex items-center gap-0.5 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 p-0.5 rounded-xl shrink-0">
-                        <span className="text-[10px] font-bold text-purple-700 dark:text-purple-300 px-1 hidden 2xl:inline">Selected:</span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const target = inkStrokes.find(s => s.id === selectedInkStrokeId);
-                            if (target) {
-                              const dup: InkStroke = {
-                                ...JSON.parse(JSON.stringify(target)),
-                                id: `stroke-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-                                shapeStart: target.shapeStart ? { x: target.shapeStart.x + 24, y: target.shapeStart.y + 24 } : undefined,
-                                shapeEnd: target.shapeEnd ? { x: target.shapeEnd.x + 24, y: target.shapeEnd.y + 24 } : undefined,
-                                points: target.points.map(p => ({ x: p.x + 24, y: p.y + 24 }))
-                              };
-                              const nextStrokes = [...inkStrokes, dup];
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const nextStrokes = inkStrokes.filter(s => s.id !== selectedInkStrokeId);
                               setInkStrokes(nextStrokes);
-                              setSelectedInkStrokeId(dup.id);
+                              setSelectedInkStrokeId(null);
                               const nextHist = [...inkHistory.slice(0, inkHistoryIndex + 1), nextStrokes];
                               setInkHistory(nextHist);
                               setInkHistoryIndex(nextHist.length - 1);
                               renderInkCanvas();
-                            }
-                          }}
-                          className="p-1.5 text-slate-600 dark:text-slate-300 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-white dark:hover:bg-slate-800 rounded-lg transition cursor-pointer"
-                          title="Duplicate shape (Ctrl+D)"
-                        >
-                          <Copy className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const nextStrokes = inkStrokes.filter(s => s.id !== selectedInkStrokeId);
-                            setInkStrokes(nextStrokes);
-                            setSelectedInkStrokeId(null);
-                            const nextHist = [...inkHistory.slice(0, inkHistoryIndex + 1), nextStrokes];
-                            setInkHistory(nextHist);
-                            setInkHistoryIndex(nextHist.length - 1);
-                            renderInkCanvas();
-                          }}
-                          className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition cursor-pointer"
-                          title="Delete shape"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedInkStrokeId(null);
-                            renderInkCanvas();
-                          }}
-                          className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg transition cursor-pointer"
-                          title="Deselect"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </>
-                  )}
+                            }}
+                            className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition cursor-pointer"
+                            title="Delete shape"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedInkStrokeId(null);
+                              renderInkCanvas();
+                            }}
+                            className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg transition cursor-pointer"
+                            title="Deselect"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </>
+                    )}
 
-                  {/* Undo, Redo, Clear */}
-                  <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-0.5 shrink-0" />
-                  <div className="flex items-center gap-0.5 shrink-0">
-                    <button
-                      type="button"
-                      disabled={inkHistoryIndex <= 0}
-                      onClick={handleInkUndo}
-                      className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-30 transition cursor-pointer"
-                      title="Undo stroke (Ctrl+Z)"
-                    >
-                      <RotateCcw className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      disabled={inkHistoryIndex >= inkHistory.length - 1}
-                      onClick={handleInkRedo}
-                      className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-30 transition cursor-pointer"
-                      title="Redo stroke"
-                    >
-                      <RotateCw className="w-3.5 h-3.5" />
-                    </button>
+                    {/* Clear All Trash Button */}
+                    <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-0.5 shrink-0" />
                     <button
                       type="button"
                       onClick={handleInkClearAll}
@@ -7573,25 +7588,46 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
-                  </div>
 
-                  {/* Done Button */}
-                  <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-0.5 shrink-0" />
-                  <button
-                    type="button"
-                    onClick={toggleInkingMode}
-                    className="shrink-0 px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-purple-500/20 transition cursor-pointer"
-                    title="Done drawing - Return to text typing"
-                  >
-                    <Check className="w-3.5 h-3.5" />
-                    <span>Done</span>
-                  </button>
+                    {/* Desktop-only Undo, Redo & Done Button */}
+                    <div className="hidden md:flex items-center gap-0.5 shrink-0">
+                      <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-0.5 shrink-0" />
+                      <button
+                        type="button"
+                        disabled={inkHistoryIndex <= 0}
+                        onClick={handleInkUndo}
+                        className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-30 transition cursor-pointer"
+                        title="Undo stroke (Ctrl+Z)"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={inkHistoryIndex >= inkHistory.length - 1}
+                        onClick={handleInkRedo}
+                        className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-30 transition cursor-pointer"
+                        title="Redo stroke"
+                      >
+                        <RotateCw className="w-3.5 h-3.5" />
+                      </button>
+                      <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-0.5 shrink-0" />
+                      <button
+                        type="button"
+                        onClick={toggleInkingMode}
+                        className="shrink-0 px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-purple-500/20 transition cursor-pointer"
+                        title="Done drawing - Return to text typing"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Done</span>
+                      </button>
+                    </div>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
 
             {/* Eye-Care Warm Paper Document Sheet */}
-            <div className={`note-paper-sheet ${isA4Mode ? 'a4-page-mode' : 'max-w-4xl mx-auto bg-[#fafbfc] dark:bg-[#111726] rounded-2xl md:rounded-3xl border border-slate-200/70 dark:border-slate-800/80 shadow-[0_2px_16px_rgba(15,23,42,0.03)] p-4 sm:p-6 md:p-8 lg:p-10 min-h-[calc(100vh-140px)]'} paper-style-${paperStyle} ${paperTone !== 'default' ? `paper-tone-${paperTone}` : ''} transition-all`}>
+            <div className={`note-paper-sheet w-full ${isA4Mode ? 'a4-page-mode' : 'max-w-4xl mx-auto bg-[#fafbfc] dark:bg-[#111726] rounded-2xl md:rounded-3xl border border-slate-200/70 dark:border-slate-800/80 shadow-[0_2px_16px_rgba(15,23,42,0.03)] p-4 sm:p-6 md:p-8 lg:p-10 min-h-[calc(100vh-140px)]'} paper-style-${paperStyle} ${paperTone !== 'default' ? `paper-tone-${paperTone}` : ''} transition-all`}>
               
               {/* Clean print title */}
               <h1 className="note-print-title hidden font-black text-3xl pb-2 mb-4 border-b-2 border-slate-300 text-slate-900">
