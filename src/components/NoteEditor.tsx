@@ -332,14 +332,24 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   const [lastSaved, setLastSaved] = useState<Date | null>(note ? new Date() : null);
 
   // Snapshot for calculating changes
-  const [lastSavedSnapshot, setLastSavedSnapshot] = useState({
+  const [lastSavedSnapshot, setLastSavedSnapshot] = useState<{
+    title: string;
+    body: string;
+    tags: string;
+    folder: string;
+    color: string;
+    paperStyle: PaperStyle;
+    paperTone: PaperTone;
+    inkStrokes: InkStroke[];
+  }>({
     title: note?.title || '',
     body: note?.body || '',
     tags: note?.tags?.join(', ') || '',
     folder: note?.folder || 'all',
     color: note?.color || COLORS[0].value,
     paperStyle: (note?.paperStyle as PaperStyle) || 'plain',
-    paperTone: (note?.paperTone as PaperTone) || 'default'
+    paperTone: (note?.paperTone as PaperTone) || 'default',
+    inkStrokes: (note?.inkStrokes && Array.isArray(note.inkStrokes)) ? note.inkStrokes : []
   });
 
   const [activeFormats, setActiveFormats] = useState({
@@ -454,6 +464,8 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     if (note?.inkStrokes && Array.isArray(note.inkStrokes)) return note.inkStrokes;
     return [];
   });
+  const inkStrokesRef = useRef<InkStroke[]>(inkStrokes);
+  inkStrokesRef.current = inkStrokes;
   const [inkHistory, setInkHistory] = useState<InkStroke[][]>([]);
   const [inkHistoryIndex, setInkHistoryIndex] = useState(-1);
 
@@ -1081,38 +1093,48 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       latestContent.current = note?.body || '';
       prevNoteIdRef.current = targetNoteId;
 
-      setLastSavedSnapshot({
-        title: note?.title || '',
-        body: note?.body || '',
-        tags: note?.tags?.join(', ') || '',
-        folder: note?.folder || 'all',
-        color: note?.color || COLORS[0].value
-      });
+      let loadedStrokes: InkStroke[] = [];
+      if (note?.inkStrokes && Array.isArray(note.inkStrokes) && note.inkStrokes.length > 0) {
+        loadedStrokes = note.inkStrokes;
+      }
 
       if (contentRef.current) {
         contentRef.current.innerHTML = note?.body || '';
         upgradeLegacyBlocks(contentRef.current);
-        const layer = contentRef.current.querySelector('.glick-page-ink-layer');
-        if (layer) {
-          const json = layer.getAttribute('data-ink-json');
-          if (json) {
-            try {
-              const parsed = JSON.parse(decodeURIComponent(json));
-              setInkStrokes(parsed);
-              setInkHistory([parsed]);
-              setInkHistoryIndex(0);
-            } catch {
-              setInkStrokes([]);
-              setInkHistory([]);
-              setInkHistoryIndex(-1);
+        const strayLayers = contentRef.current.querySelectorAll('.glick-page-ink-layer');
+        if (strayLayers.length > 0) {
+          strayLayers.forEach(layer => {
+            if (loadedStrokes.length === 0) {
+              const json = layer.getAttribute('data-ink-json');
+              if (json) {
+                try {
+                  loadedStrokes = JSON.parse(decodeURIComponent(json));
+                } catch {}
+              }
             }
-          }
-        } else {
-          setInkStrokes([]);
-          setInkHistory([]);
-          setInkHistoryIndex(-1);
+            layer.remove();
+          });
+          const cleanHtml = contentRef.current.innerHTML;
+          latestContent.current = cleanHtml;
+          setBody(cleanHtml);
         }
       }
+
+      setInkStrokes(loadedStrokes);
+      inkStrokesRef.current = loadedStrokes;
+      setInkHistory(loadedStrokes.length > 0 ? [loadedStrokes] : []);
+      setInkHistoryIndex(loadedStrokes.length > 0 ? 0 : -1);
+
+      setLastSavedSnapshot({
+        title: note?.title || '',
+        body: contentRef.current ? contentRef.current.innerHTML : (note?.body || ''),
+        tags: note?.tags?.join(', ') || '',
+        folder: note?.folder || 'all',
+        color: note?.color || COLORS[0].value,
+        paperStyle: (note?.paperStyle as PaperStyle) || 'plain',
+        paperTone: (note?.paperTone as PaperTone) || 'default',
+        inkStrokes: loadedStrokes
+      });
 
       // Always reset scroll to the very top so title and note header are cleanly visible
       requestAnimationFrame(() => {
@@ -2072,7 +2094,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     return null;
   };
 
-  const renderInkCanvas = useCallback(() => {
+  const renderInkCanvas = useCallback((strokesToRender?: InkStroke[]) => {
     const canvas = inkCanvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -2086,7 +2108,8 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
 
-    const allStrokes = [...inkStrokes];
+    const baseStrokes = strokesToRender !== undefined ? strokesToRender : inkStrokesRef.current;
+    const allStrokes = [...baseStrokes];
     if (currentStrokeRef.current) {
       allStrokes.push(currentStrokeRef.current);
     }
@@ -2375,11 +2398,20 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     }
 
     ctx.restore();
-  }, [inkStrokes, selectedInkStrokeId]);
+  }, [selectedInkStrokeId]);
+
+  // Sync inkStrokesRef and redraw canvas whenever state updates
+  useEffect(() => {
+    inkStrokesRef.current = inkStrokes;
+    if (isInkingMode) {
+      renderInkCanvas(inkStrokes);
+    }
+  }, [isInkingMode, inkStrokes, renderInkCanvas]);
 
   const eraseStrokesAt = (x: number, y: number) => {
     const r = eraserSize / 2;
-    const remaining = inkStrokes.filter(stroke => {
+    const currentList = inkStrokesRef.current;
+    const remaining = currentList.filter(stroke => {
       const bounds = getStrokeBounds(stroke);
       if ((stroke.shapeStart && stroke.shapeEnd) || stroke.tool === 'text') {
         const inBounds = (
@@ -2397,14 +2429,16 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       return true;
     });
 
-    if (remaining.length !== inkStrokes.length) {
+    if (remaining.length !== currentList.length) {
       if (selectedInkStrokeId && !remaining.some(s => s.id === selectedInkStrokeId)) {
         setSelectedInkStrokeId(null);
       }
+      inkStrokesRef.current = remaining;
       setInkStrokes(remaining);
       const nextHist = [...inkHistory.slice(0, inkHistoryIndex + 1), remaining];
       setInkHistory(nextHist);
       setInkHistoryIndex(nextHist.length - 1);
+      renderInkCanvas(remaining);
     }
   };
 
@@ -2618,11 +2652,13 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
             finished.shapeEnd = { x: finished.shapeStart.x + defW, y: finished.shapeStart.y + defH };
           }
         }
-        const nextStrokes = [...inkStrokes, finished];
+        const nextStrokes = [...inkStrokesRef.current, finished];
+        inkStrokesRef.current = nextStrokes;
         setInkStrokes(nextStrokes);
         const nextHist = [...inkHistory.slice(0, inkHistoryIndex + 1), nextStrokes];
         setInkHistory(nextHist);
         setInkHistoryIndex(nextHist.length - 1);
+        renderInkCanvas(nextStrokes);
         if (isInkShapeTool(finished.tool)) {
           setSelectedInkStrokeId(finished.id);
           setInkTool('select');
@@ -2636,10 +2672,14 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       const targetIndex = inkHistoryIndex - 1;
       setInkHistoryIndex(targetIndex);
       const snapshot = inkHistory[targetIndex] || [];
+      inkStrokesRef.current = snapshot;
       setInkStrokes(snapshot);
+      renderInkCanvas(snapshot);
     } else if (inkHistoryIndex === 0) {
       setInkHistoryIndex(-1);
+      inkStrokesRef.current = [];
       setInkStrokes([]);
+      renderInkCanvas([]);
     }
   };
 
@@ -2648,89 +2688,50 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       const targetIndex = inkHistoryIndex + 1;
       setInkHistoryIndex(targetIndex);
       const snapshot = inkHistory[targetIndex] || [];
+      inkStrokesRef.current = snapshot;
       setInkStrokes(snapshot);
+      renderInkCanvas(snapshot);
     }
   };
 
   const handleInkClearAll = () => {
+    inkStrokesRef.current = [];
     setInkStrokes([]);
     const nextHist = [...inkHistory.slice(0, inkHistoryIndex + 1), []];
     setInkHistory(nextHist);
     setInkHistoryIndex(nextHist.length - 1);
+    renderInkCanvas([]);
   };
 
   const saveInkToNote = useCallback((strokesToSave: InkStroke[]) => {
-    if (!contentRef.current) return;
-    let layer = contentRef.current.querySelector('.glick-page-ink-layer') as HTMLElement;
-
-    if (strokesToSave.length === 0) {
-      if (layer) {
-        layer.remove();
+    // Purge any legacy ink layers inside contentRef if present
+    if (contentRef.current) {
+      const strayLayers = contentRef.current.querySelectorAll('.glick-page-ink-layer');
+      if (strayLayers.length > 0) {
+        strayLayers.forEach(l => l.remove());
         const h = contentRef.current.innerHTML;
         latestContent.current = h;
         setBody(h);
-        pushToHistory(h);
-      }
-      return;
-    }
-
-    const rect = contentRef.current.getBoundingClientRect();
-    const width = Math.max(300, Math.round(rect.width) || 800);
-    let maxY = 400;
-    for (const s of strokesToSave) {
-      if (s.shapeStart && s.shapeEnd) {
-        if (s.shapeStart.y > maxY) maxY = s.shapeStart.y;
-        if (s.shapeEnd.y > maxY) maxY = s.shapeEnd.y;
-      }
-      for (const p of s.points) {
-        if (p.y > maxY) maxY = p.y;
       }
     }
-    const height = Math.max(Math.round(rect.height) || 600, maxY + 60);
-
-    const svg = convertStrokesToSvg(strokesToSave, width, height);
-
-    if (!layer) {
-      layer = document.createElement('div');
-      layer.className = 'glick-page-ink-layer';
-      layer.setAttribute('contenteditable', 'false');
-      layer.style.position = 'absolute';
-      layer.style.top = '0';
-      layer.style.left = '0';
-      layer.style.width = '100%';
-      layer.style.height = '100%';
-      layer.style.pointerEvents = 'none';
-      layer.style.zIndex = '10';
-      contentRef.current.appendChild(layer);
-    }
-
-    layer.setAttribute('data-ink-json', encodeURIComponent(JSON.stringify(strokesToSave)));
-    layer.innerHTML = svg;
-
-    const h = contentRef.current.innerHTML;
-    latestContent.current = h;
-    setBody(h);
-    pushToHistory(h);
+    inkStrokesRef.current = strokesToSave;
+    setInkStrokes(strokesToSave);
   }, []);
 
   const toggleInkingMode = () => {
     if (isInkingMode) {
       setIsInkingMode(false);
-      saveInkToNote(inkStrokes);
+      saveInkToNote(inkStrokesRef.current);
       showToast('Ink drawings saved on note!', 'success');
     } else {
+      // Purge any legacy DOM elements before entering draw mode so canvas sits cleanly on text
       if (contentRef.current) {
-        const layer = contentRef.current.querySelector('.glick-page-ink-layer');
-        if (layer) {
-          const json = layer.getAttribute('data-ink-json');
-          if (json) {
-            try {
-              const parsed = JSON.parse(decodeURIComponent(json));
-              setInkStrokes(parsed);
-              setInkHistory([parsed]);
-              setInkHistoryIndex(0);
-            } catch {}
-          }
+        const strayLayers = contentRef.current.querySelectorAll('.glick-page-ink-layer');
+        if (strayLayers.length > 0) {
+          strayLayers.forEach(l => l.remove());
+          const h = contentRef.current.innerHTML;
+          latestContent.current = h;
+          setBody(h);
         }
       }
       setIsInkingMode(true);
@@ -4696,7 +4697,16 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       await setDoc(doc(db, 'notes', noteId), noteData, { merge: true });
       const now = new Date();
       setLastSaved(now);
-      setLastSavedSnapshot({ title: finalTitle, body: currentBody, tags, folder, color, paperStyle, paperTone });
+      setLastSavedSnapshot({
+        title: finalTitle,
+        body: currentBody,
+        tags,
+        folder,
+        color,
+        paperStyle,
+        paperTone,
+        inkStrokes: inkStrokes || []
+      });
       
       if (onSave) {
         onSave({
@@ -4731,6 +4741,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   // Unsaved Changes check
   const hasUnsavedChanges = useMemo(() => {
     const currentBody = contentRef.current ? contentRef.current.innerHTML : latestContent.current;
+    const inkChanged = JSON.stringify(inkStrokes || []) !== JSON.stringify(lastSavedSnapshot.inkStrokes || []);
     return (
       title !== lastSavedSnapshot.title ||
       currentBody !== lastSavedSnapshot.body ||
@@ -4738,9 +4749,10 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       folder !== lastSavedSnapshot.folder ||
       color !== lastSavedSnapshot.color ||
       paperStyle !== lastSavedSnapshot.paperStyle ||
-      paperTone !== lastSavedSnapshot.paperTone
+      paperTone !== lastSavedSnapshot.paperTone ||
+      inkChanged
     );
-  }, [title, body, tags, folder, color, paperStyle, paperTone, lastSavedSnapshot]);
+  }, [title, body, tags, folder, color, paperStyle, paperTone, inkStrokes, lastSavedSnapshot]);
 
   // Auto-save debounced effect
   useEffect(() => {
@@ -7694,7 +7706,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                   /* 🎨 Issue #1 Fix: Read-Only Inking Overlay: Drawings STAY VISIBLE when Done / Typing text */
                   inkStrokes.length > 0 && (
                     <div
-                      className="glick-page-ink-layer pointer-events-none absolute top-0 left-0 w-full h-full z-10 overflow-visible select-none"
+                      className="glick-page-ink-overlay pointer-events-none absolute top-0 left-0 w-full h-full z-10 overflow-visible select-none"
                       dangerouslySetInnerHTML={{
                         __html: convertStrokesToSvg(
                           inkStrokes,
