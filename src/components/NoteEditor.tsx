@@ -7909,6 +7909,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       <AIAssistantDrawer
         isOpen={showAIDrawer}
         onClose={() => setShowAIDrawer(false)}
+        noteId={currentNoteId || 'untitled'}
         noteTitle={title}
         noteText={(title ? title + '\n\n' : '') + extractTextFromHtml(body)}
         noteHtml={contentRef.current ? contentRef.current.innerHTML : body}

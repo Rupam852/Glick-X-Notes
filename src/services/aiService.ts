@@ -211,9 +211,29 @@ export async function testGeminiModel(apiKey: string, model: string): Promise<Mo
   }
 }
 
-async function callGemini(apiKey: string, model: string, prompt: string, systemInstruction?: string): Promise<string> {
+async function callGemini(
+  apiKey: string, 
+  model: string, 
+  prompt: string, 
+  systemInstruction?: string,
+  images?: { mimeType: string; data: string }[]
+): Promise<string> {
+  const parts: any[] = [{ text: prompt }];
+
+  if (images && images.length > 0) {
+    images.forEach(img => {
+      const cleanData = img.data.replace(/^data:[^;]+;base64,/, '').trim();
+      parts.push({
+        inlineData: {
+          mimeType: img.mimeType || 'image/jpeg',
+          data: cleanData
+        }
+      });
+    });
+  }
+
   const body: any = {
-    contents: [{ parts: [{ text: prompt }] }]
+    contents: [{ parts }]
   };
   if (systemInstruction) {
     body.systemInstruction = { parts: [{ text: systemInstruction }] };
@@ -241,7 +261,11 @@ async function callGemini(apiKey: string, model: string, prompt: string, systemI
  * automatically falls back through the remaining working Gemini models in order.
  * If ALL models fail, throws an aggregated error for the UI to popup.
  */
-export async function executeAICompletion(prompt: string, systemInstruction?: string): Promise<{ text: string; providerUsed: string; modelUsed: string }> {
+export async function executeAICompletion(
+  prompt: string, 
+  systemInstruction?: string,
+  images?: { mimeType: string; data: string }[]
+): Promise<{ text: string; providerUsed: string; modelUsed: string }> {
   const config = getAIConfig();
   const customKey = config.mode === 'custom' ? config.gemini.apiKey.trim() : '';
   const systemKey = ((import.meta.env.VITE_GEMINI_API_KEY as string) || '').trim();
@@ -266,7 +290,7 @@ export async function executeAICompletion(prompt: string, systemInstruction?: st
   for (let i = 0; i < sequence.length; i++) {
     const currentModel = sequence[i];
     try {
-      const text = await callGemini(key, currentModel, prompt, systemInstruction);
+      const text = await callGemini(key, currentModel, prompt, systemInstruction, images);
       return { 
         text, 
         providerUsed: 'Gemini', 
@@ -697,12 +721,13 @@ export async function aiNoteAgentChat(
   noteHtml: string,
   noteText: string,
   userMessage: string,
-  history: { role: string; content: string }[] = []
+  history: { role: string; content: string }[] = [],
+  images?: { mimeType: string; data: string }[]
 ): Promise<AIAgentChatResult> {
   const noteContext = noteHtml || noteText || 'Empty Note';
 
-  const prompt = `You are an intelligent AI Note Agent for "Glick X Notes".
-You can answer questions AND directly modify, update, append to, or format the user's note based on their conversational instructions (in English, Hindi, or Hinglish).
+  const prompt = `You are an intelligent, high-capability AI Note Agent for "Glick X Notes".
+You can answer questions with deep insight, analyze attached images/diagrams/screenshots, AND directly modify, update, append to, or format the user's note based on their conversational instructions (in English, Hindi, or Hinglish).
 
 CURRENT NOTE TITLE:
 "${noteTitle || 'Untitled'}"
@@ -714,17 +739,28 @@ ${noteContext}
 
 USER INSTRUCTION / QUESTION:
 "${userMessage}"
+${images && images.length > 0 ? `\n[NOTE: The user has attached ${images.length} image(s)/photo(s). Inspect every detail, text, formula, chart, code or visual element in these images carefully and synthesize them thoroughly in your response.]\n` : ''}
 
-${history.length > 0 ? `RECENT CHAT HISTORY:\n${history.slice(-4).map(h => `${h.role === 'user' ? 'User' : 'Assistant'}: ${h.content}`).join('\n')}\n` : ''}
+${history.length > 0 ? `RECENT CHAT HISTORY:\n${history.slice(-6).map(h => `${h.role === 'user' ? 'User' : 'Assistant'}: ${h.content}`).join('\n')}\n` : ''}
 
-CRITICAL AGENT RULES:
-1. DETERMINE THE ACTION TYPE:
-   - "none": User asked a purely informational question or asked for an explanation without wanting to change the note.
+CRITICAL QUALITY & CONTENT DEPTH GUIDELINES:
+1. COMPREHENSIVE, IN-DEPTH, DETAILED ANSWERS:
+   - Provide rich, thorough, well-explained and detailed responses. Never give lazy 1-2 sentence replies.
+   - When asked to explain, write, summarize, or solve anything, provide in-depth analysis, structured sections, bullet points, key takeaways, and relevant examples.
+   - When replying to questions, break down complex concepts into step-by-step clarity.
+
+2. VISION / MULTIMODAL UNDERSTANDING:
+   - If images are provided (e.g. photos of handwritten notes, textbooks, whiteboard sketches, graphs, flowcharts, code screenshots, or errors):
+     - Extract, transcribe, analyze, or explain the visual content with 100% precision.
+     - Correlate the images with the user's note and question.
+
+3. DETERMINE THE ACTION TYPE:
+   - "none": User asked a purely informational question or asked for an explanation without wanting to change the note. Provide an extensive, detailed answer in "reply", and set "content" to "".
    - "replace_content": User asked to edit, fix, rewrite, polish, simplify, format, or update the existing note content. Provide the full new rich HTML in "content". Preserve all existing bold tags (<b>, <strong>), tables, toggles, and images.
    - "append_content": User asked to add something new (e.g. "add toggle snippet", "add code snippet", "add conclusion", "add table", "add 3 action items"). Provide the new rich HTML snippet in "content".
    - "update_title": User asked to rename or change the note title. Provide "newTitle".
 
-2. RICH COMPONENT SNIPPET TEMPLATES:
+4. RICH COMPONENT SNIPPET TEMPLATES:
    - When asked for a Toggle / Collapsible snippet:
      <details class="glick-block-wrapper glick-toggle" style="margin: 12px 0; padding: 10px 14px; border: 1px solid rgba(148, 163, 184, 0.35); border-radius: 12px; background: rgba(248, 250, 252, 0.5);"><summary style="font-weight: 700; cursor: pointer; color: #4f46e5; display: flex; align-items: center; gap: 8px;"><span class="glick-toggle-arrow" contenteditable="false">▶</span> Toggle Title</summary><div style="margin-top: 8px; padding-left: 24px;"><p>Details here...</p></div></details>
    - When asked for a Code snippet:
@@ -732,16 +768,16 @@ CRITICAL AGENT RULES:
    - When asked for a Callout box:
      <div class="glick-block-wrapper glick-callout" style="margin: 12px 0; padding: 12px 16px; border-radius: 12px; background: rgba(99, 102, 241, 0.08); border-left: 4px solid #6366f1;"><p style="margin: 0; font-weight: 700; color: #6366f1;">💡 Important Note</p><p style="margin-top: 4px;">...</p></div>
 
-3. FORMATTING RESTRICTIONS:
+5. FORMATTING RESTRICTIONS:
    - Output clean HTML ONLY.
    - NEVER output markdown image or badge syntax like [![Python](...)](...) or ![alt](...). If including badges or images, use real HTML: <a href="url" target="_blank" rel="noopener noreferrer"><img src="badge_url" alt="alt" style="display:inline-block; vertical-align:middle; margin:2px;" /></a>.
    - NEVER output markdown links like [text](url). Use <a href="url" target="_blank">text</a>.
    - NEVER output markdown headings like "### Title". Use <h3>Title</h3>.
 
-4. RESPONSE FORMAT:
+6. RESPONSE FORMAT:
 Respond ONLY with a valid JSON object:
 {
-  "reply": "Conversational reply in the user's language (English/Hindi/Hinglish) explaining what was done or answering their question",
+  "reply": "Comprehensive, conversational reply in the user's language (English/Hindi/Hinglish) with clear formatting, rich explanations, and depth",
   "action": "none" | "replace_content" | "append_content" | "update_title",
   "content": "Rich HTML content if action is replace_content or append_content, else empty string",
   "newTitle": "New title if action is update_title, else empty string"

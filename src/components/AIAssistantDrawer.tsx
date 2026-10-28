@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   Sparkles, X, FileText, Check, Copy, Wand2, MessageSquare, 
   Send, Loader2, ArrowRight, Tag, HelpCircle, RefreshCw, Plus, Mic, MicOff,
-  BarChart3, ListChecks, Zap, AlertCircle, CheckCircle2, TrendingUp, Lightbulb
+  BarChart3, ListChecks, Zap, AlertCircle, CheckCircle2, TrendingUp, Lightbulb,
+  Image as ImageIcon, Trash2, Paperclip, CheckCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -12,6 +13,7 @@ import {
 } from '../services/aiService';
 import { VoiceDictation } from '../utils/audioTools';
 import { useToast } from '../contexts/ToastContext';
+import { compressImage, CompressedImage } from '../utils/imageTools';
 
 interface AgentChatMessage {
   id: string;
@@ -22,11 +24,13 @@ interface AgentChatMessage {
   newTitle?: string;
   applied?: boolean;
   previousContent?: string;
+  images?: { dataUrl: string; mimeType: string; name?: string; sizeKb?: number }[];
 }
 
 interface AIAssistantDrawerProps {
   isOpen: boolean;
   onClose: () => void;
+  noteId?: string;
   noteTitle: string;
   noteText: string;
   noteHtml?: string;
@@ -42,6 +46,7 @@ interface AIAssistantDrawerProps {
 export default function AIAssistantDrawer({
   isOpen,
   onClose,
+  noteId = 'untitled',
   noteTitle,
   noteText,
   noteHtml,
@@ -86,16 +91,165 @@ export default function AIAssistantDrawer({
   const [loadingMeta, setLoadingMeta] = useState(false);
   const [suggestedMeta, setSuggestedMeta] = useState<{ title: string; tags: string[] } | null>(null);
 
-  // AI Agent Chat State
-  const [chatMessages, setChatMessages] = useState<AgentChatMessage[]>([
-    { 
-      id: 'welcome',
-      role: 'assistant', 
-      content: 'Hi! Main aapka AI Note Agent hoon. Aap mujhse is note ke baare me sawaal puch sakte hain, ya bol kar / likh kar is note ko modify, edit ya naye sections add karne ko keh sakte hain.' 
-    }
-  ]);
+  // AI Agent Chat State with per-note local caching (Chrome Cache/Storage)
+  const defaultWelcomeMessage: AgentChatMessage = { 
+    id: 'welcome',
+    role: 'assistant', 
+    content: 'Hi! Main aapka AI Note Agent hoon. Aap mujhse is note ke baare me detail me sawaal puch sakte hain, handwritten ya textbook photos/screenshots attach kar sakte hain, ya note ko modify/format karne ko keh sakte hain.' 
+  };
+
+  const storageKey = `glick_ai_chat_${noteId || 'default'}`;
+
+  const [chatMessages, setChatMessages] = useState<AgentChatMessage[]>([defaultWelcomeMessage]);
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
+
+  // Multi-image upload state (Max 6 photos, client-compressed)
+  const [attachedImages, setAttachedImages] = useState<CompressedImage[]>([]);
+  const [isCompressing, setIsCompressing] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-scroll ref and message container
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  // Copy feedback state
+  const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null);
+
+  // 1. Load Chat History from Chrome LocalStorage when noteId changes
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setChatMessages(parsed);
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load chat history from cache', e);
+    }
+    setChatMessages([defaultWelcomeMessage]);
+    setAttachedImages([]);
+  }, [storageKey]);
+
+  // 2. Save Chat History to Chrome LocalStorage whenever chatMessages changes
+  useEffect(() => {
+    if (!chatMessages || chatMessages.length === 0) return;
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(chatMessages));
+    } catch (e) {
+      console.warn('Failed to cache chat history to localStorage', e);
+    }
+  }, [chatMessages, storageKey]);
+
+  // 3. Auto-scroll to bottom smoothly on open, tab switch, or new message/loading
+  const scrollToBottom = (smooth = true) => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' });
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'chat' && isOpen) {
+      const timer = setTimeout(() => {
+        scrollToBottom(false);
+      }, 60);
+      return () => clearTimeout(timer);
+    }
+  }, [activeTab, isOpen, noteId]);
+
+  useEffect(() => {
+    if (activeTab === 'chat' && isOpen) {
+      scrollToBottom(true);
+    }
+  }, [chatMessages, chatLoading]);
+
+  // 4. Clear chat history for the current note
+  const handleClearChat = () => {
+    try {
+      localStorage.removeItem(storageKey);
+    } catch (e) {
+      console.warn('Failed to remove chat cache', e);
+    }
+    setChatMessages([
+      {
+        id: (Date.now()).toString(),
+        role: 'assistant',
+        content: 'Hi! Chat history clear ho gayi hai. Aap is note ke baare me naya sawal pooch sakte hain ya photos attach kar sakte hain.'
+      }
+    ]);
+    setAttachedImages([]);
+    showToast('Chat history cleared for this note!', 'info');
+  };
+
+  // 5. Copy text from any chat bubble
+  const handleCopyMessage = (msgId: string, text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedMsgId(msgId);
+    showToast('Message copied to clipboard!', 'success');
+    setTimeout(() => {
+      setCopiedMsgId(prev => prev === msgId ? null : prev);
+    }, 2000);
+  };
+
+  // 6. Handle Image Files (Upload & Clipboard Paste) - Max 6 photos & Compressed
+  const handleProcessImageFiles = async (files: FileList | File[]) => {
+    const fileArray = Array.from(files).filter(f => f.type.startsWith('image/'));
+    if (fileArray.length === 0) return;
+
+    if (attachedImages.length + fileArray.length > 6) {
+      showToast('Maximum 6 photos allowed in chat at a time!', 'error');
+      return;
+    }
+
+    setIsCompressing(true);
+    try {
+      const compressedList: CompressedImage[] = [];
+      for (const file of fileArray) {
+        const comp = await compressImage(file, { maxWidth: 1024, maxHeight: 1024, quality: 0.72 });
+        compressedList.push(comp);
+      }
+      setAttachedImages(prev => {
+        const combined = [...prev, ...compressedList];
+        return combined.slice(0, 6);
+      });
+      showToast(`${compressedList.length} photo(s) compressed & attached!`, 'success');
+    } catch (err: any) {
+      console.error('Image compression error:', err);
+      showToast('Failed to attach photo: ' + (err.message || 'Error'), 'error');
+    } finally {
+      setIsCompressing(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleRemoveImage = (indexToRemove: number) => {
+    setAttachedImages(prev => prev.filter((_, idx) => idx !== indexToRemove));
+  };
+
+  // 7. Clipboard Paste Event Handler (Ctrl+V Screenshots / Photos)
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items || items.length === 0) return;
+
+    const imageFiles: File[] = [];
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.indexOf('image') !== -1) {
+        const file = item.getAsFile();
+        if (file) imageFiles.push(file);
+      }
+    }
+
+    if (imageFiles.length > 0) {
+      e.preventDefault();
+      handleProcessImageFiles(imageFiles);
+    }
+  };
 
   // Voice Dictation (Speech-to-Text) for AI Chat
   const [isListening, setIsListening] = useState(false);
@@ -279,34 +433,50 @@ export default function AIAssistantDrawer({
     }
   };
 
-  // 4. AI Agent Chat & Note Operations
+  // 4. AI Agent Chat & Note Operations (Text + Vision / Multi-photo support)
   const handleSendMessage = async (e?: React.FormEvent, customPrompt?: string) => {
     if (e) e.preventDefault();
     const userQ = (customPrompt || chatInput).trim();
-    if (!userQ || chatLoading) return;
+    if ((!userQ && attachedImages.length === 0) || chatLoading || isCompressing) return;
 
     if (isListening) {
       dictationRef.current?.stop();
       setIsListening(false);
     }
 
+    const imagesToSend = [...attachedImages];
+    setAttachedImages([]);
     setChatInput('');
+
     const userMsg: AgentChatMessage = {
       id: Date.now().toString(),
       role: 'user',
-      content: userQ
+      content: userQ || (imagesToSend.length > 0 ? `[Sent ${imagesToSend.length} photo(s)]` : ''),
+      images: imagesToSend.map(img => ({
+        dataUrl: img.dataUrl,
+        mimeType: img.mimeType,
+        name: img.file.name,
+        sizeKb: img.sizeKb
+      }))
     };
+
     const newHistory = [...chatMessages, userMsg];
     setChatMessages(newHistory);
     setChatLoading(true);
 
     try {
+      const imagesPayload = imagesToSend.map(img => ({
+        mimeType: img.mimeType,
+        data: img.base64
+      }));
+
       const result = await aiNoteAgentChat(
         noteTitle,
         noteHtml || '',
         noteText || '',
-        userQ,
-        chatMessages.map(m => ({ role: m.role, content: m.content }))
+        userQ || 'Analyze these attached photo(s) in detail and explain them in relation to my note.',
+        chatMessages.map(m => ({ role: m.role, content: m.content })),
+        imagesPayload.length > 0 ? imagesPayload : undefined
       );
 
       // Store previous content for safe undo, but DO NOT auto-apply without user confirmation
@@ -765,9 +935,31 @@ export default function AIAssistantDrawer({
 
         {/* TAB 2: AI NOTE AGENT CHAT */}
         {activeTab === 'chat' && (
-          <div className="flex-1 flex flex-col h-full overflow-hidden">
-            {/* Messages list */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3.5">
+          <div className="flex-1 flex flex-col h-full overflow-hidden" onPaste={handlePaste}>
+            {/* Chat Context Subheader & Clear History Button */}
+            <div className="px-3.5 py-2 bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between text-xs shrink-0">
+              <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300 min-w-0">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0 animate-pulse" />
+                <span className="text-[11px] font-semibold truncate max-w-[190px]" title={noteTitle || 'Untitled Note'}>
+                  {noteTitle || 'Untitled Note'}
+                </span>
+                <span className="text-[10px] text-slate-400 shrink-0">
+                  ({chatMessages.length} msgs)
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleClearChat}
+                className="flex items-center gap-1 px-2 py-1 text-[11px] font-semibold text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition cursor-pointer shrink-0"
+                title="Clear AI chat history for this note"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Clear Chat</span>
+              </button>
+            </div>
+
+            {/* Messages list with smooth auto-scroll */}
+            <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-3.5">
               {chatMessages.map((msg) => (
                 <div 
                   key={msg.id}
@@ -780,7 +972,58 @@ export default function AIAssistantDrawer({
                         : 'bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 border border-slate-200/80 dark:border-slate-800 rounded-tl-xs space-y-2'
                     }`}
                   >
-                    <p className="whitespace-pre-wrap">{msg.content}</p>
+                    {/* Attached Image Thumbnails */}
+                    {msg.images && msg.images.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mb-2">
+                        {msg.images.map((img, i) => (
+                          <div 
+                            key={i} 
+                            className="relative group rounded-lg overflow-hidden border border-black/10 dark:border-white/10 shadow-xs cursor-pointer"
+                            onClick={() => window.open(img.dataUrl, '_blank')}
+                            title="Click to view full photo"
+                          >
+                            <img 
+                              src={img.dataUrl} 
+                              alt={img.name || 'attachment'} 
+                              className="w-14 h-14 object-cover hover:scale-105 transition duration-150"
+                            />
+                            {img.sizeKb && (
+                              <span className="absolute bottom-0 right-0 bg-black/75 text-[8.5px] text-white px-1 font-mono rounded-tl">
+                                {img.sizeKb}KB
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <p className="whitespace-pre-wrap select-text">{msg.content}</p>
+
+                    {/* Copy Button for every chat bubble */}
+                    <div className="flex items-center justify-end mt-1.5 pt-1 border-t border-slate-200/30 dark:border-slate-700/40">
+                      <button
+                        type="button"
+                        onClick={() => handleCopyMessage(msg.id, msg.content)}
+                        className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold transition cursor-pointer ${
+                          msg.role === 'user'
+                            ? 'text-indigo-100 hover:text-white hover:bg-white/15'
+                            : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-800'
+                        }`}
+                        title="Copy message text"
+                      >
+                        {copiedMsgId === msg.id ? (
+                          <>
+                            <CheckCheck className="w-3 h-3 text-emerald-300" />
+                            <span className="text-emerald-300">Copied</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3 h-3" />
+                            <span>Copy</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
 
                     {/* ⚡ Interactive Agent Action Confirmation Card */}
                     {msg.action && msg.action !== 'none' && (
@@ -829,7 +1072,7 @@ export default function AIAssistantDrawer({
                           </div>
                         )}
 
-                        {/* Interactive Buttons: Require confirmation before applying */}
+                        {/* Interactive Buttons */}
                         <div className="flex items-center gap-2 pt-1 border-t border-slate-100 dark:border-slate-800/80">
                           {msg.applied ? (
                             <>
@@ -873,16 +1116,20 @@ export default function AIAssistantDrawer({
                   </div>
                 </div>
               ))}
+
               {chatLoading && (
-                <div className="flex items-center gap-2 text-xs text-indigo-500 p-2 bg-indigo-50/50 dark:bg-indigo-950/30 rounded-xl w-fit border border-indigo-200/50 dark:border-indigo-900/40">
+                <div className="flex items-center gap-2 text-xs text-indigo-500 p-2.5 bg-indigo-50/50 dark:bg-indigo-950/30 rounded-xl w-fit border border-indigo-200/50 dark:border-indigo-900/40">
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  AI Agent is reading & preparing modifications...
+                  <span>AI Agent is analyzing note & photos in depth...</span>
                 </div>
               )}
+
+              {/* Bottom anchor for smooth auto-scroll */}
+              <div ref={messagesEndRef} />
             </div>
 
             {/* Quick Action Chips */}
-            <div className="px-3 pt-2 pb-1.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar border-t border-slate-100 dark:border-slate-800 bg-white/70 dark:bg-slate-950/40">
+            <div className="px-3 pt-2 pb-1.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar border-t border-slate-100 dark:border-slate-800 bg-white/70 dark:bg-slate-950/40 shrink-0">
               {[
                 '✨ Fix grammar & bold key points',
                 '➕ Add Conclusion',
@@ -902,9 +1149,36 @@ export default function AIAssistantDrawer({
               ))}
             </div>
 
+            {/* Attached Photos Preview Strip above input box */}
+            {attachedImages.length > 0 && (
+              <div className="px-3 py-2 bg-slate-100/90 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-center gap-2.5 overflow-x-auto shrink-0">
+                <div className="text-[10px] font-bold text-slate-500 uppercase shrink-0">
+                  Photos ({attachedImages.length}/6):
+                </div>
+                <div className="flex items-center gap-2">
+                  {attachedImages.map((img, idx) => (
+                    <div key={idx} className="relative group shrink-0 rounded-lg overflow-hidden border border-slate-300 dark:border-slate-700 shadow-2xs">
+                      <img src={img.dataUrl} alt="preview" className="w-12 h-12 object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveImage(idx)}
+                        className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-rose-500 hover:bg-rose-600 text-white flex items-center justify-center text-[10px] shadow-xs cursor-pointer"
+                        title="Remove photo"
+                      >
+                        ✕
+                      </button>
+                      <span className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[8px] text-center font-mono">
+                        {img.sizeKb}KB
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Listening Banner if Speech Recognition is active */}
             {isListening && (
-              <div className="px-3 py-1.5 bg-rose-500/10 border-t border-rose-500/20 text-rose-600 dark:text-rose-400 text-[11px] font-bold flex items-center justify-between animate-pulse">
+              <div className="px-3 py-1.5 bg-rose-500/10 border-t border-rose-500/20 text-rose-600 dark:text-rose-400 text-[11px] font-bold flex items-center justify-between animate-pulse shrink-0">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
                   <span>Listening... Bolna shuru karein (Hindi ya English)</span>
@@ -919,8 +1193,33 @@ export default function AIAssistantDrawer({
               </div>
             )}
 
-            {/* Input Bar with Voice Mic */}
-            <form onSubmit={handleSendMessage} className="p-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 flex items-center gap-2">
+            {/* Input Bar with Photo Upload, Voice Mic and Paste Support */}
+            <form onSubmit={handleSendMessage} className="p-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 flex items-center gap-2 shrink-0">
+              {/* Hidden File Input for photos */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(e) => e.target.files && handleProcessImageFiles(e.target.files)}
+              />
+
+              {/* Photo Upload Button (Max 6) */}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={attachedImages.length >= 6 || isCompressing || chatLoading}
+                className="p-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-xl transition cursor-pointer shrink-0 disabled:opacity-40 shadow-2xs"
+                title={attachedImages.length >= 6 ? 'Maximum 6 photos reached' : 'Attach photo (or Ctrl+V to paste screenshot)'}
+              >
+                {isCompressing ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />
+                ) : (
+                  <ImageIcon className="w-4 h-4" />
+                )}
+              </button>
+
               {/* Microphone Button (Speech-to-Text) */}
               <button
                 type="button"
@@ -939,14 +1238,21 @@ export default function AIAssistantDrawer({
                 type="text"
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
-                placeholder={isListening ? 'Listening to your voice...' : 'Ask question or instruct to edit note (text or mic)...'}
+                onPaste={handlePaste}
+                placeholder={
+                  isListening 
+                    ? 'Listening to your voice...' 
+                    : attachedImages.length > 0 
+                      ? 'Ask about attached photos or press send...' 
+                      : 'Ask question, attach photos or paste screenshots...'
+                }
                 className="flex-1 px-3 py-2 text-xs bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-indigo-500"
               />
 
               <button
                 type="submit"
-                disabled={chatLoading || !chatInput.trim()}
-                className="p-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl transition cursor-pointer shrink-0 shadow-2xs"
+                disabled={chatLoading || isCompressing || (!chatInput.trim() && attachedImages.length === 0)}
+                className="p-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white rounded-xl transition cursor-pointer shrink-0 shadow-2xs"
                 title="Send instruction to AI Agent"
               >
                 <Send className="w-3.5 h-3.5" />
