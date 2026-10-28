@@ -608,14 +608,42 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         }
       });
 
-      // 3. Upgrade legacy toggles without delete button
+      // 3. Upgrade legacy toggles with rotating arrow and delete button
       const toggles = root.querySelectorAll('details.glick-toggle, details');
       toggles.forEach((details) => {
         details.classList.add('glick-block-wrapper');
-        if (!details.querySelector('[data-action="delete-block"]')) {
-          const summary = details.querySelector('summary');
-          if (summary) {
-            summary.setAttribute('style', 'font-weight: 700; font-size: 14px; cursor: pointer; outline: none; color: #4f46e5; display: flex; align-items: center; justify-content: space-between;');
+        details.classList.add('glick-toggle');
+        const summary = details.querySelector('summary');
+        if (summary) {
+          summary.setAttribute('style', 'font-weight: 700; font-size: 14px; cursor: pointer; outline: none; color: #4f46e5; display: flex; align-items: center; justify-content: space-between; user-select: none;');
+          
+          if (!summary.querySelector('.glick-toggle-arrow')) {
+            const arrow = document.createElement('span');
+            arrow.className = 'glick-toggle-arrow';
+            arrow.setAttribute('contenteditable', 'false');
+            arrow.textContent = '▶';
+
+            const firstChild = summary.firstElementChild;
+            if (firstChild && firstChild.tagName === 'DIV' && firstChild !== summary.querySelector('[data-action="delete-block"]')) {
+              firstChild.insertBefore(arrow, firstChild.firstChild);
+            } else {
+              const textSpan = document.createElement('span');
+              textSpan.style.outline = 'none';
+              textSpan.textContent = summary.textContent?.replace('✕', '').replace('▶', '').trim() || 'Toggle Section';
+              
+              const deleteBtn = summary.querySelector('[data-action="delete-block"]');
+              summary.innerHTML = '';
+              
+              const leftDiv = document.createElement('div');
+              leftDiv.setAttribute('style', 'display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;');
+              leftDiv.appendChild(arrow);
+              leftDiv.appendChild(textSpan);
+              summary.appendChild(leftDiv);
+              if (deleteBtn) summary.appendChild(deleteBtn);
+            }
+          }
+
+          if (!summary.querySelector('[data-action="delete-block"]')) {
             const deleteBtn = document.createElement('button');
             deleteBtn.type = 'button';
             deleteBtn.setAttribute('data-action', 'delete-block');
@@ -1370,7 +1398,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   const handleInsertToggle = () => {
     ensureSelectionInsideEditor();
     const focusId = `toggle-focus-${Date.now()}`;
-    const html = `<details class="glick-block-wrapper glick-toggle" style="position: relative; padding: 10px 14px; margin: 10px 0; border: 1px solid rgba(148, 163, 184, 0.35); border-radius: 12px; background: rgba(248, 250, 252, 0.5);"><summary style="font-weight: 700; font-size: 14px; cursor: pointer; outline: none; color: #4f46e5; display: flex; align-items: center; justify-content: space-between;"><span id="${focusId}">Toggle Section (Click to expand)</span><button type="button" data-action="delete-block" title="Delete toggle section" contenteditable="false" style="background: transparent; border: none; cursor: pointer; color: #94a3b8; padding: 2px 6px; border-radius: 6px; font-size: 14px; line-height: 1; user-select: none;">✕</button></summary><div style="margin-top: 8px; padding-left: 8px; font-size: 14px;"><p>Hidden notes, checklist, or deeper details go here...</p></div></details><p><br/></p>`;
+    const html = `<details class="glick-block-wrapper glick-toggle" style="position: relative; padding: 10px 14px; margin: 10px 0; border: 1px solid rgba(148, 163, 184, 0.35); border-radius: 12px; background: rgba(248, 250, 252, 0.5);"><summary style="font-weight: 700; font-size: 14px; cursor: pointer; outline: none; color: #4f46e5; display: flex; align-items: center; justify-content: space-between; user-select: none;"><div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;"><span class="glick-toggle-arrow" contenteditable="false">▶</span><span id="${focusId}" style="outline: none;">Toggle Section (Click to expand)</span></div><button type="button" data-action="delete-block" title="Delete toggle section" contenteditable="false" style="background: transparent; border: none; cursor: pointer; color: #94a3b8; padding: 2px 6px; border-radius: 6px; font-size: 14px; line-height: 1; user-select: none; margin-left: 8px;">✕</button></summary><div style="margin-top: 8px; padding-left: 30px; font-size: 14px;"><p>Hidden notes, checklist, or deeper details go here...</p></div></details><p><br/></p>`;
     document.execCommand('insertHTML', false, html);
     if (contentRef.current) {
       const target = contentRef.current.querySelector(`#${focusId}`);

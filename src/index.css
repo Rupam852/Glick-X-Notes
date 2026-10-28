@@ -247,4 +247,55 @@ html.dark ::-webkit-scrollbar-thumb {
   }
 }
 
+/* 🔻 Notion-Style Animated Toggle Arrow */
+details.glick-toggle summary {
+  list-style: none !important;
+}
+details.glick-toggle summary::-webkit-details-marker {
+  display: none !important;
+}
+
+.glick-toggle-arrow {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: rgba(99, 102, 241, 0.12);
+  color: #4f46e5;
+  font-size: 10px;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s;
+  flex-shrink: 0;
+  user-select: none;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.dark .glick-toggle-arrow {
+  background: rgba(99, 102, 241, 0.25);
+  color: #a5b4fc;
+}
+
+/* When toggle is open, arrow rotates 90 degrees down */
+details.glick-toggle[open] > summary .glick-toggle-arrow {
+  transform: rotate(90deg);
+  background: rgba(99, 102, 241, 0.25);
+  color: #4338ca;
+}
+
+.dark details.glick-toggle[open] > summary .glick-toggle-arrow {
+  background: rgba(99, 102, 241, 0.35);
+  color: #c7d2fe;
+}
+
+.dark details.glick-toggle {
+  background: rgba(15, 23, 42, 0.6) !important;
+  border-color: rgba(51, 65, 85, 0.6) !important;
+}
+
+.dark details.glick-toggle summary {
+  color: #a5b4fc !important;
+}
+
 
