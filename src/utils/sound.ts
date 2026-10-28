@@ -6,7 +6,7 @@
 class SoundEffects {
   private ctx: AudioContext | null = null;
 
-  private getContext(): AudioContext | null {
+  private async ensureContext(): Promise<AudioContext | null> {
     if (typeof window === 'undefined') return null;
     if (!this.ctx) {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
@@ -15,14 +15,16 @@ class SoundEffects {
       }
     }
     if (this.ctx && this.ctx.state === 'suspended') {
-      this.ctx.resume().catch(() => {});
+      try {
+        await this.ctx.resume();
+      } catch {}
     }
     return this.ctx;
   }
 
   public isEnabled(): boolean {
     if (typeof window === 'undefined') return false;
-    // Sound effects are completely turned OFF by default
+    // Sound effects state stored in local storage
     return localStorage.getItem('glick_sound_enabled') === 'true';
   }
 
@@ -32,9 +34,9 @@ class SoundEffects {
   }
 
   // Crisp friendly pop (Craft / iOS reaction style)
-  public playPop() {
-    if (!this.isEnabled()) return;
-    const ctx = this.getContext();
+  public async playPop(force: boolean = false) {
+    if (!force && !this.isEnabled()) return;
+    const ctx = await this.ensureContext();
     if (!ctx) return;
 
     try {
@@ -43,27 +45,27 @@ class SoundEffects {
       const now = ctx.currentTime;
 
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(420, now);
-      osc.frequency.exponentialRampToValueAtTime(840, now + 0.04);
-      osc.frequency.exponentialRampToValueAtTime(320, now + 0.08);
+      osc.frequency.setValueAtTime(440, now);
+      osc.frequency.exponentialRampToValueAtTime(880, now + 0.04);
+      osc.frequency.exponentialRampToValueAtTime(360, now + 0.09);
 
-      gain.gain.setValueAtTime(0.12, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+      gain.gain.setValueAtTime(0.28, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
 
       osc.connect(gain);
       gain.connect(ctx.destination);
 
       osc.start(now);
-      osc.stop(now + 0.08);
+      osc.stop(now + 0.09);
     } catch (e) {
       // Ignore audio autoplay restrictions
     }
   }
 
   // Golden chime when pinning/favoriting a note
-  public playPin() {
-    if (!this.isEnabled()) return;
-    const ctx = this.getContext();
+  public async playPin(force: boolean = false) {
+    if (!force && !this.isEnabled()) return;
+    const ctx = await this.ensureContext();
     if (!ctx) return;
 
     try {
@@ -76,7 +78,7 @@ class SoundEffects {
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(freq, start);
 
-        gain.gain.setValueAtTime(0.09, start);
+        gain.gain.setValueAtTime(0.22, start);
         gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.22);
 
         osc.connect(gain);
@@ -91,9 +93,9 @@ class SoundEffects {
   }
 
   // Soft switch/checkbox tick
-  public playTick() {
-    if (!this.isEnabled()) return;
-    const ctx = this.getContext();
+  public async playTick(force: boolean = false) {
+    if (!force && !this.isEnabled()) return;
+    const ctx = await this.ensureContext();
     if (!ctx) return;
 
     try {
@@ -105,7 +107,7 @@ class SoundEffects {
       osc.frequency.setValueAtTime(800, now);
       osc.frequency.exponentialRampToValueAtTime(200, now + 0.03);
 
-      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.setValueAtTime(0.2, now);
       gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
 
       osc.connect(gain);
@@ -119,9 +121,9 @@ class SoundEffects {
   }
 
   // Subtle action swoosh / trash sound
-  public playSwoosh() {
-    if (!this.isEnabled()) return;
-    const ctx = this.getContext();
+  public async playSwoosh(force: boolean = false) {
+    if (!force && !this.isEnabled()) return;
+    const ctx = await this.ensureContext();
     if (!ctx) return;
 
     try {
@@ -133,7 +135,7 @@ class SoundEffects {
       osc.frequency.setValueAtTime(320, now);
       osc.frequency.exponentialRampToValueAtTime(140, now + 0.1);
 
-      gain.gain.setValueAtTime(0.1, now);
+      gain.gain.setValueAtTime(0.22, now);
       gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
 
       osc.connect(gain);

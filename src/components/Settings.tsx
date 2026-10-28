@@ -336,7 +336,7 @@ export default function Settings({ user, onSignOut }: { user: FirebaseUser; onSi
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => sound.playPop()}
+              onClick={() => { sound.playPop(true); showToast('Playing sample pop sound 🎵', 'info'); }}
               className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline px-2 py-1"
             >
               Test Sound
