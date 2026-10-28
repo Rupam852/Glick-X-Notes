@@ -426,6 +426,12 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   const [showVoiceModal, setShowVoiceModal] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [zenMode, setZenMode] = useState(false);
+  const [showMobileDesktopTip, setShowMobileDesktopTip] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const isMobile = window.innerWidth < 768;
+    const dismissed = sessionStorage.getItem('glick_dismiss_desktop_tip');
+    return isMobile && !dismissed;
+  });
   
   // Slash Command Menu States
   const [slashMenuOpen, setSlashMenuOpen] = useState(false);
@@ -2793,7 +2799,11 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         }
       }
       setIsInkingMode(true);
-      showToast('✏️ Draw Mode: Scribble, draw & highlight anywhere on the note!', 'info');
+      if (window.innerWidth < 768) {
+        showToast('💡 Pro-Tip: Perfect drawing alignment ke liye browser me "Desktop site" on karein', 'info');
+      } else {
+        showToast('✏️ Draw Mode: Scribble, draw & highlight anywhere on the note!', 'info');
+      }
     }
   };
 
@@ -7774,6 +7784,29 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                 </motion.div>
               )}
             </AnimatePresence>
+
+            {/* 📱 Smart Mobile Tip: Pro-Tip to use PC or Desktop Mode for Drawings */}
+            {showMobileDesktopTip && (
+              <div className="mx-auto max-w-4xl w-full mb-3 px-3.5 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-50/90 via-purple-50/80 to-blue-50/90 dark:from-slate-900/90 dark:via-purple-950/30 dark:to-slate-900/90 border border-indigo-200/80 dark:border-indigo-800/60 shadow-xs flex items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="text-base shrink-0">💻</span>
+                  <p className="text-slate-700 dark:text-slate-200 leading-snug">
+                    <strong className="text-indigo-600 dark:text-indigo-400 font-bold">Best Inking Experience:</strong> Freehand pen drawings aur 1:1 sync ke liye PC use karein ya browser me <span className="font-semibold underline underline-offset-2">"Desktop site"</span> on karein.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowMobileDesktopTip(false);
+                    sessionStorage.setItem('glick_dismiss_desktop_tip', 'true');
+                  }}
+                  className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800 transition cursor-pointer shrink-0"
+                  title="Dismiss tip"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
 
             {/* Eye-Care Warm Paper Document Sheet */}
             <div className={`note-paper-sheet w-full ${isA4Mode ? 'a4-page-mode' : 'max-w-4xl mx-auto bg-[#fafbfc] dark:bg-[#111726] rounded-2xl md:rounded-3xl border border-slate-200/70 dark:border-slate-800/80 shadow-[0_2px_16px_rgba(15,23,42,0.03)] p-4 sm:p-6 md:p-8 lg:p-10 min-h-[calc(100vh-140px)]'} paper-style-${paperStyle} ${paperTone !== 'default' ? `paper-tone-${paperTone}` : ''} transition-all`}>
