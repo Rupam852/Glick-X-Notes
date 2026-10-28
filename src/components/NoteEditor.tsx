@@ -3057,6 +3057,29 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
 
         <div className="flex md:flex-wrap items-center gap-1.5 p-2 bg-[#f4f6fa]/60 dark:bg-slate-900/50 overflow-x-auto no-scrollbar scroll-smooth">
           
+          {/* Undo and Redo buttons */}
+          <button 
+            type="button" 
+            onMouseDown={handleButtonMouseDown} 
+            onClick={handleUndo} 
+            className="p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all cursor-pointer" 
+            title="Undo (Ctrl+Z)"
+          >
+            <Undo className="w-4.5 h-4.5" />
+          </button>
+
+          <button 
+            type="button" 
+            onMouseDown={handleButtonMouseDown} 
+            onClick={handleRedo} 
+            className="p-2 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all cursor-pointer" 
+            title="Redo (Ctrl+Y / Ctrl+Shift+Z)"
+          >
+            <Redo className="w-4.5 h-4.5" />
+          </button>
+
+          <div className="w-px h-5 bg-slate-250 dark:bg-slate-800 mx-0.5 shrink-0" />
+
           <button onMouseDown={handleButtonMouseDown} onClick={() => togglePopup('text')} className={`p-2 w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all ${activePopup === 'text' ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'}`} title="Text Styles">
             <Type className="w-5 h-5" />
           </button>

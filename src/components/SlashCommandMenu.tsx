@@ -209,42 +209,46 @@ export default function SlashCommandMenu({
     <div
       ref={menuRef}
       style={{ top: `${top}px`, left: `${left}px` }}
-      className="fixed z-50 w-72 max-h-80 overflow-y-auto bg-white dark:bg-[#0c1220] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-1.5 space-y-0.5 animate-in fade-in zoom-in-95 duration-150 select-none backdrop-blur-md no-scrollbar"
+      className="fixed z-50 w-72 max-h-84 flex flex-col bg-white dark:bg-[#0c1220] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 select-none backdrop-blur-md"
     >
-      <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 mb-1 sticky top-0 bg-white/95 dark:bg-[#0c1220]/95 backdrop-blur-sm z-10">
+      {/* 1. Dedicated Header Row (Never overlaps or hides items) */}
+      <div className="px-3.5 py-2 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center justify-between border-b border-slate-100 dark:border-slate-800 bg-slate-50/90 dark:bg-[#0c1220]/90 shrink-0">
         <span>Insert Block</span>
         <span className="text-[9px] font-mono lowercase">{selectedIndex + 1}/{filtered.length}</span>
       </div>
 
-      {filtered.map((item, idx) => {
-        const isSelected = idx === selectedIndex;
-        return (
-          <button
-            key={item.id}
-            ref={el => { itemRefs.current[idx] = el; }}
-            type="button"
-            onClick={() => onExecute(item.id)}
-            onMouseEnter={() => setSelectedIndex(idx)}
-            className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left transition-colors cursor-pointer ${
-              isSelected 
-                ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-900 dark:text-indigo-200 ring-1 ring-indigo-500/30' 
-                : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900'
-            }`}
-          >
-            <div className={`p-1.5 rounded-lg border ${
-              isSelected 
-                ? 'border-indigo-200 dark:border-indigo-800 bg-white dark:bg-slate-900 shadow-xs' 
-                : 'border-slate-200 dark:border-slate-800 bg-slate-100/60 dark:bg-slate-900/40'
-            }`}>
-              {item.icon}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold leading-tight truncate">{item.label}</p>
-              <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate leading-normal">{item.desc}</p>
-            </div>
-          </button>
-        );
-      })}
+      {/* 2. Isolated Scrollable Items List */}
+      <div className="flex-1 overflow-y-auto p-1.5 space-y-0.5 no-scrollbar scroll-smooth">
+        {filtered.map((item, idx) => {
+          const isSelected = idx === selectedIndex;
+          return (
+            <button
+              key={item.id}
+              ref={el => { itemRefs.current[idx] = el; }}
+              type="button"
+              onClick={() => onExecute(item.id)}
+              onMouseEnter={() => setSelectedIndex(idx)}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left transition-colors cursor-pointer ${
+                isSelected 
+                  ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-900 dark:text-indigo-200 ring-1 ring-indigo-500/30' 
+                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900'
+              }`}
+            >
+              <div className={`p-1.5 rounded-lg border ${
+                isSelected 
+                  ? 'border-indigo-200 dark:border-indigo-800 bg-white dark:bg-slate-900 shadow-xs' 
+                  : 'border-slate-200 dark:border-slate-800 bg-slate-100/60 dark:bg-slate-900/40'
+              }`}>
+                {item.icon}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold leading-tight truncate">{item.label}</p>
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate leading-normal">{item.desc}</p>
+              </div>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
