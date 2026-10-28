@@ -22,6 +22,26 @@ export interface Note {
   previewImage?: string;
   paperStyle?: PaperStyle;
   paperTone?: PaperTone;
+  inkStrokes?: InkStroke[];
+}
+
+export type InkShapeType = 
+  | 'line' | 'arrow' | 'doubleArrow'
+  | 'rect' | 'roundedRect' | 'circle' | 'triangle' | 'diamond' | 'parallelogram'
+  | 'star' | 'heart' | 'cloud' | 'calloutRect' | 'calloutRounded';
+
+export type InkToolType = 'select' | 'pen' | 'highlighter' | 'eraser' | 'text' | InkShapeType;
+
+export interface InkStroke {
+  id: string;
+  tool: InkToolType;
+  color: string;
+  width: number;
+  points: { x: number; y: number }[];
+  shapeStart?: { x: number; y: number };
+  shapeEnd?: { x: number; y: number };
+  text?: string;
+  fontSize?: number;
 }
 
 export type PaperStyle = 'plain' | 'lined' | 'dot' | 'grid' | 'cornell' | 'vintage';

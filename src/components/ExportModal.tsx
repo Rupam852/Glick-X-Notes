@@ -13,6 +13,7 @@ interface ExportModalProps {
   noteText: string;
   tags: string[];
   createdAt?: Date;
+  inkSvg?: string;
 }
 
 export default function ExportModal({
@@ -22,7 +23,8 @@ export default function ExportModal({
   noteHtml,
   noteText,
   tags,
-  createdAt = new Date()
+  createdAt = new Date(),
+  inkSvg
 }: ExportModalProps) {
   const { showToast } = useToast();
   const cardRef = useRef<HTMLDivElement>(null);
@@ -146,7 +148,8 @@ export default function ExportModal({
             ${tags.map(t => `<span class="badge">#${t}</span>`).join(' ')}
             <span>Created: ${createdAt.toLocaleDateString()}</span> • <span>Glick X Notes</span>
           </div>
-          <div class="content">
+          <div class="content" style="position: relative;">
+            ${inkSvg ? `<div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10;">${inkSvg}</div>` : ''}
             ${noteHtml}
           </div>
           <script>

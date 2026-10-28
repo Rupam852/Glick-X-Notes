@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { collection, doc, setDoc, deleteDoc, serverTimestamp, addDoc, query, where, getDocs, onSnapshot, Timestamp } from 'firebase/firestore';
 import { User as FirebaseUser } from 'firebase/auth';
 import { db, handleFirestoreError, OperationType } from '../firebase';
-import { Note, Attachment, PaperStyle, PaperTone } from '../types';
+import { Note, Attachment, PaperStyle, PaperTone, InkStroke, InkShapeType, InkToolType } from '../types';
 import { 
   ArrowLeft, Save, Trash2, Paperclip, X, Download, FileText, Image as ImageIcon, Plus, Tag, Check, 
   Bold, Italic, List, ListOrdered, Link, Heading1, Heading2, Heading3, Quote, Undo, Redo, UploadCloud, 
@@ -80,27 +80,9 @@ const extractTextFromHtml = (html: string): string => {
     .trim();
 };
 
-// ✏️ Direct Inking / Pen Stroke Interface (OneNote style)
-export type InkShapeType = 
-  | 'line' | 'arrow' | 'doubleArrow'
-  | 'rect' | 'roundedRect' | 'circle' | 'triangle' | 'diamond' | 'parallelogram'
-  | 'star' | 'heart' | 'cloud' | 'calloutRect' | 'calloutRounded';
+export type { InkShapeType, InkToolType, InkStroke };
 
-export type InkToolType = 'select' | 'pen' | 'highlighter' | 'eraser' | 'text' | InkShapeType;
-
-export interface InkStroke {
-  id: string;
-  tool: InkToolType;
-  color: string;
-  width: number;
-  points: { x: number; y: number }[];
-  shapeStart?: { x: number; y: number };
-  shapeEnd?: { x: number; y: number };
-  text?: string;
-  fontSize?: number;
-}
-
-const convertStrokesToSvg = (strokes: InkStroke[], width: number, height: number): string => {
+export const convertStrokesToSvg = (strokes: InkStroke[], width: number, height: number): string => {
   if (strokes.length === 0) return '';
   const elements = strokes.map(s => {
     // If it's a text stroke
@@ -418,7 +400,6 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   };
   const [showExportModal, setShowExportModal] = useState(false);
   const [showVoiceModal, setShowVoiceModal] = useState(false);
-  const [isDictating, setIsDictating] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [zenMode, setZenMode] = useState(false);
   
@@ -469,7 +450,10 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     document.addEventListener('pointerdown', handleOutside);
     return () => document.removeEventListener('pointerdown', handleOutside);
   }, [showInkShapeMenu]);
-  const [inkStrokes, setInkStrokes] = useState<InkStroke[]>([]);
+  const [inkStrokes, setInkStrokes] = useState<InkStroke[]>(() => {
+    if (note?.inkStrokes && Array.isArray(note.inkStrokes)) return note.inkStrokes;
+    return [];
+  });
   const [inkHistory, setInkHistory] = useState<InkStroke[][]>([]);
   const [inkHistoryIndex, setInkHistoryIndex] = useState(-1);
 
@@ -2764,7 +2748,8 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       const rect = editor.getBoundingClientRect();
       const dpr = Math.max(1, window.devicePixelRatio || 1);
       const w = Math.round(rect.width);
-      const h = Math.max(600, Math.round(rect.height));
+      const scrollH = editor.scrollHeight || 0;
+      const h = Math.max(600, Math.round(rect.height), scrollH);
 
       canvas.width = Math.round(w * dpr);
       canvas.height = Math.round(h * dpr);
@@ -2776,11 +2761,103 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     updateCanvasSize();
     const timer = setTimeout(updateCanvasSize, 50);
     window.addEventListener('resize', updateCanvasSize);
+
+    // 📏 Issue #3: ResizeObserver for dynamic editor height growth
+    let ro: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined' && contentRef.current) {
+      ro = new ResizeObserver(() => {
+        updateCanvasSize();
+      });
+      ro.observe(contentRef.current);
+    }
+
     return () => {
       clearTimeout(timer);
       window.removeEventListener('resize', updateCanvasSize);
+      if (ro) ro.disconnect();
     };
   }, [isInkingMode, renderInkCanvas]);
+
+  // ⌨️ Issue #4: Global Keyboard Shortcuts for Inking Mode (Ctrl+Z, Ctrl+Y, Delete, Esc, Ctrl+D, Arrow keys)
+  useEffect(() => {
+    if (!isInkingMode) return;
+
+    const handleInkingKeyDown = (e: KeyboardEvent) => {
+      // If typing in the inline text box, let textarea handle it
+      if (inlineEditingInkTextId) return;
+
+      const isMac = navigator.userAgent.toUpperCase().indexOf('MAC') >= 0;
+      const modifier = isMac ? e.metaKey : e.ctrlKey;
+
+      if (modifier) {
+        if (e.key.toLowerCase() === 'z') {
+          e.preventDefault();
+          if (e.shiftKey) {
+            handleInkRedo();
+          } else {
+            handleInkUndo();
+          }
+        } else if (e.key.toLowerCase() === 'y') {
+          e.preventDefault();
+          handleInkRedo();
+        } else if (e.key.toLowerCase() === 'd' && selectedInkStrokeId) {
+          e.preventDefault();
+          const target = inkStrokes.find(s => s.id === selectedInkStrokeId);
+          if (target) {
+            const dup: InkStroke = {
+              ...JSON.parse(JSON.stringify(target)),
+              id: `stroke-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+              shapeStart: target.shapeStart ? { x: target.shapeStart.x + 24, y: target.shapeStart.y + 24 } : undefined,
+              shapeEnd: target.shapeEnd ? { x: target.shapeEnd.x + 24, y: target.shapeEnd.y + 24 } : undefined,
+              points: target.points.map(p => ({ x: p.x + 24, y: p.y + 24 }))
+            };
+            const nextStrokes = [...inkStrokes, dup];
+            setInkStrokes(nextStrokes);
+            setSelectedInkStrokeId(dup.id);
+            const nextHist = [...inkHistory.slice(0, inkHistoryIndex + 1), nextStrokes];
+            setInkHistory(nextHist);
+            setInkHistoryIndex(nextHist.length - 1);
+            renderInkCanvas();
+          }
+        }
+      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (selectedInkStrokeId) {
+          e.preventDefault();
+          const nextStrokes = inkStrokes.filter(s => s.id !== selectedInkStrokeId);
+          setInkStrokes(nextStrokes);
+          setSelectedInkStrokeId(null);
+          const nextHist = [...inkHistory.slice(0, inkHistoryIndex + 1), nextStrokes];
+          setInkHistory(nextHist);
+          setInkHistoryIndex(nextHist.length - 1);
+          renderInkCanvas();
+        }
+      } else if (e.key === 'Escape') {
+        if (selectedInkStrokeId) {
+          e.preventDefault();
+          setSelectedInkStrokeId(null);
+          renderInkCanvas();
+        }
+      } else if (selectedInkStrokeId && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        e.preventDefault();
+        const step = e.shiftKey ? 10 : 2;
+        const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
+        const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
+        setInkStrokes(prev => prev.map(s => {
+          if (s.id !== selectedInkStrokeId) return s;
+          return {
+            ...s,
+            shapeStart: s.shapeStart ? { x: s.shapeStart.x + dx, y: s.shapeStart.y + dy } : undefined,
+            shapeEnd: s.shapeEnd ? { x: s.shapeEnd.x + dx, y: s.shapeEnd.y + dy } : undefined,
+            points: s.points.map(p => ({ x: p.x + dx, y: p.y + dy }))
+          };
+        }));
+        renderInkCanvas();
+      }
+    };
+
+    window.addEventListener('keydown', handleInkingKeyDown);
+    return () => window.removeEventListener('keydown', handleInkingKeyDown);
+  }, [isInkingMode, inlineEditingInkTextId, selectedInkStrokeId, inkStrokes, inkHistory, inkHistoryIndex, renderInkCanvas]);
 
   // --- AESTHETIC DECORATIVE DIVIDERS ---
   const handleInsertDivider = (type: 'gradient' | 'stars' | 'dots' | 'line') => {
@@ -4610,6 +4687,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
       pinned: note?.pinned || false,
       paperStyle: paperStyle || 'plain',
       paperTone: paperTone || 'default',
+      inkStrokes: inkStrokes || [],
       updatedAt: serverTimestamp(),
       ...(isNewNote ? { createdAt: serverTimestamp() } : {})
     };
@@ -4632,6 +4710,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
           pinned: note?.pinned || false,
           paperStyle: paperStyle || 'plain',
           paperTone: paperTone || 'default',
+          inkStrokes: inkStrokes || [],
           createdAt: note?.createdAt || Timestamp.fromDate(now),
           updatedAt: Timestamp.fromDate(now)
         });
@@ -4647,7 +4726,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     } finally {
       setSaving(false);
     }
-  }, [currentNoteId, title, tags, folder, color, paperStyle, paperTone, user, showToast, onSave, note]);
+  }, [currentNoteId, title, tags, folder, color, paperStyle, paperTone, inkStrokes, user, showToast, onSave, note]);
 
   // Unsaved Changes check
   const hasUnsavedChanges = useMemo(() => {
@@ -4883,75 +4962,119 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     link.click();
   };
 
-  // Find & Replace match counter helper
-  const updateMatchCount = useCallback(() => {
-    if (!findText || !contentRef.current) {
-      setMatchCount(0);
-      return;
+  // 🔍 Modern DOM TreeWalker Find & Replace (Issue #6)
+  const currentMatchIndexRef = useRef<number>(-1);
+
+  const getEditorTextMatches = useCallback(() => {
+    if (!contentRef.current || !findText.trim()) return [];
+    const root = contentRef.current;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    const matches: { node: Text; start: number; end: number }[] = [];
+    const search = findText.toLowerCase();
+
+    let node: Text | null = walker.nextNode() as Text | null;
+    while (node) {
+      const val = node.nodeValue || '';
+      const lower = val.toLowerCase();
+      let pos = 0;
+      while ((pos = lower.indexOf(search, pos)) !== -1) {
+        matches.push({ node, start: pos, end: pos + search.length });
+        pos += search.length;
+      }
+      node = walker.nextNode() as Text | null;
     }
-    const text = contentRef.current.textContent || '';
-    const regex = new RegExp(findText.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'gi');
-    const matches = text.match(regex);
-    setMatchCount(matches ? matches.length : 0);
+    return matches;
   }, [findText]);
+
+  const updateMatchCount = useCallback(() => {
+    const matches = getEditorTextMatches();
+    setMatchCount(matches.length);
+  }, [getEditorTextMatches]);
 
   useEffect(() => {
     updateMatchCount();
   }, [findText, body, updateMatchCount]);
 
   const handleFind = (forward = true) => {
-    if (!findText) return;
+    if (!findText.trim() || !contentRef.current) return;
+    const matches = getEditorTextMatches();
+    if (matches.length === 0) {
+      setMatchCount(0);
+      return;
+    }
+    setMatchCount(matches.length);
+
+    let nextIdx = currentMatchIndexRef.current + (forward ? 1 : -1);
+    if (nextIdx >= matches.length) nextIdx = 0;
+    if (nextIdx < 0) nextIdx = matches.length - 1;
+    currentMatchIndexRef.current = nextIdx;
+
+    const match = matches[nextIdx];
     try {
-      const found = (window as any).find(findText, false, !forward, true, false, true, false);
-      if (!found) {
-        // Search wrap around
-        (window as any).find(findText, false, !forward, true, true, true, false);
+      const range = document.createRange();
+      range.setStart(match.node, match.start);
+      range.setEnd(match.node, match.end);
+
+      const sel = window.getSelection();
+      if (sel) {
+        sel.removeAllRanges();
+        sel.addRange(range);
       }
-      updateMatchCount();
-    } catch (e) {
-      console.error(e);
+      if (match.node.parentElement) {
+        match.node.parentElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    } catch {
+      // Graceful fallback
+      (window as any).find?.(findText, false, !forward, true, false, true, false);
     }
   };
 
   const handleReplace = () => {
-    if (!findText) return;
-    const selection = window.getSelection();
-    if (selection && selection.rangeCount > 0) {
-      const range = selection.getRangeAt(0);
+    if (!findText || !contentRef.current) return;
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      const range = sel.getRangeAt(0);
       if (range.toString().toLowerCase() === findText.toLowerCase()) {
-        if (contentRef.current) {
-          pushToHistoryImmediate(contentRef.current.innerHTML);
-        }
+        pushToHistoryImmediate(contentRef.current.innerHTML);
         range.deleteContents();
-        const node = document.createTextNode(replaceText);
-        range.insertNode(node);
-        
-        if (contentRef.current) {
-          const html = contentRef.current.innerHTML;
-          latestContent.current = html;
-          setBody(html);
-          pushToHistory(html);
-        }
-        
+        const textNode = document.createTextNode(replaceText);
+        range.insertNode(textNode);
+
+        const html = contentRef.current.innerHTML;
+        latestContent.current = html;
+        setBody(html);
+        pushToHistory(html);
+        updateMatchCount();
+        handleFind(true);
+      } else {
         handleFind(true);
       }
+    } else {
+      handleFind(true);
     }
   };
 
   const handleReplaceAll = () => {
     if (!findText || !contentRef.current) return;
+    const matches = getEditorTextMatches();
+    if (matches.length === 0) return;
+
     pushToHistoryImmediate(contentRef.current.innerHTML);
-    
-    const text = contentRef.current.innerHTML;
-    const regex = new RegExp(findText.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'gi');
-    const newHtml = text.replace(regex, replaceText);
-    contentRef.current.innerHTML = newHtml;
-    
-    latestContent.current = newHtml;
-    setBody(newHtml);
-    pushToHistory(newHtml);
+
+    // Replace in reverse order so character offsets in earlier nodes stay valid
+    for (let i = matches.length - 1; i >= 0; i--) {
+      const m = matches[i];
+      const val = m.node.nodeValue || '';
+      m.node.nodeValue = val.slice(0, m.start) + replaceText + val.slice(m.end);
+    }
+
+    const html = contentRef.current.innerHTML;
+    latestContent.current = html;
+    setBody(html);
+    pushToHistory(html);
+    currentMatchIndexRef.current = -1;
     updateMatchCount();
-    showToast('All matches replaced', 'success');
+    showToast(`Replaced all ${matches.length} matches!`, 'success');
   };
 
   // Info helpers
@@ -7485,7 +7608,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
               {/* Center Content Editor container */}
               <div className="w-full relative min-h-[500px]" ref={editorWrapperRef}>
                 {/* Active Interactive Inking Canvas */}
-                {isInkingMode && (
+                {isInkingMode ? (
                   <>
                     <canvas
                       ref={inkCanvasRef}
@@ -7567,6 +7690,20 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                       );
                     })()}
                   </>
+                ) : (
+                  /* 🎨 Issue #1 Fix: Read-Only Inking Overlay: Drawings STAY VISIBLE when Done / Typing text */
+                  inkStrokes.length > 0 && (
+                    <div
+                      className="glick-page-ink-layer pointer-events-none absolute top-0 left-0 w-full h-full z-10 overflow-visible select-none"
+                      dangerouslySetInnerHTML={{
+                        __html: convertStrokesToSvg(
+                          inkStrokes,
+                          contentRef.current?.offsetWidth || 850,
+                          Math.max(600, contentRef.current?.scrollHeight || 600)
+                        )
+                      }}
+                    />
+                  )
                 )}
                 
                 <div
@@ -7809,6 +7946,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
         noteText={extractTextFromHtml(body)}
         tags={tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : []}
         createdAt={lastSaved || new Date()}
+        inkSvg={inkStrokes.length > 0 ? convertStrokesToSvg(inkStrokes, 800, 1000) : undefined}
       />
 
       {/* 🎙️ Voice Dictation Speech-to-Text Modal */}
