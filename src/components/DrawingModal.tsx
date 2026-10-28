@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
   X, Check, RotateCcw, RotateCw, Trash2, MousePointer, 
-  Pencil, Highlighter, Minus, ArrowRight, Square, Circle, 
+  Pencil, Highlighter, Eraser, Minus, ArrowRight, Square, Circle, 
   Triangle, Star, MessageSquare, Type, Image as ImageIcon,
   Palette, Download, Sparkles, ChevronRight, ChevronDown,
   Layers, ArrowUp, ArrowDown, Move, Compass,
@@ -141,10 +141,11 @@ export default function DrawingModal({
 
   // Interaction State Refs
   const isInteractingRef = useRef(false);
-  const dragModeRef = useRef<HandleType | 'draw' | null>(null);
+  const dragModeRef = useRef<HandleType | 'draw' | 'erase' | null>(null);
   const dragStartMouseRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const initialObjectSnapshotRef = useRef<CanvasObject | null>(null);
   const activeDrawPointsRef = useRef<{ x: number; y: number }[]>([]);
+  const hasInitializedRef = useRef(false);
 
   // Auto-focus inline textarea when text tool activates and select all
   useEffect(() => {
@@ -224,7 +225,13 @@ export default function DrawingModal({
 
   // Initial load: either image or empty canvas
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      hasInitializedRef.current = false;
+      return;
+    }
+    if (hasInitializedRef.current) return;
+    hasInitializedRef.current = true;
+
     const timer = setTimeout(() => {
       const canvas = canvasRef.current;
       const container = containerRef.current;
@@ -232,8 +239,8 @@ export default function DrawingModal({
 
       const rect = container.getBoundingClientRect();
       const dpr = Math.max(1, window.devicePixelRatio || 1);
-      const w = Math.floor(rect.width) || 880;
-      const h = Math.floor(rect.height) || 540;
+      const w = Math.max(320, Math.floor(rect.width) || 880);
+      const h = Math.max(320, Math.floor(rect.height) || 540);
       canvas.width = Math.round(w * dpr);
       canvas.height = Math.round(h * dpr);
       canvas.style.width = `${w}px`;
@@ -274,16 +281,36 @@ export default function DrawingModal({
     return () => clearTimeout(timer);
   }, [isOpen, initialImageData]);
 
-  // Helper: Convert screen mouse coords to canvas coords with smooth subpixel precision
+  // Helper: Convert screen mouse / touch coords to canvas coords with smooth subpixel precision
   const getCanvasCoords = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    let clientX = 0;
+    let clientY = 0;
+
+    if ('touches' in e) {
+      if (e.touches && e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      } else if (e.changedTouches && e.changedTouches.length > 0) {
+        clientX = e.changedTouches[0].clientX;
+        clientY = e.changedTouches[0].clientY;
+      }
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    const internalW = canvas.width / dpr;
+    const internalH = canvas.height / dpr;
+    const scaleX = rect.width > 0 ? internalW / rect.width : 1;
+    const scaleY = rect.height > 0 ? internalH / rect.height : 1;
+
     return {
-      x: clientX - rect.left,
-      y: clientY - rect.top
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY
     };
   };
 
@@ -790,11 +817,11 @@ export default function DrawingModal({
 
     // Draw Selection Bounding Box & Handles for Selected Object
     const selObj = objects.find(o => o.id === selectedId);
-    if (selObj && selObj.type !== 'pen' && selObj.type !== 'highlighter') {
+    if (selObj) {
       const cx = selObj.x + selObj.width / 2;
       const cy = selObj.y + selObj.height / 2;
-      const w = selObj.width;
-      const h = selObj.height;
+      const w = Math.max(10, selObj.width);
+      const h = Math.max(10, selObj.height);
 
       ctx.save();
       ctx.translate(cx, cy);
@@ -869,10 +896,11 @@ export default function DrawingModal({
 
     const w = obj.width;
     const h = obj.height;
-    const tol = 8; // handle click radius tolerance
+    const isTouch = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+    const tol = isTouch ? 20 : 9; // generous touch tolerance for fingers / mobile
 
     // Check Rotation Handle
-    if (Math.hypot(lx - w / 2, ly - (-22)) <= 10) return 'rot';
+    if (Math.hypot(lx - w / 2, ly - (-22)) <= (isTouch ? 20 : 10)) return 'rot';
 
     // Check 8 Resize Handles
     if (Math.hypot(lx - 0, ly - 0) <= tol) return 'tl';
@@ -894,12 +922,14 @@ export default function DrawingModal({
 
   // Find topmost hit object under cursor
   const findTopObjectAt = (px: number, py: number): { obj: CanvasObject; handle: HandleType } | null => {
+    const isTouch = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
     for (let i = objects.length - 1; i >= 0; i--) {
       const obj = objects[i];
       if (obj.type === 'pen' || obj.type === 'highlighter') {
-        // Test distance to points
-        if (obj.points) {
-          const hit = obj.points.some(pt => Math.hypot(pt.x - px, pt.y - py) <= (obj.strokeWidth + 6));
+        // Test distance to points with generous touch tolerance
+        if (obj.points && obj.points.length > 0) {
+          const hitRadius = (obj.strokeWidth || 3) + (isTouch ? 18 : 8);
+          const hit = obj.points.some(pt => Math.hypot(pt.x - px, pt.y - py) <= hitRadius);
           if (hit) return { obj, handle: 'body' };
         }
       } else {
@@ -908,6 +938,49 @@ export default function DrawingModal({
       }
     }
     return null;
+  };
+
+  // Continuous eraser: smoothly removes strokes & shapes touched by the eraser
+  const eraseAtPoint = (px: number, py: number) => {
+    const isTouch = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+    const eraserRadius = isTouch ? Math.max(22, strokeWidth * 3.5) : Math.max(15, strokeWidth * 2.5);
+    setObjects(prev => {
+      let changed = false;
+      const next = prev.filter(obj => {
+        if (obj.type === 'pen' || obj.type === 'highlighter') {
+          if (obj.points && obj.points.length > 0) {
+            const hit = obj.points.some(pt => Math.hypot(pt.x - px, pt.y - py) <= (eraserRadius + (obj.strokeWidth || 3)));
+            if (hit) {
+              changed = true;
+              return false;
+            }
+          }
+          return true;
+        } else {
+          const cx = obj.x + obj.width / 2;
+          const cy = obj.y + obj.height / 2;
+          const rad = (-obj.rotation * Math.PI) / 180;
+          const dx = px - cx;
+          const dy = py - cy;
+          const lx = dx * Math.cos(rad) - dy * Math.sin(rad) + obj.width / 2;
+          const ly = dx * Math.sin(rad) + dy * Math.cos(rad) + obj.height / 2;
+          if (lx >= -eraserRadius && lx <= obj.width + eraserRadius && 
+              ly >= -eraserRadius && ly <= obj.height + eraserRadius) {
+            changed = true;
+            return false;
+          }
+          return true;
+        }
+      });
+
+      if (changed) {
+        if (selectedId && !next.some(o => o.id === selectedId)) {
+          setSelectedId(null);
+        }
+        return next;
+      }
+      return prev;
+    });
   };
 
   // -------------------------------------------------------------
@@ -947,16 +1020,10 @@ export default function DrawingModal({
       return;
     }
 
-    // 2. Eraser Mode
+    // 2. Eraser Mode: Click or Drag to continuously erase strokes and shapes
     if (activeTool === 'eraser') {
-      const hit = findTopObjectAt(x, y);
-      if (hit) {
-        const nextObjs = objects.filter(o => o.id !== hit.obj.id);
-        setObjects(nextObjs);
-        if (selectedId === hit.obj.id) setSelectedId(null);
-        pushHistory(nextObjs);
-      }
-      isInteractingRef.current = false;
+      dragModeRef.current = 'erase';
+      eraseAtPoint(x, y);
       return;
     }
 
@@ -964,16 +1031,17 @@ export default function DrawingModal({
     if (activeTool === 'pen' || activeTool === 'highlighter') {
       dragModeRef.current = 'draw';
       activeDrawPointsRef.current = [{ x, y }];
+      const penWidth = activeTool === 'highlighter' ? Math.max(16, strokeWidth * 3.5) : Math.max(1, strokeWidth);
       const newObj: CanvasObject = {
         id: `stroke-${Date.now()}`,
         type: activeTool,
         x,
         y,
-        width: 0,
-        height: 0,
+        width: 1,
+        height: 1,
         rotation: 0,
         strokeColor,
-        strokeWidth,
+        strokeWidth: penWidth,
         fillColor: 'transparent',
         points: [{ x, y }]
       };
@@ -1035,13 +1103,37 @@ export default function DrawingModal({
     const dx = x - startX;
     const dy = y - startY;
 
-    // A. Freehand Drawing
+    // A. Eraser Dragging Mode
+    if (dragModeRef.current === 'erase' || (activeTool === 'eraser' && isInteractingRef.current)) {
+      eraseAtPoint(x, y);
+      return;
+    }
+
+    // B. Freehand Drawing
     if (dragModeRef.current === 'draw' && (activeTool === 'pen' || activeTool === 'highlighter')) {
       activeDrawPointsRef.current.push({ x, y });
+      const pts = [...activeDrawPointsRef.current];
+      let minX = pts[0].x, maxX = pts[0].x, minY = pts[0].y, maxY = pts[0].y;
+      for (let i = 1; i < pts.length; i++) {
+        if (pts[i].x < minX) minX = pts[i].x;
+        if (pts[i].x > maxX) maxX = pts[i].x;
+        if (pts[i].y < minY) minY = pts[i].y;
+        if (pts[i].y > maxY) maxY = pts[i].y;
+      }
+      const sWidth = Math.max(1, maxX - minX);
+      const sHeight = Math.max(1, maxY - minY);
+
       setObjects(prev => {
         if (prev.length === 0) return prev;
         const lastIdx = prev.length - 1;
-        const lastObj = { ...prev[lastIdx], points: [...activeDrawPointsRef.current] };
+        const lastObj = { 
+          ...prev[lastIdx], 
+          x: minX, 
+          y: minY, 
+          width: sWidth, 
+          height: sHeight, 
+          points: pts 
+        };
         const next = [...prev];
         next[lastIdx] = lastObj;
         return next;
@@ -1049,7 +1141,7 @@ export default function DrawingModal({
       return;
     }
 
-    // B. Drawing New Vector Shape
+    // C. Drawing New Vector Shape
     if (dragModeRef.current === 'draw' && activeTool !== 'select') {
       const snap = initialObjectSnapshotRef.current;
       if (!snap) return;
@@ -1070,13 +1162,24 @@ export default function DrawingModal({
       return;
     }
 
-    // C. Transforming Existing Selected Object
+    // D. Transforming Existing Selected Object
     const snap = initialObjectSnapshotRef.current;
     if (!selectedId || !snap || !dragModeRef.current) return;
 
     if (dragModeRef.current === 'body') {
-      // Move Object
-      setObjects(prev => prev.map(o => o.id === selectedId ? { ...o, x: snap.x + dx, y: snap.y + dy } : o));
+      // Move Object (support both vector shapes and freehand stroke points)
+      setObjects(prev => prev.map(o => {
+        if (o.id !== selectedId) return o;
+        if (snap.points && (snap.type === 'pen' || snap.type === 'highlighter')) {
+          return {
+            ...o,
+            x: snap.x + dx,
+            y: snap.y + dy,
+            points: snap.points.map(pt => ({ x: pt.x + dx, y: pt.y + dy }))
+          };
+        }
+        return { ...o, x: snap.x + dx, y: snap.y + dy };
+      }));
     } else if (dragModeRef.current === 'rot') {
       // Rotate Object
       const cx = snap.x + snap.width / 2;
@@ -1123,10 +1226,27 @@ export default function DrawingModal({
     if (!isInteractingRef.current) return;
     isInteractingRef.current = false;
 
+    const wasDrawingStroke = dragModeRef.current === 'draw' && (activeTool === 'pen' || activeTool === 'highlighter');
+    const wasDrawingShape = dragModeRef.current === 'draw' && activeTool !== 'pen' && activeTool !== 'highlighter' && activeTool !== 'text' && activeTool !== 'select' && activeTool !== 'eraser';
     const wasDrawingText = dragModeRef.current === 'draw' && activeTool === 'text';
 
-    // If we were drawing a shape or text, ensure visible default size if user clicked without dragging
-    if (dragModeRef.current === 'draw' && activeTool !== 'pen' && activeTool !== 'highlighter') {
+    if (wasDrawingStroke) {
+      // Finalize stroke points safely without race conditions
+      const completedPts = [...activeDrawPointsRef.current];
+      setObjects(currentObjs => {
+        if (currentObjs.length > 0 && completedPts.length > 0) {
+          const lastIdx = currentObjs.length - 1;
+          const updated = { ...currentObjs[lastIdx], points: completedPts };
+          const next = [...currentObjs];
+          next[lastIdx] = updated;
+          pushHistory(next);
+          return next;
+        }
+        pushHistory(currentObjs);
+        return currentObjs;
+      });
+      activeDrawPointsRef.current = [];
+    } else if (wasDrawingShape) {
       setObjects(currentObjs => {
         const lastIdx = currentObjs.length - 1;
         if (lastIdx >= 0) {
@@ -1153,7 +1273,10 @@ export default function DrawingModal({
       });
       setActiveTool('select');
     } else {
-      pushHistory(objects);
+      setObjects(currentObjs => {
+        pushHistory(currentObjs);
+        return currentObjs;
+      });
     }
 
     dragModeRef.current = null;
@@ -1577,10 +1700,15 @@ export default function DrawingModal({
           <button
             type="button"
             onClick={() => { setActiveTool('eraser'); setSelectedId(null); }}
-            className={`p-1.5 px-2 rounded-xl flex items-center gap-1 font-semibold transition ${activeTool === 'eraser' ? 'bg-rose-600 text-white shadow-xs' : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300'}`}
-            title="Eraser: Click on any shape to delete it"
+            className={`p-1.5 px-2.5 rounded-xl flex items-center gap-1.5 font-semibold transition cursor-pointer ${
+              activeTool === 'eraser' 
+                ? 'bg-rose-600 text-white shadow-xs' 
+                : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300'
+            }`}
+            title="Eraser: Click or drag across any stroke or shape to erase"
           >
-            <Trash2 className="w-4 h-4" />
+            <Eraser className="w-4 h-4" />
+            <span className="hidden sm:inline">Eraser</span>
           </button>
 
           <div className="w-px h-5 bg-slate-200 dark:bg-slate-800 mx-1 shrink-0" />
@@ -2097,11 +2225,23 @@ export default function DrawingModal({
               onMouseDown={handleMouseDown}
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
-              onTouchStart={handleMouseDown}
-              onTouchMove={handleMouseMove}
-              onTouchEnd={handleMouseUp}
+              onTouchStart={(e) => {
+                e.preventDefault();
+                handleMouseDown(e);
+              }}
+              onTouchMove={(e) => {
+                e.preventDefault();
+                handleMouseMove(e);
+              }}
+              onTouchEnd={(e) => {
+                e.preventDefault();
+                handleMouseUp();
+              }}
+              onTouchCancel={() => {
+                handleMouseUp();
+              }}
               onDoubleClick={handleCanvasDoubleClick}
-              className={`rounded-xl ${activeTool === 'select' ? 'cursor-default' : 'cursor-crosshair'}`}
+              className={`rounded-xl ${activeTool === 'select' ? 'cursor-default' : activeTool === 'eraser' ? 'cursor-cell' : 'cursor-crosshair'}`}
               style={{ touchAction: 'none' }}
             />
 
