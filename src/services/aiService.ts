@@ -17,11 +17,20 @@ export interface ModelTestResult {
   message: string;
 }
 
+// Officially verified, active Google Gemini models
 export const GEMINI_MODELS = [
-  { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash (Fast & Balanced - Recommended)', default: true },
-  { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash (Next-Gen Fast)', default: false },
-  { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro (Deep Reasoning & Analysis)', default: false },
-  { id: 'gemini-2.0-flash-lite', name: 'Gemini 2.0 Flash-Lite (Ultra-Speed)', default: false }
+  { id: 'gemini-3.5-flash', name: 'Gemini 3.5 Flash (Primary - Fast & Stable)', default: true },
+  { id: 'gemini-3.5-flash-lite', name: 'Gemini 3.5 Flash-Lite (High Speed)', default: false },
+  { id: 'gemini-3.6-flash', name: 'Gemini 3.6 Flash (High Performance)', default: false },
+  { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash (Deep Reasoning)', default: false }
+];
+
+// Sequential fallback chain: if a model fails or hits limits, seamlessly move to the next
+export const WORKING_GEMINI_FALLBACK_CHAIN = [
+  'gemini-3.5-flash',
+  'gemini-3.5-flash-lite',
+  'gemini-3.6-flash',
+  'gemini-3.8-flash'
 ];
 
 const LOCAL_STORAGE_KEY = 'glick_ai_config';
@@ -30,7 +39,7 @@ export function getDefaultAIConfig(): AIConfiguration {
   return {
     mode: 'default',
     gemini: {
-      model: 'gemini-1.5-flash',
+      model: 'gemini-3.5-flash',
       apiKey: (import.meta.env.VITE_GEMINI_API_KEY as string) || ''
     }
   };
@@ -42,10 +51,11 @@ export function getAIConfig(): AIConfiguration {
     if (!stored) return getDefaultAIConfig();
     const parsed = JSON.parse(stored);
     
-    // Auto-migrate any invalid legacy model names
-    let geminiModel = parsed.gemini?.model || 'gemini-1.5-flash';
-    if (geminiModel.includes('3.5') || geminiModel.includes('3.7') || geminiModel === 'gemini-flash-latest') {
-      geminiModel = 'gemini-1.5-flash';
+    // Auto-migrate any deprecated legacy models (1.5, 2.0, 2.5, etc.) to 3.5-flash
+    let geminiModel = parsed.gemini?.model || 'gemini-3.5-flash';
+    const isValidModel = WORKING_GEMINI_FALLBACK_CHAIN.includes(geminiModel);
+    if (!isValidModel) {
+      geminiModel = 'gemini-3.5-flash';
     }
 
     return {
@@ -153,32 +163,47 @@ async function callGemini(apiKey: string, model: string, prompt: string, systemI
 }
 
 /**
- * Executes an AI completion using Google Gemini with automatic failover to backup Gemini model.
+ * Executes an AI completion using sequential Gemini fallback.
+ * Tries the user's selected model first, and if it fails or is overloaded,
+ * automatically falls back through the remaining working Gemini models in order.
+ * If ALL models fail, throws an aggregated error for the UI to popup.
  */
 export async function executeAICompletion(prompt: string, systemInstruction?: string): Promise<{ text: string; providerUsed: string; modelUsed: string }> {
   const config = getAIConfig();
   const key = config.mode === 'custom' 
     ? config.gemini.apiKey 
     : ((import.meta.env.VITE_GEMINI_API_KEY as string) || '');
-  const model = config.gemini.model || 'gemini-1.5-flash';
-
+  
   if (!key) {
-    throw new Error('Google Gemini API key is not configured. Please add your key in AI Configuration or .env');
+    throw new Error('Google Gemini API key is missing. Please set VITE_GEMINI_API_KEY in Vercel or configure your key in Settings.');
   }
 
-  try {
-    const text = await callGemini(key, model, prompt, systemInstruction);
-    return { text, providerUsed: 'Gemini', modelUsed: model };
-  } catch (primaryErr: any) {
-    console.warn(`Primary Gemini model (${model}) failed:`, primaryErr.message);
-    const fallbackModel = model === 'gemini-1.5-flash' ? 'gemini-2.0-flash' : 'gemini-1.5-flash';
+  const selectedModel = config.gemini.model || 'gemini-3.5-flash';
+  // Sequence: Selected model first, then remaining verified working models
+  const sequence = [
+    selectedModel,
+    ...WORKING_GEMINI_FALLBACK_CHAIN.filter(m => m !== selectedModel)
+  ];
+
+  const failureDetails: string[] = [];
+
+  for (let i = 0; i < sequence.length; i++) {
+    const currentModel = sequence[i];
     try {
-      const text = await callGemini(key, fallbackModel, prompt, systemInstruction);
-      return { text, providerUsed: 'Gemini', modelUsed: fallbackModel };
-    } catch (secondaryErr: any) {
-      throw new Error(`Gemini Error: ${primaryErr.message} (Fallback: ${secondaryErr.message})`);
+      const text = await callGemini(key, currentModel, prompt, systemInstruction);
+      return { 
+        text, 
+        providerUsed: 'Gemini', 
+        modelUsed: currentModel 
+      };
+    } catch (err: any) {
+      console.warn(`[Gemini Fallback] Model ${currentModel} failed (attempt ${i + 1}/${sequence.length}):`, err.message);
+      failureDetails.push(`[${currentModel}]: ${err.message}`);
     }
   }
+
+  // All models in sequence failed
+  throw new Error(`All Gemini models failed!\n${failureDetails.join('\n')}`);
 }
 
 // 1. AI Summary

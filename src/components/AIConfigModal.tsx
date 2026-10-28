@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Sparkles, Check, AlertCircle, Loader2, Key, Cpu, ShieldCheck, 
-  RotateCcw, Eye, EyeOff, X, Play, RefreshCw, Zap, ExternalLink
+  RotateCcw, Eye, EyeOff, X, Play, RefreshCw, Zap, ExternalLink, ArrowRight
 } from 'lucide-react';
 import { 
   getAIConfig, saveAIConfig, getDefaultAIConfig, 
-  testGeminiModel, GEMINI_MODELS, 
+  testGeminiModel, GEMINI_MODELS, WORKING_GEMINI_FALLBACK_CHAIN,
   AIConfiguration, ModelTestResult 
 } from '../services/aiService';
 import { useToast } from '../contexts/ToastContext';
@@ -81,7 +81,7 @@ export default function AIConfigModal({ isOpen, onClose }: AIConfigModalProps) {
     showToast('Reset to Default Gemini Configuration', 'info');
   };
 
-  // Run Test for Default Gemini Models
+  // Run Test for Default Gemini Models across Fallback Chain
   const handleTestDefault = async () => {
     if (cooldownSeconds > 0) return;
     setTestingDefault(true);
@@ -89,44 +89,78 @@ export default function AIConfigModal({ isOpen, onClose }: AIConfigModalProps) {
 
     const defaultGeminiKey = (import.meta.env.VITE_GEMINI_API_KEY as string) || '';
 
+    if (!defaultGeminiKey.trim()) {
+      showToast('Error: VITE_GEMINI_API_KEY is not set in environment.', 'error');
+      setTestResults([{
+        provider: 'gemini',
+        model: 'gemini-3.5-flash',
+        ok: false,
+        status: 'Missing Key',
+        latencyMs: 0,
+        message: 'No API key configured in environment variables.'
+      }]);
+      setTestingDefault(false);
+      return;
+    }
+
     const results: ModelTestResult[] = [];
-
-    // Test Gemini 1.5 Flash
-    const gResult = await testGeminiModel(defaultGeminiKey, 'gemini-1.5-flash');
-    results.push(gResult);
-
-    // Test Gemini 2.0 Flash
-    const g2Result = await testGeminiModel(defaultGeminiKey, 'gemini-2.0-flash');
-    results.push(g2Result);
+    for (const m of WORKING_GEMINI_FALLBACK_CHAIN) {
+      const res = await testGeminiModel(defaultGeminiKey, m);
+      results.push(res);
+    }
 
     setTestResults(results);
     setTestingDefault(false);
     setCooldownSeconds(15);
+
+    const anySuccess = results.some(r => r.ok);
+    if (!anySuccess) {
+      showToast('All Gemini models failed connection test! Please check Vercel API key.', 'error');
+    } else {
+      const workingCount = results.filter(r => r.ok).length;
+      showToast(`${workingCount}/${results.length} Gemini models online & connected!`, 'success');
+    }
   };
 
-  // Run Test for Custom Gemini Configuration
+  // Run Test for Custom Gemini Configuration with sequential fallback
   const handleTestCustom = async () => {
-    setTestingCustom(true);
-    setTestResults(null);
-
-    const results: ModelTestResult[] = [];
-
-    if (geminiKey.trim()) {
-      const gResult = await testGeminiModel(geminiKey.trim(), geminiModel);
-      results.push(gResult);
-    } else {
-      results.push({
+    if (!geminiKey.trim()) {
+      showToast('Please enter your Google Gemini API key first.', 'error');
+      setTestResults([{
         provider: 'gemini',
         model: geminiModel,
         ok: false,
         status: 'Missing Key',
         latencyMs: 0,
         message: 'Google Gemini API key is not entered.'
-      });
+      }]);
+      return;
+    }
+
+    setTestingCustom(true);
+    setTestResults(null);
+
+    const sequence = [
+      geminiModel,
+      ...WORKING_GEMINI_FALLBACK_CHAIN.filter(m => m !== geminiModel)
+    ];
+
+    const results: ModelTestResult[] = [];
+    for (const m of sequence) {
+      const res = await testGeminiModel(geminiKey.trim(), m);
+      results.push(res);
     }
 
     setTestResults(results);
     setTestingCustom(false);
+
+    const anySuccess = results.some(r => r.ok);
+    if (!anySuccess) {
+      showToast('All Gemini models failed with your key! Please check if your key is valid.', 'error');
+    } else {
+      const workingCount = results.filter(r => r.ok).length;
+      showToast(`${workingCount}/${results.length} Gemini models online with your key!`, 'success');
+    }
   };
 
   return (
@@ -143,7 +177,7 @@ export default function AIConfigModal({ isOpen, onClose }: AIConfigModalProps) {
             </div>
             <div>
               <h2 className="text-xl font-bold text-slate-900 dark:text-white">Google Gemini AI Engine</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Configure your Google Gemini models and API key</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Multi-Model Sequential Failover & Resilience System</p>
             </div>
           </div>
           <button 
@@ -192,6 +226,39 @@ export default function AIConfigModal({ isOpen, onClose }: AIConfigModalProps) {
             </button>
           </div>
 
+          {/* Sequential Fallback Chain Indicator */}
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                Active Fallback Sequence
+              </span>
+              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded font-semibold">
+                Auto-Failover
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Agar pehla model busy ya rate-limited ho, system bina rukhe agle model par shift ho jata hai:
+            </p>
+            <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-mono font-medium pt-1">
+              <span className="px-2 py-1 rounded bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900/60 font-semibold">
+                1. 3.5-flash
+              </span>
+              <ArrowRight className="w-3 h-3 text-slate-400" />
+              <span className="px-2 py-1 rounded bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-900/60">
+                2. 3.5-flash-lite
+              </span>
+              <ArrowRight className="w-3 h-3 text-slate-400" />
+              <span className="px-2 py-1 rounded bg-purple-100 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-900/60">
+                3. 3.6-flash
+              </span>
+              <ArrowRight className="w-3 h-3 text-slate-400" />
+              <span className="px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                4. 3.8-flash
+              </span>
+            </div>
+          </div>
+
           {/* Mode 1: DEFAULT */}
           {mode === 'default' && (
             <div className="space-y-4 animate-in fade-in duration-200">
@@ -201,7 +268,7 @@ export default function AIConfigModal({ isOpen, onClose }: AIConfigModalProps) {
                   <div>
                     <h4 className="font-semibold text-blue-950 dark:text-blue-200">Google Gemini Built-In</h4>
                     <p className="text-xs text-blue-800/80 dark:text-blue-300/80 mt-1">
-                      Glick X Notes uses fast and modern Google Gemini models. You can test your connection or use your own custom key anytime.
+                      Glick X Notes high-speed Google Gemini models use karta hai. Connectivity test karke aap sabhi models ka live status dekh sakte hain.
                     </p>
                   </div>
                 </div>
@@ -211,13 +278,13 @@ export default function AIConfigModal({ isOpen, onClose }: AIConfigModalProps) {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-blue-500 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded">Primary Model</span>
-                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 mt-1.5">Gemini 1.5 Flash</p>
-                  <p className="text-xs text-slate-500">Fast, smart & optimized for notes</p>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 mt-1.5">Gemini 3.5 Flash</p>
+                  <p className="text-xs text-slate-500">Fast, smart & stable</p>
                 </div>
                 <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-500 bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 rounded">Failover Backup</span>
-                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 mt-1.5">Gemini 2.0 Flash</p>
-                  <p className="text-xs text-slate-500">Automatic high-speed fallback</p>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-500 bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 rounded">High-Speed Failover</span>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 mt-1.5">Gemini 3.5 Flash-Lite</p>
+                  <p className="text-xs text-slate-500">Instant automatic backup</p>
                 </div>
               </div>
 
@@ -235,7 +302,7 @@ export default function AIConfigModal({ isOpen, onClose }: AIConfigModalProps) {
                   {testingDefault ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      Testing Gemini Connection...
+                      Testing Gemini Sequence in Real-Time...
                     </>
                   ) : cooldownSeconds > 0 ? (
                     <>
@@ -245,7 +312,7 @@ export default function AIConfigModal({ isOpen, onClose }: AIConfigModalProps) {
                   ) : (
                     <>
                       <Zap className="w-4 h-4" />
-                      Test Gemini Connection
+                      Test All Gemini Models in Sequence
                     </>
                   )}
                 </button>
@@ -259,7 +326,7 @@ export default function AIConfigModal({ isOpen, onClose }: AIConfigModalProps) {
               
               {/* Notice */}
               <div className="p-3.5 rounded-xl bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400 flex items-center justify-between">
-                <span>🔒 Your key stays strictly in your browser's local storage.</span>
+                <span>🔒 Key aapke browser ke safe local storage me store hoti hai.</span>
                 <a 
                   href="https://aistudio.google.com/app/apikey" 
                   target="_blank" 
@@ -272,7 +339,7 @@ export default function AIConfigModal({ isOpen, onClose }: AIConfigModalProps) {
 
               {/* Model Selector */}
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Select Google Gemini Model</label>
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Select Primary Gemini Model</label>
                 <select
                   value={geminiModel}
                   onChange={(e) => setGeminiModel(e.target.value)}
@@ -313,7 +380,7 @@ export default function AIConfigModal({ isOpen, onClose }: AIConfigModalProps) {
                   className="flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 transition"
                 >
                   <Check className="w-4 h-4" />
-                  Save Gemini Configuration
+                  Save Configuration
                 </button>
                 <button
                   type="button"
@@ -322,7 +389,7 @@ export default function AIConfigModal({ isOpen, onClose }: AIConfigModalProps) {
                   className="py-2.5 px-4 rounded-xl text-sm font-semibold border border-blue-200 dark:border-blue-800/80 hover:bg-blue-50 dark:hover:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center gap-2 transition"
                 >
                   {testingCustom ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-                  Test Connection
+                  Test Fallback Chain
                 </button>
               </div>
             </div>
@@ -331,15 +398,20 @@ export default function AIConfigModal({ isOpen, onClose }: AIConfigModalProps) {
           {/* Test Results Section */}
           {testResults && (
             <div className="p-4 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3 animate-in fade-in duration-200">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-blue-500" />
-                Connection Test Results
-              </h4>
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-blue-500" />
+                  Sequential Model Test Results
+                </h4>
+                <span className="text-[10px] text-slate-500">
+                  {testResults.filter(r => r.ok).length}/{testResults.length} Online
+                </span>
+              </div>
               <div className="space-y-2">
                 {testResults.map((res, idx) => (
                   <div 
                     key={idx}
-                    className={`p-3 rounded-lg border flex items-start justify-between gap-3 text-xs ${
+                    className={`p-3 rounded-lg border flex items-start justify-between gap-3 text-xs transition-all ${
                       res.ok 
                         ? 'border-emerald-200 dark:border-emerald-900/60 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-900 dark:text-emerald-200' 
                         : 'border-rose-200 dark:border-rose-900/60 bg-rose-50/50 dark:bg-rose-950/20 text-rose-900 dark:text-rose-200'
@@ -347,8 +419,14 @@ export default function AIConfigModal({ isOpen, onClose }: AIConfigModalProps) {
                   >
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold uppercase tracking-wider text-[10px]">Gemini: {res.model}</span>
-                        {res.ok && <span className="text-[10px] bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.2 rounded font-semibold">{res.latencyMs}ms</span>}
+                        <span className="font-bold uppercase tracking-wider text-[10px]">
+                          #{idx + 1}: {res.model}
+                        </span>
+                        {res.ok && (
+                          <span className="text-[10px] bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.2 rounded font-semibold">
+                            {res.latencyMs}ms
+                          </span>
+                        )}
                       </div>
                       <p className="text-[11px] opacity-90 leading-relaxed">{res.message}</p>
                     </div>

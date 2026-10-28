@@ -131,6 +131,7 @@ export default function AIAssistantDrawer({
       const reply = await aiAskAboutNote(noteText, userQ, chatMessages);
       setChatMessages([...newHistory, { role: 'assistant', content: reply }]);
     } catch (err: any) {
+      showToast(err.message || 'All AI models failed to respond', 'error');
       setChatMessages([
         ...newHistory, 
         { role: 'assistant', content: `⚠️ ${err.message || 'Could not answer question. Please check AI settings.'}` }
