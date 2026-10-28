@@ -8,7 +8,7 @@
 [![Vite](https://img.shields.io/badge/Vite-6-646CFF.svg?logo=vite)](https://vitejs.dev/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
-**Glick X Notes** is an ultra-fast, feature-packed modern personal workspace and intelligent note-taking application. Built with React 19, TypeScript, Tailwind CSS v4, and Cloud Firestore v12, Glick X Notes combines effortless real-time synchronization, multi-provider AI assistance (Google Gemini, Groq, Hugging Face), interactive Mermaid diagrams, KaTeX mathematical formulas, freehand canvas drawing, and multi-format export capabilities with enterprise-grade data isolation.
+**Glick X Notes** is an ultra-fast, feature-packed modern personal workspace and intelligent note-taking application. Built with React 19, TypeScript, Tailwind CSS v4, and Cloud Firestore v12, Glick X Notes combines effortless real-time synchronization, Google Gemini AI assistance with automated multi-tier fallback, interactive Mermaid diagrams, KaTeX mathematical formulas, freehand canvas drawing, and multi-format export capabilities with enterprise-grade data isolation.
 
 🌐 **Live Production App:** [https://glick-x-notes.pages.dev/](https://glick-x-notes.pages.dev/)
 
@@ -16,10 +16,11 @@
 
 ## ✨ Core Features
 
-### 🤖 Multi-Provider AI Intelligence
-* **Bring Your Own Key (BYOK):** Seamlessly configure and test your own API keys for **Google Gemini**, **Groq (Llama 3)**, and **Hugging Face**.
-* **AI Writing Assistant:** One-click summarization, smart action item extraction, tone adjustment (Professional, Casual, Academic), translation, and grammar enhancement.
-* **Auto-Tagging & Title Generation:** Let AI analyze your notes and suggest relevant categorized tags and catchy titles automatically.
+### 🤖 Google Gemini AI Intelligence & Fallback Chain
+* **Next-Gen Gemini Models:** Native integration with **Gemini 3.5 Flash** (Primary), **Gemini 3.5 Flash-Lite** (High Speed), **Gemini 3.6 Flash**, and **Gemini 3.8 Flash**.
+* **Automated Fallback Architecture:** If rate limits occur, the sequential failover chain seamlessly shifts to the next verified model to guarantee 0% interruption.
+* **Bring Your Own Key (BYOK):** Configure your personal Gemini API key with live latency testing, or run on default system intelligence.
+* **Smart Writing Assistant:** One-click summarization, action item extraction, tone adjustment (Professional, Casual, Academic), translation, and grammar enhancement.
 
 ### 🖋️ Next-Gen Rich Text & Visual Editor
 * **Typography & Headings:** Full support for H1, H2, H3, blockquotes, code blocks with syntax highlighting, custom highlight colors, and text formatting.
@@ -55,7 +56,7 @@
 | **Styling & Design** | Tailwind CSS v4, Lucide Icons | Utility-first responsive design with dark mode styling |
 | **Build Tool** | Vite 6 | Sub-second HMR and optimized production code splitting |
 | **Database & Auth** | Cloud Firestore v12, Firebase Auth | Real-time reactive data streaming, offline cache, and OAuth |
-| **AI Engine** | Google Gemini API, Groq SDK, Hugging Face API | Context-aware writing, summaries, and text generation |
+| **AI Engine** | Google Gemini API (3.5 Flash, 3.5 Lite, 3.6, 3.8) | High-speed contextual summarization, writing assistance & auto-failover |
 | **Visualization** | Mermaid.js, KaTeX, Cytoscape, Canvas API | Live diagrams, mathematical typesetting, and freehand drawing |
 | **Deployment** | Cloudflare Pages | Global edge CDN, ultra-low latency, and instant continuous deployment |
 

@@ -374,48 +374,54 @@ export default function LandingPage({ onLogin, onSignup }: LandingPageProps) {
               </div>
             </div>
 
-            {/* Bento Cell: Multi-Provider AI Assistant (Spans 2 columns) */}
-            <div className="md:col-span-2 group relative rounded-3xl p-7 md:p-8 bg-white/90 dark:bg-[#0c1220]/90 border border-slate-200/90 dark:border-slate-800/90 hover:border-violet-500/50 dark:hover:border-violet-400/50 shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:shadow-[0_12px_36px_rgba(139,92,246,0.08)] transition-all duration-300 flex flex-col justify-between overflow-hidden">
+            {/* Bento Cell: Google Gemini AI Intelligence (Spans 2 columns) */}
+            <div className="md:col-span-2 group relative rounded-3xl p-7 md:p-8 bg-white/90 dark:bg-[#0c1220]/90 border border-slate-200/90 dark:border-slate-800/90 hover:border-indigo-500/50 dark:hover:border-indigo-400/50 shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:shadow-[0_12px_36px_rgba(99,102,241,0.08)] transition-all duration-300 flex flex-col justify-between overflow-hidden">
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <div className="w-10 h-10 rounded-xl bg-violet-500/10 text-violet-600 dark:text-violet-400 flex items-center justify-center font-bold">
-                    <Bot className="w-5 h-5" />
+                  <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold">
+                    <Sparkles className="w-5 h-5" />
                   </div>
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wider uppercase bg-gradient-to-r from-violet-500/10 to-indigo-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/20">
-                    BYOK Multi-Model AI
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wider uppercase bg-gradient-to-r from-indigo-500/10 to-blue-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                    Google Gemini AI Intelligence
                   </span>
                 </div>
                 <h3 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white">
-                  Multi-Provider AI Intelligence
+                  Intelligent Writing & Synthesis Engine
                 </h3>
                 <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400 max-w-lg leading-relaxed">
-                  Supercharge your thoughts with Google Gemini, Groq (Llama 3), or Hugging Face. Summarize meetings, extract actionable checklists, enhance writing tone, and generate smart tags with zero latency.
+                  Supercharge your notes with official Google Gemini models. Summarize long meeting records, extract actionable checklists, enhance grammar, and auto-generate categorical tags with high-speed automated fallback.
                 </p>
               </div>
 
-              {/* Interactive AI Preview Pill */}
+              {/* Supported Gemini Models Grid & Automatic Fallback */}
               <div className="mt-6 pt-5 border-t border-slate-100 dark:border-slate-800/80 space-y-3">
                 <div className="flex flex-wrap items-center gap-2">
-                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-violet-50 dark:bg-violet-950/40 border border-violet-200/80 dark:border-violet-800/60 text-[11px] font-bold text-violet-700 dark:text-violet-300">
-                    <Sparkles className="w-3.5 h-3.5 text-violet-500" />
-                    <span>Gemini 2.0 Flash</span>
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/60 text-[11px] font-bold text-indigo-700 dark:text-indigo-300 shadow-xs">
+                    <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
+                    <span>Gemini 3.5 Flash</span>
+                    <span className="text-[9px] bg-indigo-600 text-white px-1.5 py-0.2 rounded-md font-black uppercase">Primary</span>
                   </div>
-                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 text-[11px] font-bold text-amber-700 dark:text-amber-300">
-                    <Zap className="w-3.5 h-3.5 text-amber-500" />
-                    <span>Groq Llama 3.3</span>
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-800/60 text-[11px] font-bold text-blue-700 dark:text-blue-300">
+                    <Zap className="w-3.5 h-3.5 text-blue-500" />
+                    <span>Gemini 3.5 Flash-Lite</span>
                   </div>
-                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/60 text-[11px] font-bold text-indigo-700 dark:text-indigo-300">
-                    <Cpu className="w-3.5 h-3.5 text-indigo-500" />
-                    <span>Hugging Face</span>
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200/80 dark:border-purple-800/60 text-[11px] font-bold text-purple-700 dark:text-purple-300">
+                    <span>Gemini 3.6 Flash</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                    <span>Gemini 3.8 Flash</span>
                   </div>
                 </div>
 
                 <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200/60 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300 flex items-start gap-2.5">
-                  <Sparkles className="w-4 h-4 text-violet-500 shrink-0 mt-0.5" />
-                  <div className="space-y-1">
-                    <span className="font-bold text-slate-900 dark:text-white">Instant AI Assistants:</span>
+                  <Shield className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-900 dark:text-white">Zero Downtime Fallback Chain + BYOK:</span>
+                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">Active</span>
+                    </div>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      "Summarize in 3 bullet points" • "Convert notes to task list" • "Professional grammar polish"
+                      Auto-switches to consecutive fallback models if limits are reached. Add your own Gemini API key or use built-in system intelligence anytime.
                     </p>
                   </div>
                 </div>
