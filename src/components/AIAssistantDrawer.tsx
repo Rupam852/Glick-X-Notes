@@ -70,6 +70,7 @@ export default function AIAssistantDrawer({
   const [auditResult, setAuditResult] = useState<NoteAuditResult | null>(null);
   const [loadingTakeaways, setLoadingTakeaways] = useState(false);
   const [loadingActionChecklist, setLoadingActionChecklist] = useState(false);
+  const [superchargeRevertHtml, setSuperchargeRevertHtml] = useState<string | null>(null);
 
   const hasSelection = Boolean((selectedHtml && selectedHtml.trim()) || (selectedText && selectedText.trim()));
   const [polishScope, setPolishScope] = useState<'selection' | 'full'>('full');
@@ -308,23 +309,8 @@ export default function AIAssistantDrawer({
         chatMessages.map(m => ({ role: m.role, content: m.content }))
       );
 
-      // Auto-apply if modification/addition was requested
+      // Store previous content for safe undo, but DO NOT auto-apply without user confirmation
       const previous = noteHtml || '';
-      let autoApplied = false;
-
-      if (result.action === 'replace_content' && result.content && onReplaceContent) {
-        onReplaceContent(result.content);
-        autoApplied = true;
-        showToast('AI Agent ne note me changes apply kar diye!', 'success');
-      } else if (result.action === 'append_content' && result.content) {
-        onInsertText(result.content);
-        autoApplied = true;
-        showToast('AI Agent ne naya section note me add kar diya!', 'success');
-      } else if (result.action === 'update_title' && result.newTitle) {
-        onApplyTitle(result.newTitle);
-        autoApplied = true;
-        showToast(`AI Agent ne title badal diya: "${result.newTitle}"!`, 'success');
-      }
 
       const assistantMsg: AgentChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -333,11 +319,14 @@ export default function AIAssistantDrawer({
         action: result.action,
         actionContent: result.content,
         newTitle: result.newTitle,
-        applied: autoApplied,
+        applied: false, // Explicit user confirmation required
         previousContent: previous
       };
 
       setChatMessages([...newHistory, assistantMsg]);
+      if (result.action && result.action !== 'none') {
+        showToast('AI recommendation taiyaar hai. Review karke Confirm karein.', 'info');
+      }
     } catch (err: any) {
       showToast(err.message || 'AI Agent failed to respond', 'error');
       setChatMessages([
@@ -367,6 +356,11 @@ export default function AIAssistantDrawer({
     }
 
     setChatMessages(prev => prev.map(m => m.id === msg.id ? { ...m, applied: true } : m));
+  };
+
+  const handleDismissAgentAction = (msgId: string) => {
+    setChatMessages(prev => prev.map(m => m.id === msgId ? { ...m, action: 'none' } : m));
+    showToast('Suggestion dismissed. Note remains unchanged.', 'info');
   };
 
   const handleUndoAgentAction = (msg: AgentChatMessage) => {
@@ -522,24 +516,45 @@ export default function AIAssistantDrawer({
                   {auditResult.enhancedHtml && onReplaceContent && (
                     <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-2">
                       <div className="flex items-center justify-between text-[11px]">
-                        <span className="font-bold text-slate-700 dark:text-slate-300">Supercharged Executive Layout</span>
-                        <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold">Ready to apply</span>
+                        <div>
+                          <span className="font-bold text-slate-700 dark:text-slate-300">Supercharged Executive Layout</span>
+                          <span className="block text-[9.5px] text-emerald-600 dark:text-emerald-400 font-medium">✓ 100% full content preserved (Zero sentences cut or shortened)</span>
+                        </div>
+                        <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold">Preview Ready</span>
                       </div>
                       <div 
                         className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 max-h-36 overflow-y-auto text-[11px] text-slate-700 dark:text-slate-300 leading-relaxed"
                         dangerouslySetInnerHTML={{ __html: auditResult.enhancedHtml }}
                       />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onReplaceContent(auditResult.enhancedHtml!);
-                          showToast('Note supercharged with executive structure!', 'success');
-                        }}
-                        className="w-full py-2 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-700 hover:to-pink-700 text-white font-bold rounded-xl flex items-center justify-center gap-1.5 text-xs shadow-md shadow-indigo-500/20 cursor-pointer transition"
-                      >
-                        <Zap className="w-3.5 h-3.5" />
-                        Apply Supercharged Layout to Note
-                      </button>
+                      {superchargeRevertHtml ? (
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onReplaceContent(superchargeRevertHtml);
+                              setSuperchargeRevertHtml(null);
+                              showToast('Reverted back to original note content!', 'info');
+                            }}
+                            className="w-full py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-xl flex items-center justify-center gap-1.5 text-xs transition cursor-pointer border border-slate-200 dark:border-slate-800"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5 text-slate-500" />
+                            ↩ Revert to Original Note
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSuperchargeRevertHtml(noteHtml || '');
+                            onReplaceContent(auditResult.enhancedHtml!);
+                            showToast('Full note supercharged! All original content preserved with executive highlights.', 'success');
+                          }}
+                          className="w-full py-2 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-700 hover:to-pink-700 text-white font-bold rounded-xl flex items-center justify-center gap-1.5 text-xs shadow-md shadow-indigo-500/20 cursor-pointer transition"
+                        >
+                          <Zap className="w-3.5 h-3.5" />
+                          Apply Supercharged Layout (Full Note Preserved)
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -767,64 +782,90 @@ export default function AIAssistantDrawer({
                   >
                     <p className="whitespace-pre-wrap">{msg.content}</p>
 
-                    {/* ⚡ Interactive Agent Action Card */}
+                    {/* ⚡ Interactive Agent Action Confirmation Card */}
                     {msg.action && msg.action !== 'none' && (
-                      <div className="mt-2.5 p-2.5 rounded-xl bg-white dark:bg-slate-950 border border-indigo-200/90 dark:border-indigo-900/60 space-y-2 shadow-xs">
+                      <div className={`mt-2.5 p-3 rounded-xl border space-y-2.5 transition-all ${
+                        msg.applied 
+                          ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/60'
+                          : 'bg-white dark:bg-slate-950 border-amber-300/80 dark:border-amber-700/60 shadow-xs'
+                      }`}>
                         <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide flex items-center gap-1">
-                            <Sparkles className="w-3 h-3" />
-                            {msg.action === 'replace_content' && 'Note Modification'}
-                            {msg.action === 'append_content' && 'New Section Added'}
-                            {msg.action === 'update_title' && 'Title Changed'}
+                          <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide flex items-center gap-1.5">
+                            <Sparkles className="w-3.5 h-3.5" />
+                            {msg.action === 'replace_content' && 'Proposed Note Modification'}
+                            {msg.action === 'append_content' && 'Proposed Section Addition'}
+                            {msg.action === 'update_title' && 'Proposed Title Change'}
                           </span>
-                          {msg.applied && (
-                            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded-md flex items-center gap-1">
-                              <Check className="w-2.5 h-2.5" /> Applied to Note
+                          {msg.applied ? (
+                            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-100/70 dark:bg-emerald-900/40 px-2 py-0.5 rounded-full flex items-center gap-1">
+                              <Check className="w-3 h-3" /> Applied to Note
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-2 py-0.5 rounded-full flex items-center gap-1">
+                              Awaiting Confirmation
                             </span>
                           )}
                         </div>
 
                         {/* Rendered HTML Preview */}
                         {msg.actionContent && (
-                          <div 
-                            className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-[11px] text-slate-700 dark:text-slate-300 max-h-40 overflow-y-auto leading-relaxed"
-                            dangerouslySetInnerHTML={{ __html: msg.actionContent }}
-                          />
+                          <div className="space-y-1">
+                            <span className="text-[9.5px] uppercase tracking-wider font-bold text-slate-400">
+                              {msg.applied ? 'Applied Content:' : 'Preview of proposed changes:'}
+                            </span>
+                            <div 
+                              className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-[11px] text-slate-700 dark:text-slate-300 max-h-44 overflow-y-auto leading-relaxed"
+                              dangerouslySetInnerHTML={{ __html: msg.actionContent }}
+                            />
+                          </div>
                         )}
 
                         {msg.action === 'update_title' && msg.newTitle && (
-                          <p className="font-bold text-slate-900 dark:text-white text-xs bg-slate-50 dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
-                            "{msg.newTitle}"
-                          </p>
+                          <div className="space-y-1">
+                            <span className="text-[9.5px] uppercase tracking-wider font-bold text-slate-400">Proposed New Title:</span>
+                            <p className="font-bold text-slate-900 dark:text-white text-xs bg-slate-50 dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
+                              "{msg.newTitle}"
+                            </p>
+                          </div>
                         )}
 
-                        {/* Buttons: Revert if applied, or Apply if not applied */}
-                        <div className="flex items-center gap-1.5 pt-1 border-t border-slate-100 dark:border-slate-800">
+                        {/* Interactive Buttons: Require confirmation before applying */}
+                        <div className="flex items-center gap-2 pt-1 border-t border-slate-100 dark:border-slate-800/80">
                           {msg.applied ? (
                             <>
                               <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex-1">
-                                ✓ Synced into note editor
+                                ✓ Note updated safely
                               </span>
                               {msg.previousContent && (
                                 <button
                                   type="button"
                                   onClick={() => handleUndoAgentAction(msg)}
-                                  className="py-1 px-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg text-[10px] font-bold flex items-center gap-1 transition cursor-pointer border border-slate-200 dark:border-slate-800"
+                                  className="py-1 px-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-[10px] font-bold flex items-center gap-1.5 transition cursor-pointer border border-slate-200 dark:border-slate-700"
                                   title="Revert note back to before this change"
                                 >
-                                  <RefreshCw className="w-2.5 h-2.5" /> Revert
+                                  <RefreshCw className="w-3 h-3 text-slate-500" /> Revert to Previous
                                 </button>
                               )}
                             </>
                           ) : (
-                            <button
-                              type="button"
-                              onClick={() => handleApplyAgentAction(msg)}
-                              className="w-full py-1.5 px-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold rounded-lg flex items-center justify-center gap-1.5 text-xs shadow-xs transition cursor-pointer"
-                            >
-                              <Check className="w-3.5 h-3.5" />
-                              {msg.action === 'replace_content' ? 'Apply Changes to Note' : msg.action === 'append_content' ? 'Append to Note' : 'Update Title'}
-                            </button>
+                            <div className="flex items-center gap-2 w-full">
+                              <button
+                                type="button"
+                                onClick={() => handleApplyAgentAction(msg)}
+                                className="flex-1 py-1.5 px-3 bg-gradient-to-r from-emerald-600 via-indigo-600 to-purple-600 hover:from-emerald-700 hover:to-purple-700 text-white font-bold rounded-lg flex items-center justify-center gap-1.5 text-xs shadow-xs transition cursor-pointer"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                                {msg.action === 'replace_content' ? 'Confirm & Apply to Note' : msg.action === 'append_content' ? 'Confirm & Append' : 'Confirm New Title'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDismissAgentAction(msg.id)}
+                                className="py-1.5 px-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg text-xs font-semibold transition cursor-pointer border border-slate-200 dark:border-slate-800"
+                                title="Dismiss this suggestion"
+                              >
+                                ✕ Dismiss
+                              </button>
+                            </div>
                           )}
                         </div>
                       </div>

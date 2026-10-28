@@ -824,18 +824,19 @@ NOTE CONTENT:
 ${content}
 """
 
-TASKS:
-1. AUDIT:
-   - score: Overall quality score from 1 to 100 based on clarity, readability, visual structure, and actionability.
+CRITICAL INSTRUCTIONS:
+1. FULL NOTE SCAN & AUDIT (DO NOT SHORTEN OR CUT):
+   - Scan and analyze the ENTIRE note thoroughly without cutting or skipping any part.
+   - score: Overall quality score from 1 to 100 based on clarity, readability, structure, and actionability.
    - scoreLabel: Brief status badge ("Needs Structure", "Good Draft", "Well Written", "Executive Ready").
-   - strengths: 2 bullet points of what is already clear or good in this note.
-   - improvements: 2 to 3 constructive suggestions of what is missing or how to elevate this note (e.g. missing deadlines, needs summary callout, key phrases should be bolded, action items need clear checkboxes).
+   - strengths: 2 to 3 bullet points highlighting what is already clear, useful, or well-written in this note.
+   - improvements: 3 to 4 constructive, specific suggestions of what is missing, how to elevate the note, missing gaps, and formatting suggestions.
    - actionItems: Array of specific tasks or follow-ups identified or recommended for this note.
    - keyTopics: 3 to 5 core topics or tags.
 
-2. SUPERCHARGED VERSION (enhancedHtml):
-   - Rewrite and elevate the note into an executive-grade, beautifully formatted rich HTML document.
-   - PRESERVE 100% of all user data, facts, names, and original meaning.
+2. SUPERCHARGED FULL VERSION (enhancedHtml):
+   - CRITICAL: DO NOT SHORTEN, SUMMARIZE, OR CONDENSE. Keep 100% of all paragraphs, explanations, code blocks, lists, details, and context at FULL length.
+   - PRESERVE 100% of all user data, facts, names, links, code, and original meaning.
    - Add bold tags (<b>) around critical keywords, metrics, and takeaways.
    - Format cleanly with HTML:
      - Sleek top "Key Takeaways" callout:
