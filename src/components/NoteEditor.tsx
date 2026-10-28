@@ -433,6 +433,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
   const [paperStyle, setPaperStyle] = useState<PaperStyle>(() => (note?.paperStyle as PaperStyle) || 'plain');
   const [paperTone, setPaperTone] = useState<PaperTone>(() => (note?.paperTone as PaperTone) || 'default');
   const [showPaperMenu, setShowPaperMenu] = useState(false);
+  const [paperMenuCoords, setPaperMenuCoords] = useState<{ top: number; right: number } | null>(null);
   const paperMenuRef = useRef<HTMLDivElement | null>(null);
   const [currentLineSpacing, setCurrentLineSpacing] = useState('1.6');
 
@@ -609,8 +610,16 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      audioReader.stop();
     };
   }, []);
+
+  useEffect(() => {
+    if (!showPaperMenu) return;
+    const handleScroll = () => setShowPaperMenu(false);
+    window.addEventListener('scroll', handleScroll, true);
+    return () => window.removeEventListener('scroll', handleScroll, true);
+  }, [showPaperMenu]);
 
   // Document-level Selection Change Listener to dynamically track latest cursor position & formats
   useEffect(() => {
@@ -5564,7 +5573,14 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
             <button
               type="button"
               onMouseDown={handleButtonMouseDown}
-              onClick={() => setShowPaperMenu(prev => !prev)}
+              onClick={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                setPaperMenuCoords({
+                  top: rect.bottom + 6,
+                  right: Math.max(12, window.innerWidth - rect.right)
+                });
+                setShowPaperMenu(prev => !prev);
+              }}
               className={`p-1.5 h-9 px-2.5 flex items-center gap-1.5 rounded-xl shrink-0 text-xs font-bold transition-all cursor-pointer ${
                 paperStyle !== 'plain' || paperTone !== 'default'
                   ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-800 shadow-xs'
@@ -5589,8 +5605,12 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                   initial={{ opacity: 0, y: 5, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 5, scale: 0.95 }}
-                  className="absolute right-0 top-full mt-1.5 w-64 z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-2xl space-y-3"
-                  style={{ boxShadow: '0 20px 40px -10px rgba(0,0,0,0.3), 0 0 0 1px rgba(0,0,0,0.08)' }}
+                  className="fixed z-[100] w-72 max-w-[92vw] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-2xl space-y-3"
+                  style={{
+                    top: `${paperMenuCoords?.top ?? 90}px`,
+                    right: `${paperMenuCoords?.right ?? 16}px`,
+                    boxShadow: '0 20px 40px -10px rgba(0,0,0,0.35), 0 0 0 1px rgba(0,0,0,0.08)'
+                  }}
                 >
                   {/* Pattern Template Section */}
                   <div>
@@ -5598,7 +5618,7 @@ export default function NoteEditor({ user, note, onBack, onSave }: NoteEditorPro
                     <div className="grid grid-cols-2 gap-1.5">
                       {[
                         { id: 'plain', label: 'Plain Paper', desc: 'Clean white sheet', icon: '📄' },
-                        { id: 'lined', label: 'College Ruled', desc: 'Ruled with margin', icon: '📝' },
+                        { id: 'lined', label: 'College Ruled', desc: 'Clean horizontal lines', icon: '📝' },
                         { id: 'dot', label: 'Dot Grid', desc: 'Bullet journal matrix', icon: '⠂⠂' },
                         { id: 'grid', label: 'Math / Grid', desc: 'Engineering graph', icon: '▦' },
                         { id: 'cornell', label: 'Cornell Notes', desc: 'Study cues & summary', icon: '🎓' },

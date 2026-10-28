@@ -701,15 +701,15 @@ details.glick-toggle[open] > summary .glick-toggle-arrow {
 /* 1. Lined / College Ruled Paper */
 .paper-style-lined {
   background-image: 
-    linear-gradient(to right, transparent 56px, rgba(239, 68, 68, 0.22) 56px, rgba(239, 68, 68, 0.22) 58px, transparent 58px),
     linear-gradient(to bottom, transparent 31px, rgba(99, 102, 241, 0.12) 32px);
-  background-size: 100% 100%, 100% 32px;
-  background-position: 0 0, 0 16px;
+  background-size: 100% 32px;
+  background-position: 0 16px;
 }
 .dark .paper-style-lined {
   background-image: 
-    linear-gradient(to right, transparent 56px, rgba(244, 63, 94, 0.3) 56px, rgba(244, 63, 94, 0.3) 58px, transparent 58px),
     linear-gradient(to bottom, transparent 31px, rgba(129, 140, 248, 0.14) 32px);
+  background-size: 100% 32px;
+  background-position: 0 16px;
 }
 
 /* 2. Dot Grid Bullet Journal Paper */
@@ -735,18 +735,20 @@ details.glick-toggle[open] > summary .glick-toggle-arrow {
     linear-gradient(to bottom, rgba(148, 163, 184, 0.12) 1px, transparent 1px);
 }
 
-/* 4. Cornell Notes Study Template */
+/* 4. Cornell Notes Study Template - Elegant study ruling with distinct left cue-indicator border */
 .paper-style-cornell {
   background-image: 
-    linear-gradient(to right, transparent 160px, rgba(99, 102, 241, 0.28) 160px, rgba(99, 102, 241, 0.28) 162px, transparent 162px),
-    linear-gradient(to bottom, transparent 31px, rgba(100, 116, 139, 0.12) 32px);
-  background-size: 100% 100%, 100% 32px;
-  background-position: 0 0, 0 16px;
+    linear-gradient(to bottom, transparent 31px, rgba(99, 102, 241, 0.11) 32px);
+  background-size: 100% 32px;
+  background-position: 0 16px;
+  border-left: 6px solid #6366f1 !important;
 }
 .dark .paper-style-cornell {
   background-image: 
-    linear-gradient(to right, transparent 160px, rgba(129, 140, 248, 0.3) 160px, rgba(129, 140, 248, 0.3) 162px, transparent 162px),
-    linear-gradient(to bottom, transparent 31px, rgba(148, 163, 184, 0.14) 32px);
+    linear-gradient(to bottom, transparent 31px, rgba(129, 140, 248, 0.13) 32px);
+  background-size: 100% 32px;
+  background-position: 0 16px;
+  border-left: 6px solid #818cf8 !important;
 }
 
 /* 5. Vintage Parchment Paper */
